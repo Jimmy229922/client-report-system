@@ -57,14 +57,15 @@ function showUpdateOverlay() {
 }
 
 function checkServerStatus(attempts = 0) {
-    const maxAttempts = 30; // Try for 30 seconds (30 * 1000ms)
+    const maxAttempts = 90; // Try for 90 seconds (90 * 1000ms)
     if (attempts >= maxAttempts) {
         const overlay = document.getElementById('update-overlay');
         if(overlay) {
             overlay.innerHTML = `
-                <i class="fas fa-times-circle" style="font-size: 3rem; color: var(--danger-color);"></i>
-                <p style="margin-top: 1rem;">فشل الاتصال بالسيرفر بعد التحديث.</p>
-                <p>الرجاء محاولة تحديث الصفحة يدوياً.</p>
+                <i class="fas fa-exclamation-triangle" style="font-size: 3rem; color: #ff9800;"></i>
+                <p style="margin-top: 1rem;">استغرقت عملية التحديث وقتاً طويلاً.</p>
+                <p>قد يكون السيرفر لا يزال يقوم بتثبيت التحديثات في الخلفية.</p>
+                <p>الرجاء محاولة تحديث الصفحة يدوياً بعد دقيقة.</p>
                 <button class="submit-btn" style="margin-top: 1.5rem; width: auto; padding: 0.5rem 1rem;" onclick="location.reload(true)">تحديث الصفحة</button>
             `;
         }

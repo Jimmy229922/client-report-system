@@ -532,20 +532,25 @@ app.delete('/api/users/:id', verifyToken, verifyAdmin, async (req, res) => {
 // Endpoint for self-updating the application
 app.post('/api/system/update', verifyToken, (req, res) => {
     const projectRoot = path.join(__dirname, '..');
-    // Using `cd` is more reliable across different npm versions and platforms than `--prefix`.
     const command = 'git pull && cd backend && npm install';
+    console.log(`[Update] Executing command: ${command}`);
 
     exec(command, { cwd: projectRoot }, (err, stdout, stderr) => {
+        console.log('[Update] stdout:', stdout);
+        console.error('[Update] stderr:', stderr);
+
         if (err) {
-            console.error('Update failed during exec:', stderr);
+            console.error('[Update] Update failed during exec:', err);
             return res.status(500).json({ message: 'فشل تنفيذ أمر التحديث. تأكد من تثبيت Git وأن المشروع تم تحميله عبر git clone.', error: stderr });
         }
 
         if (stdout.includes('Already up to date.')) {
+            console.log('[Update] System is already up to date.');
             return res.json({ message: 'النظام محدث بالفعل. لا حاجة لإعادة التشغيل.' });
         }
 
         // If we are here, there were updates.
+        console.log('[Update] Updates pulled successfully. Restarting server...');
         res.json({ message: 'تم سحب التحديثات بنجاح. سيتم إعادة تشغيل السيرفر...' });
 
         // Use a short delay to ensure the response is sent before exiting
