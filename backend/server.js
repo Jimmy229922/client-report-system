@@ -548,6 +548,27 @@ app.delete('/api/users/:id', verifyToken, verifyAdmin, async (req, res) => {
     res.json({ message: "تم حذف المستخدم بنجاح." });
 });
 
+// Delete all non-admin users
+app.delete('/api/users/all-non-admins', verifyToken, verifyAdmin, async (req, res) => {
+    // This is a very destructive operation.
+    // We delete all users EXCEPT the admin (ID 1).
+    const adminId = 1;
+
+    const { error, count } = await supabase
+        .from('users')
+        .delete({ count: 'exact' })
+        .neq('id', adminId);
+
+    if (error) {
+        if (error.code === '23503') { // Foreign key violation
+            return res.status(409).json({ message: "فشل الحذف. يوجد تقارير مرتبطة ببعض المستخدمين. يجب تعديل قاعدة البيانات للسماح بالحذف (SET NULL)." });
+        }
+        return res.status(500).json({ error: error.message });
+    }
+
+    res.json({ message: `تم حذف ${count} مستخدم بنجاح.` });
+});
+
 // Update a specific user's avatar (Admin only)
 app.put('/api/users/:id/avatar', verifyToken, verifyAdmin, upload.single('avatar'), async (req, res) => {
     const { id: userId } = req.params;

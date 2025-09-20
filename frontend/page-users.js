@@ -223,6 +223,8 @@ function handleUserActions() {
                 try {
                     await fetchWithAuth(`/api/users/${userId}`, { method: 'DELETE' });
                     showToast('تم حذف المستخدم بنجاح.');
+                    // Remove the user from the local cache
+                    allUsers = allUsers.filter(u => u.id != userId);
                     row.remove();
                 } catch (error) {
                     showToast(error.message, true);
@@ -311,7 +313,10 @@ export function renderUsersPage() {
         <h1 class="page-title">إدارة المستخدمين</h1>
         <div class="user-management-layout">
             <div class="user-list-container">
-                <h2>قائمة المستخدمين</h2>
+                <div class="user-list-header">
+                    <h2>قائمة المستخدمين</h2>
+                    <button id="delete-all-users-btn" class="delete-all-btn"><i class="fas fa-users-slash"></i> حذف جميع الموظفين</button>
+                </div>
                 <div class="search-container">
                     <i class="fas fa-search"></i>
                     <input type="text" id="users-search" class="search-input" placeholder="ابحث عن مستخدم بالاسم أو البريد الإلكتروني...">
@@ -361,6 +366,27 @@ export function renderUsersPage() {
         debounceTimer = setTimeout(() => {
             fetchAndRenderUsers(e.target.value);
         }, 500);
+    });
+
+    // Add Delete All Users logic
+    const deleteAllBtn = document.getElementById('delete-all-users-btn');
+    deleteAllBtn.addEventListener('click', async () => {
+        const confirmation1 = confirm("تحذير: هذا الإجراء سيقوم بحذف جميع المستخدمين باستثناء حساب المسؤول. لا يمكن التراجع عن هذا الإجراء. هل أنت متأكد؟");
+        if (!confirmation1) return;
+
+        const confirmation2 = prompt("للتأكيد، يرجى كتابة 'حذف الكل' في المربع أدناه:");
+        if (confirmation2 !== 'حذف الكل') {
+            showToast('تم إلغاء العملية. النص المدخل غير مطابق.', true);
+            return;
+        }
+
+        try {
+            const result = await fetchWithAuth('/api/users/all-non-admins', { method: 'DELETE' });
+            showToast(result.message);
+            fetchAndRenderUsers(); // Refresh the list
+        } catch (error) {
+            showToast(error.message, true);
+        }
     });
 
     // Add sorting logic
