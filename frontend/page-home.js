@@ -219,4 +219,7 @@ export function renderHomePage() {
         </div>
     `;
     fetchAndRenderHomePageData();
+
+    // Listen for the custom event to refresh data in real-time
+    document.addEventListener('reportSent', fetchAndRenderHomePageData);
 }

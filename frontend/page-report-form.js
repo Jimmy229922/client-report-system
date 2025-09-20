@@ -337,6 +337,10 @@ export function initCreateReportPage() {
             form.reset();
             imagePreviews.innerHTML = '';
             uploadedFiles = [];
+
+            // Dispatch a custom event to notify other parts of the app (like the dashboard)
+            document.dispatchEvent(new CustomEvent('reportSent'));
+
             const countryIcon = form.querySelector('#country-icon');
             if (countryIcon) {
                 countryIcon.innerHTML = '';

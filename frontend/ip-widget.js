@@ -173,6 +173,13 @@ export function initIpWidget() {
         widget.classList.remove('dragging');
     });
 
+    // --- Auto-hide on outside click ---
+    document.addEventListener('click', (e) => {
+        if (!isPinned && widget.classList.contains('show') && !widget.contains(e.target) && !toggleBtn.contains(e.target)) {
+            hideWidget();
+        }
+    });
+
     // Initial setup
     updateHistory();
 }
