@@ -653,7 +653,7 @@ async function initializeAdmin() {
       const hash = bcrypt.hashSync("password", salt);
       const { error: insertError } = await supabase
         .from('users')
-        .insert({ id: 1, username: 'INZO LLC', email: 'admin@inzo.llc', password: hash, avatar_url: null });
+        .insert({ id: 1, username: 'INZO LLC', email: 'admin@inzo.com', password: hash, avatar_url: null });
 
       if (insertError) {
         console.error('Failed to create default admin user:', insertError);

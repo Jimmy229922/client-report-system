@@ -3,6 +3,33 @@ import { showToast } from './ui.js';
 
 let allUsers = []; // Store the fetched users
 
+function createUserRow(user) {
+    const avatarHtml = user.avatar_url
+        ? `<img src="${user.avatar_url}" class="navbar-avatar" style="margin-left: 10px;">`
+        : `<span class="profile-avatar-placeholder" style="width: 32px; height: 32px; font-size: 1rem; margin-left: 10px;">
+               <i class="fas fa-user"></i>
+           </span>`;
+    
+    const isAdmin = user.id === 1;
+    const adminBadge = isAdmin ? `<span class="admin-badge">مسؤول</span>` : '';
+    const deleteButton = !isAdmin ? `<button class="archive-btn delete" data-action="delete" data-id="${user.id}" title="حذف المستخدم"><i class="fas fa-trash"></i></button>` : '';
+
+    return `
+    <tr id="user-row-${user.id}" class="${isAdmin ? 'admin-row' : ''}">
+        <td data-field="username" style="display: flex; align-items: center;">${avatarHtml} ${user.username} ${adminBadge}</td>
+        <td data-field="email" class="email-cell">
+            <span>${user.email}</span>
+            <button class="archive-btn copy-email" data-email="${user.email}" title="نسخ البريد الإلكتروني"><i class="fas fa-copy"></i></button>
+        </td>
+        <td data-field="created_at">${new Date(user.created_at).toLocaleDateString('ar-EG')}</td>
+        <td class="user-actions">
+            <button class="archive-btn" data-action="edit" data-id="${user.id}" title="تعديل المستخدم"><i class="fas fa-edit"></i></button>
+            ${deleteButton}
+        </td>
+    </tr>
+    `;
+}
+
 async function fetchAndRenderUsers(searchTerm = '') {
     const tableBody = document.getElementById('users-table-body');
     const tableHead = document.querySelector('#users-table thead tr');
@@ -14,37 +41,13 @@ async function fetchAndRenderUsers(searchTerm = '') {
         allUsers = result.data || []; // Store users
 
         if (allUsers.length > 0) {
-            tableBody.innerHTML = allUsers.map(user => {
-                const avatarHtml = user.avatar_url
-                    ? `<img src="${user.avatar_url}" class="navbar-avatar" style="margin-left: 10px;">`
-                    : `<span class="profile-avatar-placeholder" style="width: 32px; height: 32px; font-size: 1rem; margin-left: 10px;">
-                           <i class="fas fa-user"></i>
-                       </span>`;
-                
-                const isAdmin = user.id === 1;
-                const adminBadge = isAdmin ? `<span class="admin-badge">مسؤول</span>` : '';
-                const deleteButton = !isAdmin ? `<button class="archive-btn delete" data-action="delete" data-id="${user.id}" title="حذف المستخدم"><i class="fas fa-trash"></i></button>` : '';
-
-                return `
-                <tr id="user-row-${user.id}" class="${isAdmin ? 'admin-row' : ''}">
-                    <td data-field="username" style="display: flex; align-items: center;">${avatarHtml} ${user.username} ${adminBadge}</td>
-                    <td data-field="email" class="email-cell">
-                        <span>${user.email}</span>
-                        <button class="archive-btn copy-email" data-email="${user.email}" title="نسخ البريد الإلكتروني"><i class="fas fa-copy"></i></button>
-                    </td>
-                    <td data-field="created_at">${new Date(user.created_at).toLocaleDateString('ar-EG')}</td>
-                    <td class="user-actions">
-                        <button class="archive-btn" data-action="edit" data-id="${user.id}" title="تعديل المستخدم"><i class="fas fa-edit"></i></button>
-                        ${deleteButton}
-                    </td>
-                </tr>
-            `}).join('');
+            tableBody.innerHTML = allUsers.map(user => createUserRow(user)).join('');
         } else {
             tableBody.innerHTML = `<tr><td colspan="${tableHead.children.length}" style="text-align:center;">لا يوجد مستخدمين.</td></tr>`;
         }
     } catch (error) {
         showToast(error.message, true);
-        tableBody.innerHTML = `<tr><td colspan="3" style="text-align:center;">${error.message}</td></tr>`;
+        tableBody.innerHTML = `<tr><td colspan="${tableHead.children.length}" style="text-align:center;">${error.message}</td></tr>`;
     }
 }
 
@@ -97,7 +100,7 @@ function handleAddUser() {
         const password = passwordInput.value;
 
         try {
-            await fetchWithAuth('/api/users', {
+            const result = await fetchWithAuth('/api/users', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ username, email, password })
@@ -105,7 +108,16 @@ function handleAddUser() {
 
             showToast('تمت إضافة المستخدم بنجاح.');
             form.reset();
-            fetchAndRenderUsers(); // Refresh the list
+
+            // Optimistic UI update
+            const newUser = result.data;
+            allUsers.push(newUser);
+            const tableBody = document.getElementById('users-table-body');
+            const noUsersRow = tableBody.querySelector('td[colspan]');
+            if (noUsersRow) {
+                noUsersRow.parentElement.remove();
+            }
+            tableBody.insertAdjacentHTML('beforeend', createUserRow(newUser));
         } catch (error) {
             showToast(error.message, true);
         }
