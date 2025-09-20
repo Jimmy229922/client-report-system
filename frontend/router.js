@@ -36,7 +36,19 @@ export function navigate() {
 
     // Client-side route guard for admin page
     const userStr = localStorage.getItem('user');
-    const user = userStr ? JSON.parse(userStr) : null;
+    let user = null;
+    if (userStr && userStr !== 'undefined' && userStr !== 'null') {
+        try {
+            user = JSON.parse(userStr);
+        } catch (error) {
+            console.error("Corrupted user data in localStorage (router.js). Clearing and reloading.", error);
+            localStorage.removeItem('user');
+            localStorage.removeItem('token');
+            location.reload();
+            return; // Stop navigation to allow reload
+        }
+    }
+
     if (window.location.hash === '#users' && (!user || user.id !== 1)) {
         console.warn('Access denied to user management page.');
         window.location.hash = '#home'; // Redirect to home

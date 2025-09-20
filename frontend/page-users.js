@@ -24,7 +24,10 @@ async function fetchAndRenderUsers(searchTerm = '') {
                 return `
                 <tr id="user-row-${user.id}" class="${isAdmin ? 'admin-row' : ''}">
                     <td data-field="username" style="display: flex; align-items: center;">${avatarHtml} ${user.username} ${adminBadge}</td>
-                    <td data-field="email">${user.email}</td>
+                    <td data-field="email" class="email-cell">
+                        <span>${user.email}</span>
+                        <button class="archive-btn copy-email" data-email="${user.email}" title="نسخ البريد الإلكتروني"><i class="fas fa-copy"></i></button>
+                    </td>
                     <td class="user-actions">
                         <button class="archive-btn" data-action="edit" data-id="${user.id}" title="تعديل المستخدم"><i class="fas fa-edit"></i></button>
                         ${deleteButton}
@@ -126,6 +129,13 @@ function handleUserActions() {
                     showToast(error.message, true);
                 }
             }
+        } else if (button.classList.contains('copy-email')) {
+            const email = button.dataset.email;
+            navigator.clipboard.writeText(email).then(() => {
+                showToast('تم نسخ البريد الإلكتروني.');
+            }).catch(err => {
+                showToast('فشل نسخ البريد الإلكتروني.', true);
+            });
         }
     });
 

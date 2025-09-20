@@ -870,6 +870,25 @@ main { padding: 2rem; max-width: 1200px; margin: 2rem auto; animation: fadeIn 0.
     font-size: 0.9rem;
 }
 
+.email-cell {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+}
+
+.email-cell .copy-email {
+    visibility: hidden; /* Hide by default */
+    opacity: 0;
+    transition: visibility 0s 0.2s, opacity 0.2s linear;
+}
+
+#users-table tr:hover .email-cell .copy-email {
+    visibility: visible; /* Show on row hover */
+    opacity: 1;
+    transition-delay: 0s;
+}
+
 .admin-badge {
     background-color: var(--accent-color);
     color: white;
