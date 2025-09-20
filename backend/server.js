@@ -197,10 +197,7 @@ app.post('/api/send-report', verifyToken, upload.array('images', 3), async (req,
             return res.status(400).json({ success: false, message: 'نص التقرير مفقود.' });
         }
 
-        // Add username to the first line of the report
-        const lines = reportText.split('\n');
-        lines[0] = `${lines[0]} (بواسطة: ${username})`;
-        const telegramMessage = lines.join('\n');
+        const telegramMessage = `${reportText}\n\nبواسطة: ${username}`;
         const TELEGRAM_CAPTION_LIMIT = 1024;
 
         // التحقق من وجود صور
