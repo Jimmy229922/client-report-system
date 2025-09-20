@@ -1,28 +1,50 @@
 // This file centralizes API calls
 
 export async function fetchWithAuth(url, options = {}) {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 20000); // 20-second timeout
+
     const token = localStorage.getItem('token');
-    const headers = {
-        ...options.headers,
-        'Authorization': `Bearer ${token}`
-    };
-    const response = await fetch(url, { ...options, headers });
-
-    if (response.status === 401 || response.status === 403) {
-        const errorData = await response.json().catch(() => ({ message: 'فشل المصادقة. الرجاء تسجيل الدخول مرة أخرى.' }));
-
-        // On 403 (Forbidden), the user is authenticated but not authorized.
-        // We should show the specific error message instead of logging them out.
-        if (response.status === 403) {
-            throw new Error(errorData.message || 'صلاحية الوصول مرفوضة.');
-        }
-
-        // On 401 (Unauthorized), the token is invalid/expired, so we force a logout.
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
-        location.reload();
-        throw new Error(errorData.message);
+    const headers = { ...options.headers };
+    if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
     }
 
-    return response;
+    try {
+        const response = await fetch(url, { 
+            ...options, 
+            headers,
+            signal: controller.signal // Pass the abort signal to fetch
+        });
+
+        clearTimeout(timeoutId); // Clear the timeout if the request succeeds
+
+        if (response.status === 401) {
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+            location.reload();
+            throw new Error('انتهت صلاحية الجلسة. الرجاء تسجيل الدخول مرة أخرى.');
+        }
+
+        const contentType = response.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+            const errorText = await response.text();
+            throw new Error(`استجابة غير متوقعة من السيرفر (Status: ${response.status}). قد يكون السيرفر متوقفاً.`);
+        }
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.message || data.error || `HTTP Error: ${response.status}`);
+        }
+
+        return data;
+    } catch (error) {
+        clearTimeout(timeoutId);
+        if (error.name === 'AbortError') {
+            throw new Error('انتهت مهلة الطلب. قد يكون هناك بطء في الشبكة أو مشكلة في السيرفر.');
+        }
+        // Re-throw other errors
+        throw error;
+    }
 }

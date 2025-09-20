@@ -34,6 +34,74 @@ function initProfilePage() {
         }
     });
 
+    const profileLayout = document.querySelector('.profile-page-layout');
+    if (!profileLayout) return;
+
+    // --- Event Delegation for Editing Details ---
+    profileLayout.addEventListener('click', async (e) => {
+        const button = e.target.closest('button');
+        if (!button) return;
+
+        const field = button.dataset.field;
+        if (!field) return;
+
+        const fieldContainer = button.closest('.profile-field');
+        const valueSpan = fieldContainer.querySelector('span');
+        const input = fieldContainer.querySelector('input[type="text"], input[type="email"]');
+        const editBtn = fieldContainer.querySelector('.edit-btn');
+        const actionBtns = fieldContainer.querySelector('.edit-actions');
+
+        const toggleEdit = (isEditing) => {
+            valueSpan.classList.toggle('hidden', isEditing);
+            input.classList.toggle('hidden', !isEditing);
+            editBtn.classList.toggle('hidden', isEditing);
+            actionBtns.classList.toggle('hidden', !isEditing);
+            if (isEditing) {
+                input.value = valueSpan.textContent;
+                input.focus();
+            }
+        };
+
+        if (button.classList.contains('edit-btn')) {
+            toggleEdit(true);
+        }
+
+        if (button.classList.contains('cancel-btn')) {
+            toggleEdit(false);
+        }
+
+        if (button.classList.contains('save-btn')) {
+            const newValue = input.value.trim();
+            const originalValue = valueSpan.textContent;
+
+            if (newValue === '' || newValue === originalValue) {
+                toggleEdit(false);
+                return;
+            }
+
+            const payload = { [field]: newValue };
+            button.innerHTML = '<i class="fas fa-spinner fa-spin"></i>'; // Show spinner
+            button.disabled = true;
+
+            try {
+                const result = await fetchWithAuth('/api/profile/details', {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                showToast(result.message);
+                localStorage.setItem('user', JSON.stringify(result.user));
+                renderProfilePage(); // Re-render to reflect changes and reset state
+                updateNavbarUser();
+
+            } catch (error) {
+                showToast(error.message, true);
+                toggleEdit(false); // Revert on error
+            }
+        }
+    });
+
     const changePasswordForm = document.getElementById('change-password-form');
     if (changePasswordForm) {
         changePasswordForm.addEventListener('submit', async (e) => {
@@ -89,21 +157,35 @@ export function renderProfilePage() {
                     <input type="file" id="avatar-upload-input" accept="image/png, image/jpeg, image/webp" class="hidden">
                 </div>
                 <div class="profile-details">
-                    <div class="profile-field">
+                    <div class="profile-field" data-field="username">
                         <label>اسم المستخدم</label>
                         <div class="value-container">
-                            <span id="profile-username">${user.username}</span>
+                            <span>${user.username}</span>
+                            <input type="text" class="hidden profile-edit-input" value="${user.username}">
+                            ${user.id !== 1 ? `
+                                <button class="edit-btn" data-field="username" title="تعديل"><i class="fas fa-pen"></i></button>
+                                <div class="edit-actions hidden">
+                                    <button class="save-btn" data-field="username" title="حفظ"><i class="fas fa-check"></i></button>
+                                    <button class="cancel-btn" data-field="username" title="إلغاء"><i class="fas fa-times"></i></button>
+                                </div>
+                            ` : ''}
                         </div>
                     </div>
-                    <div class="profile-field">
+                    <div class="profile-field" data-field="email">
                         <label>البريد الإلكتروني</label>
                         <div class="value-container">
-                            <span id="profile-email">${user.email}</span>
+                            <span>${user.email}</span>
+                            <input type="email" class="hidden profile-edit-input" value="${user.email}">
+                            <button class="edit-btn" data-field="email" title="تعديل"><i class="fas fa-pen"></i></button>
+                            <div class="edit-actions hidden">
+                                <button class="save-btn" data-field="email" title="حفظ"><i class="fas fa-check"></i></button>
+                                <button class="cancel-btn" data-field="email" title="إلغاء"><i class="fas fa-times"></i></button>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
-            <div class="form-container" style="max-width: 100%; margin: 0;">
+            <div class="form-container" style="max-width: 100%; margin: 0; grid-column: 1 / -1;">
                 <h2 style="margin-top: 0; margin-bottom: 1.5rem; font-size: 1.5rem;">تغيير كلمة المرور</h2>
                 <form id="change-password-form">
                     <div class="form-group">
