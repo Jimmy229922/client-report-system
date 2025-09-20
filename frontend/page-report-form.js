@@ -243,32 +243,69 @@ export function initCreateReportPage() {
     }
 
     if (ipInput) {
-        ipInput.addEventListener('input', async () => {
+        // Debounce function to avoid API calls on every keystroke
+        const debounce = (func, delay) => {
+            let timeout;
+            return function(...args) {
+                const context = this;
+                clearTimeout(timeout);
+                timeout = setTimeout(() => func.apply(context, args), delay);
+            };
+        };
+
+        const handleIpLookup = async () => {
             const ip = ipInput.value.trim();
             const countryInput = form.querySelector('#country');
             const countryIcon = form.querySelector('#country-icon');
+
+            // Reset fields if IP is invalid
             if (!/^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$/.test(ip)) {
                 countryInput.value = "";
                 countryIcon.className = 'fas fa-globe';
                 countryIcon.innerHTML = '';
                 return;
             }
+
             countryInput.value = "جاري البحث...";
+            countryIcon.className = 'fas fa-spinner fa-spin';
+            countryIcon.innerHTML = '';
+
             try {
-                const response = await fetch(`https://ipapi.co/${ip}/json/`);
+                // Primary API: ip-api.com (more reliable)
+                const response = await fetch(`https://ip-api.com/json/${ip}?fields=status,country,countryCode,message`);
                 const data = await response.json();
-                if (data.error) {
-                    countryInput.value = data.reason || 'IP غير صالح';
-                    countryIcon.className = 'fas fa-question-circle';
-                } else {
-                    countryInput.value = data.country_name;
-                    countryIcon.innerHTML = `<img src="https://flagcdn.com/w20/${data.country_code.toLowerCase()}.png" alt="${data.country_code}">`;
+                if (data.status === 'success' && data.countryCode) {
+                    countryInput.value = data.country;
+                    countryIcon.className = 'fas fa-globe';
+                    countryIcon.innerHTML = `<img src="https://flagcdn.com/w20/${data.countryCode.toLowerCase()}.png" alt="${data.countryCode}">`;
+                    return;
                 }
-            } catch (error) {
-                countryInput.value = 'خطأ في جلب البيانات';
-                countryIcon.className = 'fas fa-exclamation-triangle';
+                throw new Error(data.message || 'Primary API failed or missing country code');
+            } catch (error1) {
+                console.warn('Primary IP lookup failed:', error1.message, 'Trying fallback...');
+                try {
+                    // Fallback API: ipapi.co
+                    const response = await fetch(`https://ipapi.co/${ip}/json/`);
+                    const data = await response.json();
+                    if (data.error) {
+                        countryInput.value = data.reason || 'IP غير صالح';
+                        countryIcon.className = 'fas fa-question-circle';
+                        countryIcon.innerHTML = '';
+                    } else {
+                        countryInput.value = data.country_name;
+                        countryIcon.className = 'fas fa-globe';
+                        countryIcon.innerHTML = `<img src="https://flagcdn.com/w20/${data.country_code.toLowerCase()}.png" alt="${data.country_code}">`;
+                    }
+                } catch (error2) {
+                    console.error('Fallback IP lookup also failed:', error2.message);
+                    countryInput.value = 'فشل البحث عن الدولة';
+                    countryIcon.className = 'fas fa-exclamation-triangle';
+                    countryIcon.innerHTML = '';
+                }
             }
-        });
+        };
+
+        ipInput.addEventListener('input', debounce(handleIpLookup, 500));
     }
 
     const handleFiles = (files) => {
@@ -277,6 +314,8 @@ export function initCreateReportPage() {
                 if (!uploadedFiles.some(f => f.name === file.name && f.size === file.size)) {
                     uploadedFiles.push(file);
                     createImagePreview(file);
+                } else {
+                    showToast('تم رفع هذه الصورة بالفعل.', true);
                 }
             }
         }
