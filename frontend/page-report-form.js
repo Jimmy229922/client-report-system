@@ -157,7 +157,7 @@ function getCommonReportData(form) {
 
 function getReportText(reportType, form) {
     const common = getCommonReportData(form);
-    const mentions = '\n\n@Mudarballoul\n@batoulhassan';
+    const mentions = '\n@Mudarballoul\n@batoulhassan';
 
     const reportTypeMap = {
         'Suspicious Report': { title: 'suspicious', hash: '#suspicious' },
