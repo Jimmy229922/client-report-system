@@ -267,8 +267,8 @@ app.post('/api/send-report', verifyToken, upload.array('images', 3), async (req,
             footer = footer.replace(/#account_transfer\s*/g, '').trim();
         }
 
-        // Conditionally add the author to the report title. Only add if not the admin.
-        const authorSuffix = (userId !== 1 && username) ? ` (بواسطة: ${username})` : '';
+        // Always add the author to the report title.
+        const authorSuffix = username ? ` (بواسطة: ${username})` : '';
         const reportTitle = mainText.split('\n')[0];
         const reportBody = mainText.substring(reportTitle.length).trim();
         

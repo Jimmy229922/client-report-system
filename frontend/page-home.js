@@ -238,10 +238,25 @@ function renderWeeklyChart(weeklyData) {
     }).reverse();
 
     const chartLabels = last24Hours.map(date => date.toLocaleTimeString('ar-EG', { hour: 'numeric', hour12: true }));
+    
+    // Create a lookup map for efficiency and to handle potential invalid dates safely
+    const dataMap = new Map();
+    if (Array.isArray(weeklyData)) {
+        for (const item of weeklyData) {
+            if (item && item.hour_timestamp) {
+                try {
+                    const key = date_trunc('hour', new Date(item.hour_timestamp)).toISOString();
+                    dataMap.set(key, item.count);
+                } catch (e) {
+                    console.warn(`Skipping invalid date from API: ${item.hour_timestamp}`);
+                }
+            }
+        }
+    }
+
     const chartData = last24Hours.map(date => {
         const dateStr = date.toISOString();
-        const found = weeklyData.find(d => date_trunc('hour', new Date(d.hour_timestamp)).toISOString() === dateStr);
-        return found ? found.count : 0;
+        return dataMap.get(dateStr) || 0;
     });
 
     weeklyChart = new Chart(ctx, {

@@ -763,6 +763,18 @@ main { padding: 2rem; max-width: 1200px; margin: 2rem auto; animation: fadeIn 0.
     font-family: 'Courier New', Courier, monospace;
     font-weight: bold;
 }
+
+/* --- Custom Confirm Modal --- */
+.modal-actions {
+    display: flex;
+    gap: 1rem;
+    margin-top: 1.5rem;
+    justify-content: flex-end;
+}
+.modal-actions button {
+    width: auto;
+    padding: 0.5rem 1.5rem;
+}
 .search-container i {
     position: absolute;
     left: 1rem;

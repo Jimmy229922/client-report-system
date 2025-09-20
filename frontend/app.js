@@ -1,6 +1,5 @@
 import { handleTheme, updateNavbarUser, showToast } from './ui.js';
 import { navigate } from './router.js';
-import { fetchWithAuth } from './api.js';
 import { initIpWidget } from './ip-widget.js';
 
 function handleImagePreviewModal() {
@@ -47,6 +46,38 @@ function setupUIForUser() {
             }
         }
     }
+}
+
+function showConfirmModal(title, text) {
+    return new Promise((resolve) => {
+        const modal = document.getElementById('confirm-modal');
+        const titleEl = document.getElementById('confirm-modal-title');
+        const textEl = document.getElementById('confirm-modal-text');
+        const okBtn = document.getElementById('confirm-modal-ok-btn');
+        const cancelBtn = document.getElementById('confirm-modal-cancel-btn');
+        const closeBtn = document.getElementById('confirm-modal-close-btn');
+
+        titleEl.textContent = title;
+        textEl.textContent = text;
+
+        const closeModal = (result) => {
+            modal.style.display = 'none';
+            okBtn.onclick = null;
+            cancelBtn.onclick = null;
+            closeBtn.onclick = null;
+            modal.onclick = null;
+            resolve(result);
+        };
+
+        okBtn.onclick = () => closeModal(true);
+        cancelBtn.onclick = () => closeModal(false);
+        closeBtn.onclick = () => closeModal(false);
+        modal.onclick = (e) => {
+            if (e.target === modal) closeModal(false);
+        };
+
+        modal.style.display = 'flex';
+    });
 }
 
 function showUpdateOverlay(initialMessage = 'جاري البحث عن تحديثات...') {
@@ -138,7 +169,7 @@ async function handleAppUpdate() {
     const closeBtn = document.getElementById('close-update-overlay-btn');
 
     try {
-        const result = await fetchWithAuth('/api/system/update', { method: 'POST' });
+        const result = await (await fetch('/api/system/update', { method: 'POST' })).json();
 
         statusEl.textContent = result.message;
         logEl.textContent = result.log || 'لا يوجد سجلات لعرضها.';
@@ -163,10 +194,14 @@ async function handleAppUpdate() {
 async function loadAppVersion() {
     try {
         const response = await fetch('/api/version');
-        const data = await response.json();
-        const versionSpan = document.getElementById('app-version');
-        if (versionSpan && data.version) {
-            versionSpan.textContent = `v${data.version}`;
+        if (response.ok && response.headers.get('Content-Type')?.includes('application/json')) {
+            const data = await response.json();
+            const versionSpan = document.getElementById('app-version');
+            if (versionSpan && data.version) {
+                versionSpan.textContent = `v${data.version}`;
+            }
+        } else {
+            console.warn(`Failed to load app version. Status: ${response.status}`);
         }
     } catch (error) {
         console.error('Failed to load app version:', error);
@@ -183,8 +218,9 @@ export function initApp() {
         updateBtn.addEventListener('click', handleAppUpdate);
     }
 
-    document.getElementById('logout-btn').addEventListener('click', () => {
-        if (confirm('هل أنت متأكد من أنك تريد تسجيل الخروج؟')) {
+    document.getElementById('logout-btn').addEventListener('click', async () => {
+        const confirmed = await showConfirmModal('تأكيد تسجيل الخروج', 'هل أنت متأكد من أنك تريد تسجيل الخروج؟');
+        if (confirmed) {
             localStorage.removeItem('token');
             localStorage.removeItem('user'); // Clear user info on logout
             location.reload();
