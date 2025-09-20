@@ -44,7 +44,7 @@ export async function fetchAndRenderHomePageData() {
             console.error('Failed to fetch recent reports:', recentReportsResult.reason);
             const recentReportsContainer = document.getElementById('recent-reports-container');
             if (recentReportsContainer) {
-                recentReportsContainer.innerHTML = '<p>فشل تحميل أحدث التقارير.</p>';
+                recentReportsContainer.innerHTML = `<p>فشل تحميل أحدث التقارير.</p><p class="error-details">${recentReportsResult.reason.message}</p>`;
             }
         }
 
@@ -55,7 +55,7 @@ export async function fetchAndRenderHomePageData() {
             console.error('Failed to fetch top contributor:', topContributorResult.reason);
             const topContributorContainer = document.getElementById('top-contributor-container');
             if (topContributorContainer) {
-                topContributorContainer.innerHTML = '<p>فشل تحميل المساهم الأعلى.</p>';
+                topContributorContainer.innerHTML = `<p>فشل تحميل المساهم الأعلى.</p><p class="error-details">${topContributorResult.reason.message}</p>`;
             }
         }
     } catch (error) { // This catch is now for truly unexpected errors

@@ -411,6 +411,12 @@ main { padding: 2rem; max-width: 1200px; margin: 2rem auto; animation: fadeIn 0.
     cursor: move;
 }
 
+.error-details {
+    font-size: 0.8rem;
+    color: #aaa;
+    margin-top: 0.5rem;
+}
+
 .widget-header h3 {
     margin: 0;
     font-size: 1rem;

@@ -74,7 +74,7 @@ async function fetchAndRenderArchive(searchTerm = '') {
         }
     } catch (error) {
         console.error('Failed to fetch archive:', error);
-        archiveGrid.innerHTML = '<p>فشل تحميل الأرشيف. تأكد من أن السيرفر يعمل.</p>';
+        archiveGrid.innerHTML = `<p>فشل تحميل الأرشيف.</p><p class="error-details">${error.message}</p>`;
     }
 }
 
