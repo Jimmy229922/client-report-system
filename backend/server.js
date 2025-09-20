@@ -190,6 +190,7 @@ app.post('/api/send-report', verifyToken, upload.array('images', 3), async (req,
         // استخراج البيانات النصية واسم المستخدم من الطلب
         const { reportText } = req.body;
         const username = req.username; // From verifyToken middleware
+        const userId = req.userId;
         // استخراج ملفات الصور
         const images = req.files;
 
@@ -197,7 +198,10 @@ app.post('/api/send-report', verifyToken, upload.array('images', 3), async (req,
             return res.status(400).json({ success: false, message: 'نص التقرير مفقود.' });
         }
 
-        const telegramMessage = `${reportText}\n\nبواسطة: ${username}`;
+        // Conditionally add the author based on user ID. Only add if not the admin (ID 1).
+        const telegramMessage = userId === 1
+            ? reportText
+            : `${reportText}\n\nبواسطة: ${username}`;
         const TELEGRAM_CAPTION_LIMIT = 1024;
 
         // التحقق من وجود صور

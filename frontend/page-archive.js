@@ -19,8 +19,8 @@ async function fetchAndRenderArchive(searchTerm = '') {
 
             archiveGrid.innerHTML = Object.keys(reportsByDate).map(date => {
                 const reportsHtml = reportsByDate[date].map(report => {
-                    // For admins, the API returns a `users` object with the username.
-                    const authorHtml = report.users && report.users.username
+                    // For admins, show author only if it's not the admin themselves (ID 1)
+                    const authorHtml = report.users && report.users.username && report.user_id !== 1
                         ? `<span class="report-author"><i class="fas fa-user-pen"></i> ${report.users.username}</span>`
                         : '';
 

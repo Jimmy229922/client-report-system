@@ -36,16 +36,27 @@ async function fetchCountryFromIpapiCo(ip) {
     return countryName;
 }
 
+// --- Self-attaching logic ---
+
+// We use a global variable to avoid re-attaching listeners to the same element.
+let lastIpInputHandled = null;
+
 function setupIpWidget() {
     const ipInput = document.getElementById('ip-input');
     const countryOutput = document.getElementById('country-output');
 
     if (!ipInput || !countryOutput) {
-        console.log('IP widget elements not found on this page.');
+        // This is expected if the current page doesn't have the IP widget.
         return;
     }
 
-    ipInput.addEventListener('input', debounce(async (e) => {
+    // If we've already attached a listener to this specific element, do nothing.
+    // This prevents issues if the observer fires multiple times for the same page load.
+    if (lastIpInputHandled === ipInput) {
+        return;
+    }
+
+    const debouncedIpCheck = debounce(async (e) => {
         const ip = e.target.value.trim();
 
         // Simple regex to validate IP format
@@ -72,5 +83,28 @@ function setupIpWidget() {
                 countryOutput.textContent = 'فشل البحث';
             }
         }
-    }, 500)); // 500ms delay after user stops typing
+    }, 500); // 500ms delay after user stops typing
+
+    ipInput.addEventListener('input', debouncedIpCheck);
+    lastIpInputHandled = ipInput; // Remember the element we've handled.
+    console.log('IP to Country widget initialized on new element.');
 }
+
+// Use a MutationObserver to watch for page changes inside #main-content.
+// This is more robust than assuming when a page will be rendered.
+document.addEventListener('DOMContentLoaded', () => {
+    const mainContent = document.getElementById('main-content');
+    
+    if (mainContent) {
+        const observer = new MutationObserver(() => {
+            // When content changes, check if the IP widget is present and set it up.
+            setupIpWidget();
+        });
+
+        // Start observing the target node for child node changes.
+        observer.observe(mainContent, { childList: true, subtree: true });
+        
+        // Also run it once initially in case the first page has the widget.
+        setupIpWidget();
+    }
+});
