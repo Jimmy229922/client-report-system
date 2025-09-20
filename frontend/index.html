@@ -144,7 +144,25 @@
         </div>
     </div>
 
+    <!-- Quick IP Check Modal -->
+    <div id="quick-ip-modal" class="modal" style="display: none;">
+        <div class="modal-dialog form-container" style="max-width: 450px;">
+            <div class="modal-header">
+                <h2 class="page-title" style="margin-bottom: 0; font-size: 1.8rem;">فحص سريع للـ IP</h2>
+                <button class="close-btn" id="quick-ip-modal-close-btn">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="quick-ip-input">أدخل عنوان IP</label>
+                    <input type="text" id="quick-ip-input" placeholder="1.2.3.4" autocomplete="off">
+                </div>
+                <div id="quick-ip-result" class="widget-result" style="display: none;"></div>
+            </div>
+        </div>
+    </div>
+
     <script src="main.js" type="module"></script>
-    <script src="ip-widget.js"></script>
+    <!-- IP-to-Country Library for fast, local lookups -->
+    <script src="https://cdn.jsdelivr.net/npm/ip-to-country-lite/ip-to-country-lite.min.js"></script>
 </body>
 </html>

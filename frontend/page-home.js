@@ -173,17 +173,14 @@ export function renderHomePage() {
             <p>نظرة عامة سريعة على نشاط النظام والإحصائيات الرئيسية.</p>
         </div>
         <div class="home-grid">
-            <div class="stats-column">
-                <h3><i class="fas fa-tachometer-alt"></i> إحصائيات التقارير</h3>
-                <div id="stats-grid" class="stats-grid">
-                    <div class="spinner"></div>
-                </div>
-            </div>
             <div class="chart-card">
                 <h3><i class="fas fa-chart-bar"></i> النشاط الأسبوعي</h3>
                 <div class="chart-container">
                     <canvas id="weekly-chart"></canvas>
                 </div>
+            </div>
+            <div id="stats-grid" class="stats-grid">
+                <div class="spinner"></div>
             </div>
         </div>
     `;

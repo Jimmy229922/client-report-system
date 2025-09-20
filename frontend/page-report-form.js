@@ -365,71 +365,33 @@ export function initCreateReportPage() {
     });
 }
 
-// --- Self-attaching IP Lookup for Report Forms ---
-
-// Helper function to delay execution
-function debounce(func, delay) {
-    let timeout;
-    return function(...args) {
-        clearTimeout(timeout);
-        timeout = setTimeout(() => func.apply(this, args), delay);
-    };
-}
-
-async function handleIpLookup(ipInput) {
+function handleLocalIpLookup(ipInput) {
     const form = ipInput.closest('form');
     if (!form) return;
 
     const ip = ipInput.value.trim();
     const countryInput = form.querySelector('#country');
     const countryIcon = form.querySelector('#country-icon');
-
     if (!countryInput || !countryIcon) return;
 
-    // Reset fields if IP is invalid
     if (!/^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$/.test(ip)) {
         countryInput.value = "";
         countryIcon.className = 'fas fa-globe';
         countryIcon.innerHTML = '';
         return;
     }
-
-    countryInput.value = "جاري البحث...";
-    countryIcon.className = 'fas fa-spinner fa-spin';
-    countryIcon.innerHTML = '';
-
-    try {
-        // Primary API: ip-api.com
-        const response = await fetch(`https://ip-api.com/json/${ip}?fields=status,country,countryCode,message`);
-        const data = await response.json();
-        if (data.status === 'success' && data.countryCode) {
-            countryInput.value = data.country;
-            countryIcon.className = 'fas fa-globe';
-            countryIcon.innerHTML = `<img src="https://flagcdn.com/w20/${data.countryCode.toLowerCase()}.png" alt="${data.countryCode}">`;
-            return;
-        }
-        throw new Error(data.message || 'Primary API failed');
-    } catch (error1) {
-        console.warn('Primary IP lookup failed:', error1.message, 'Trying fallback...');
-        try {
-            // Fallback API: ipapi.co
-            const response = await fetch(`https://ipapi.co/${ip}/json/`);
-            const data = await response.json();
-            if (data.error) {
-                countryInput.value = data.reason || 'IP غير صالح';
-                countryIcon.className = 'fas fa-question-circle';
-                countryIcon.innerHTML = '';
-            } else {
-                countryInput.value = data.country_name;
-                countryIcon.className = 'fas fa-globe';
-                countryIcon.innerHTML = `<img src="https://flagcdn.com/w20/${data.country_code.toLowerCase()}.png" alt="${data.country_code}">`;
-            }
-        } catch (error2) {
-            console.error('Fallback IP lookup also failed:', error2.message);
-            countryInput.value = 'فشل البحث عن الدولة';
-            countryIcon.className = 'fas fa-exclamation-triangle';
-            countryIcon.innerHTML = '';
-        }
+    
+    // Use the globally available ipToCountry function from the library
+    const countryCode = window.ipToCountry.lookup(ip);
+    if (countryCode) {
+        // The library only gives the code, we need a way to get the name.
+        // A simple mapping can be used, or we can use Intl.DisplayNames
+        const regionNames = new Intl.DisplayNames(['ar'], { type: 'region' });
+        countryInput.value = regionNames.of(countryCode) || countryCode;
+        countryIcon.innerHTML = `<img src="https://flagcdn.com/w20/${countryCode.toLowerCase()}.png" alt="${countryCode}">`;
+    } else {
+        countryInput.value = 'غير معروف';
+        countryIcon.innerHTML = '';
     }
 }
 
@@ -440,7 +402,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const observer = new MutationObserver(() => {
             const ipInput = document.getElementById('ip-input');
             if (ipInput && !ipInput.dataset.listenerAttached) {
-                ipInput.addEventListener('input', debounce(() => handleIpLookup(ipInput), 300));
+                ipInput.addEventListener('input', () => handleLocalIpLookup(ipInput));
                 ipInput.dataset.listenerAttached = 'true';
             }
         });

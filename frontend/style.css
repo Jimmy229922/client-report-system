@@ -686,7 +686,7 @@ main { padding: 2rem; max-width: 1200px; margin: 2rem auto; animation: fadeIn 0.
     flex: 1; /* Take up available space */
     min-width: 300px;
     position: relative;
-    height: 450px; /* A fixed height for consistency */
+    height: 350px; /* Adjust height for the new layout */
 }
 
 /* --- Home Page Layout --- */
@@ -1178,4 +1178,12 @@ main { padding: 2rem; max-width: 1200px; margin: 2rem auto; animation: fadeIn 0.
     margin-top: 4px;
     font-size: 0.8rem;
     min-height: 1em; /* Reserve space to prevent layout shift */
+}
+
+/* --- Quick IP Modal Specifics --- */
+#quick-ip-result {
+    margin-top: 1rem;
+    padding: 1.5rem;
+    min-height: 80px;
+    font-size: 1.5rem;
 }
