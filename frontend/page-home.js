@@ -169,7 +169,7 @@ function renderRecentReports(reports) {
                     <a href="#archive" class="recent-report-title">${report.report_text.split('\n')[0]}</a>
                     <span class="recent-report-time">${timeAgo(report.timestamp)}</span>
                 </div>
-                ${authorHtml ? `<div class="recent-report-author"></div>` : ''}
+                ${authorHtml ? `<div class="recent-report-author">${authorHtml}</div>` : ''}
             </div>
         `;
     }).join('');
