@@ -1,7 +1,7 @@
 import { showToast } from './ui.js';
 
 export function initIpWidget() {
-    const toggleBtn = document.getElementById('quick-ip-check-btn');
+    const openBtn = document.getElementById('quick-ip-check-btn');
     const widget = document.getElementById('ip-widget');
     const header = document.querySelector('.widget-header');
     const closeBtn = document.getElementById('widget-close-btn');
@@ -11,18 +11,17 @@ export function initIpWidget() {
     const historyContainer = document.getElementById('widget-history-container');
     const historyList = document.getElementById('widget-history-list');
 
-    if (!toggleBtn || !widget || !header || !closeBtn || !pinBtn || !ipInput || !resultDiv || !historyContainer || !historyList) {
+    if (!openBtn || !widget || !header || !closeBtn || !pinBtn || !ipInput || !resultDiv || !historyContainer || !historyList) {
         console.warn('IP Widget elements not found.');
         return;
     }
 
     let isPinned = false;
-    let isMonitoring = false;
-    let lastCheckedIp = null;
     let history = [];
 
     const showWidget = () => {
         widget.classList.add('show');
+        setTimeout(() => ipInput.focus(), 50);
     };
 
     const hideWidget = () => {
@@ -82,60 +81,12 @@ export function initIpWidget() {
         }
     };
 
-    // --- Clipboard Monitoring ---
-    let lastCheckTime = 0;
-    const checkInterval = 2000; // 2 seconds
-
-    const clipboardLoop = async (timestamp) => {
-        if (!isMonitoring) return;
-
-        if (timestamp - lastCheckTime > checkInterval) {
-            lastCheckTime = timestamp;
-
-            if (document.hasFocus()) {
-                try {
-                    const text = await navigator.clipboard.readText();
-                    const potentialIp = text.trim();
-                    
-                    if (/^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$/.test(potentialIp) && potentialIp !== lastCheckedIp) {
-                        lastCheckedIp = potentialIp;
-                        showWidget();
-                        ipInput.value = potentialIp;
-                        performLookup(potentialIp);
-                    }
-                } catch (err) {
-                    if (err.name !== 'NotFoundError') {
-                        console.warn('Could not read clipboard:', err.name);
-                    }
-                }
-            }
-        }
-        
-        window.requestAnimationFrame(clipboardLoop);
-    };
-
-    const startMonitoring = () => {
-        if (isMonitoring) return;
-        isMonitoring = true;
+    // --- Event Listeners ---
+    openBtn.addEventListener('click', (e) => {
+        e.stopPropagation(); // Prevent the document click listener from firing immediately
+        // If the widget is already shown, this click does nothing.
+        // If it's hidden, it shows it.
         showWidget();
-        showToast('تم تفعيل مراقبة الحافظة.');
-        window.requestAnimationFrame(clipboardLoop);
-    };
-
-    const stopMonitoring = () => {
-        if (!isMonitoring) return;
-        isMonitoring = false;
-        showToast('تم إيقاف مراقبة الحافظة.');
-    };
-
-    toggleBtn.addEventListener('click', () => {
-        if (isMonitoring) {
-            stopMonitoring();
-        } else {
-            startMonitoring();
-        }
-        toggleBtn.classList.toggle('active', isMonitoring);
-        toggleBtn.title = isMonitoring ? 'إيقاف مراقبة الحافظة' : 'تفعيل مراقبة الحافظة';
     });
 
     closeBtn.addEventListener('click', hideWidget);
@@ -148,7 +99,6 @@ export function initIpWidget() {
 
     ipInput.addEventListener('input', () => {
         performLookup(ipInput.value.trim());
-        lastCheckedIp = ipInput.value.trim();
     });
 
     // --- Draggable Widget Logic ---
@@ -175,7 +125,7 @@ export function initIpWidget() {
 
     // --- Auto-hide on outside click ---
     document.addEventListener('click', (e) => {
-        if (!isPinned && widget.classList.contains('show') && !widget.contains(e.target) && !toggleBtn.contains(e.target)) {
+        if (!isPinned && widget.classList.contains('show') && !widget.contains(e.target) && !openBtn.contains(e.target)) {
             hideWidget();
         }
     });

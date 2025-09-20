@@ -701,8 +701,21 @@ app.post('/api/system/update', verifyToken, (req, res) => {
 
 // Endpoint to get the application version from package.json
 app.get('/api/version', (req, res) => {
-    const packageJson = require('../package.json');
-    res.json({ version: packageJson.version });
+    try {
+        // Use path.join with __dirname for a more robust and absolute path.
+        // The package.json is in the same directory as server.js.
+        const packageJsonPath = path.join(__dirname, 'package.json');
+        const packageJson = require(packageJsonPath);
+        if (packageJson && packageJson.version) {
+            res.json({ version: packageJson.version });
+        } else {
+            throw new Error('Version property not found in package.json');
+        }
+    } catch (error) {
+        console.error("Error reading package.json for version:", error.message);
+        // Send a specific error instead of crashing the server
+        res.status(500).json({ error: "Could not determine application version." });
+    }
 });
 
 // 7. Fallback for Frontend Routing

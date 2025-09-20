@@ -81,24 +81,6 @@ function updateSystemHealth() {
         });
 }
 
-function updateSystemHealth() {
-    const container = document.getElementById('system-health-container');
-    if (!container) {
-        // If the container isn't on the page, stop checking
-        if (healthCheckInterval) clearInterval(healthCheckInterval);
-        return;
-    };
-
-    fetchWithAuth('/api/health')
-        .then(result => {
-            if (result.status === 'ok') renderSystemHealth(true);
-            else renderSystemHealth(false);
-        })
-        .catch(() => {
-            renderSystemHealth(false);
-        });
-}
-
 function renderRecentReports(reports) {
     const container = document.getElementById('recent-reports-container');
     if (!container) return;
@@ -437,9 +419,11 @@ async function loadAndDisplayVersion() {
             }
         } else {
             console.warn(`Failed to load app version. Status: ${response.status}`);
+            versionSpan.textContent = 'v?.?.?';
         }
     } catch (error) {
         console.error('Failed to load app version:', error);
+        versionSpan.textContent = 'v?.?.?';
     }
 }
 
