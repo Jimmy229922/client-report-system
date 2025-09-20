@@ -42,32 +42,53 @@ function renderStatCards(stats) {
 
     statsGrid.innerHTML = `
         <div class="stat-card">
-            <h3>إجمالي التقارير</h3>
-            <p>${stats.total || 0}</p>
+            <div class="stat-card-icon"><i class="fas fa-file-alt"></i></div>
+            <div class="stat-card-info">
+                <h3>إجمالي التقارير <small>Total Reports</small></h3>
+                <p>${stats.total || 0}</p>
+            </div>
         </div>
         <div class="stat-card">
-            <h3>Suspicious</h3>
-            <p>${stats.suspicious || 0}</p>
+            <div class="stat-card-icon"><i class="fas fa-user-secret"></i></div>
+            <div class="stat-card-info">
+                <h3>تقارير مشبوهة <small>Suspicious</small></h3>
+                <p>${stats.suspicious || 0}</p>
+            </div>
         </div>
         <div class="stat-card">
-            <h3>Deposit</h3>
-            <p>${stats.deposit || 0}</p>
+            <div class="stat-card-icon"><i class="fas fa-money-bill-wave"></i></div>
+            <div class="stat-card-info">
+                <h3>إيداعات <small>Deposit</small></h3>
+                <p>${stats.deposit || 0}</p>
+            </div>
         </div>
         <div class="stat-card">
-            <h3>New Positions</h3>
-            <p>${stats.new_positions || 0}</p>
+            <div class="stat-card-icon"><i class="fas fa-chart-line"></i></div>
+            <div class="stat-card-info">
+                <h3>صفقات جديدة <small>New Position</small></h3>
+                <p>${stats.new_positions || 0}</p>
+            </div>
         </div>
         <div class="stat-card">
-            <h3>Credit Out</h3>
-            <p>${stats.credit_out || 0}</p>
+            <div class="stat-card-icon"><i class="fas fa-credit-card"></i></div>
+            <div class="stat-card-info">
+                <h3>سحب رصيد <small>Credit Out</small></h3>
+                <p>${stats.credit_out || 0}</p>
+            </div>
         </div>
         <div class="stat-card">
-            <h3>تحويل حسابات</h3>
-            <p>${stats.account_transfer || 0}</p>
+            <div class="stat-card-icon"><i class="fas fa-exchange-alt"></i></div>
+            <div class="stat-card-info">
+                <h3>تحويل حسابات <small>Account Transfer</small></h3>
+                <p>${stats.account_transfer || 0}</p>
+            </div>
         </div>
         <div class="stat-card">
-            <h3>PAYOUTS</h3>
-            <p>${stats.payouts || 0}</p>
+            <div class="stat-card-icon"><i class="fas fa-hand-holding-usd"></i></div>
+            <div class="stat-card-info">
+                <h3>دفعات <small>PAYOUTS</small></h3>
+                <p>${stats.payouts || 0}</p>
+            </div>
         </div>
     `;
 }
@@ -83,7 +104,7 @@ function renderDistributionChart(stats) {
     const labels = [
         'Suspicious',
         'Deposit',
-        'New Positions',
+        'New Position',
         'Credit Out',
         'تحويل حسابات',
         'PAYOUTS'

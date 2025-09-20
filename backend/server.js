@@ -323,8 +323,8 @@ app.get('/api/stats', verifyToken, async (req, res) => {
     const queries = [
         supabase.from('reports').select('*', { count: 'exact', head: true }),
         supabase.from('reports').select('*', { count: 'exact', head: true }).like('report_text', '%#suspicious%'),
-        supabase.from('reports').select('*', { count: 'exact', head: true }).like('report_text', '%#deposit_percentages%'),
-        supabase.from('reports').select('*', { count: 'exact', head: true }).like('report_text', '%#new-positions%'),
+        supabase.from('reports').select('*', { count: 'exact', head: true }).like('report_text', '%#deposit%'),
+        supabase.from('reports').select('*', { count: 'exact', head: true }).like('report_text', '%#new-position%'),
         supabase.from('reports').select('*', { count: 'exact', head: true }).like('report_text', '%#credit-out%'),
         supabase.from('reports').select('*', { count: 'exact', head: true }).like('report_text', '%تقرير تحويل الحسابات%'),
         supabase.from('reports').select('*', { count: 'exact', head: true }).like('report_text', '%#payouts%')
