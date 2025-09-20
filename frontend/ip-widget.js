@@ -1,21 +1,24 @@
+import { showToast } from './ui.js';
+
 export function initIpWidget() {
-    const openBtn = document.getElementById('quick-ip-check-btn');
+    const toggleBtn = document.getElementById('quick-ip-check-btn');
     const widget = document.getElementById('ip-widget');
     const closeBtn = document.getElementById('widget-close-btn');
     const pinBtn = document.getElementById('pin-widget-btn');
     const ipInput = document.getElementById('widget-ip-input');
     const resultDiv = document.getElementById('widget-ip-result');
 
-    if (!openBtn || !widget || !closeBtn || !pinBtn || !ipInput || !resultDiv) {
+    if (!toggleBtn || !widget || !closeBtn || !pinBtn || !ipInput || !resultDiv) {
         console.warn('IP Widget elements not found.');
         return;
     }
 
     let isPinned = false;
+    let isMonitoring = false;
+    let clipboardInterval = null;
 
     const showWidget = () => {
         widget.classList.add('show');
-        setTimeout(() => ipInput.focus(), 50);
     };
 
     const hideWidget = () => {
@@ -29,22 +32,13 @@ export function initIpWidget() {
         resultDiv.innerHTML = '<span class="widget-placeholder">انسخ IP أو أدخله يدوياً</span>';
     };
 
-    openBtn.addEventListener('click', showWidget);
-    closeBtn.addEventListener('click', hideWidget);
-
-    pinBtn.addEventListener('click', () => {
-        isPinned = !isPinned;
-        pinBtn.classList.toggle('pinned', isPinned);
-        pinBtn.title = isPinned ? 'إلغاء تثبيت الأداة' : 'تثبيت الأداة';
-    });
-
     const performLookup = (ip) => {
         if (!/^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$/.test(ip)) {
             resetWidget();
             return;
         }
 
-        // Use the globally available ipToCountry function
+        // Use the globally available ipToCountry function from the library
         const countryCode = window.ipToCountry.lookup(ip);
 
         if (countryCode) {
@@ -59,13 +53,9 @@ export function initIpWidget() {
         }
     };
 
-    ipInput.addEventListener('input', () => {
-        performLookup(ipInput.value.trim());
-    });
-
     // --- Clipboard Monitoring ---
     const checkClipboard = async () => {
-        if (!document.hasFocus()) {
+        if (!isMonitoring || !document.hasFocus()) {
             return;
         }
         try {
@@ -78,31 +68,50 @@ export function initIpWidget() {
                 performLookup(potentialIp);
             }
         } catch (err) {
-            // This can happen if the clipboard is empty or doesn't contain text.
-            // Or if the user hasn't granted permission. We can ignore these errors.
             if (err.name !== 'NotFoundError') {
                 console.warn('Could not read clipboard:', err.name);
             }
         }
     };
 
-    // Check clipboard periodically when the window is focused
-    let clipboardInterval;
-    window.addEventListener('focus', () => {
-        checkClipboard(); // Check immediately on focus
-        if (!clipboardInterval) {
-            clipboardInterval = setInterval(checkClipboard, 2000); // Then check every 2 seconds
+    const startMonitoring = () => {
+        if (clipboardInterval) return;
+        showToast('تم تفعيل مراقبة الحافظة.');
+        checkClipboard(); // Check immediately
+        clipboardInterval = setInterval(checkClipboard, 2000);
+    };
+
+    const stopMonitoring = () => {
+        if (!clipboardInterval) return;
+        showToast('تم إيقاف مراقبة الحافظة.');
+        clearInterval(clipboardInterval);
+        clipboardInterval = null;
+    };
+
+    toggleBtn.addEventListener('click', () => {
+        isMonitoring = !isMonitoring;
+        toggleBtn.classList.toggle('active', isMonitoring);
+        toggleBtn.title = isMonitoring ? 'إيقاف مراقبة الحافظة' : 'تفعيل مراقبة الحافظة';
+
+        if (isMonitoring) {
+            startMonitoring();
+        } else {
+            stopMonitoring();
         }
     });
 
-    window.addEventListener('blur', () => {
-        if (clipboardInterval) {
-            clearInterval(clipboardInterval);
-            clipboardInterval = null;
-        }
+    closeBtn.addEventListener('click', hideWidget);
+
+    pinBtn.addEventListener('click', () => {
+        isPinned = !isPinned;
+        pinBtn.classList.toggle('pinned', isPinned);
+        pinBtn.title = isPinned ? 'إلغاء تثبيت الأداة' : 'تثبيت الأداة';
+    });
+
+    ipInput.addEventListener('input', () => {
+        performLookup(ipInput.value.trim());
     });
 
     // Initial setup
     resetWidget();
-    clipboardInterval = setInterval(checkClipboard, 2000);
 }
