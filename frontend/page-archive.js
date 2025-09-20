@@ -18,24 +18,34 @@ async function fetchAndRenderArchive(searchTerm = '') {
             }, {});
 
             archiveGrid.innerHTML = Object.keys(reportsByDate).map(date => {
-                const reportsHtml = reportsByDate[date].map(report => `
-                    <div class="archive-card" id="report-card-${report.id}">
-                        <div class="archive-card-header">
-                            <strong>${report.report_text.split('\n')[0]}</strong>
-                            <span>${new Date(report.timestamp).toLocaleTimeString('ar-EG')}</span>
-                        </div>
-                        <div class="archive-card-body">${report.report_text}</div>
-                        <div class="archive-card-footer">
-                            <div class="archive-image-thumbnails">
-                                ${report.image_count > 0 ? `<i class="fas fa-images"></i> <span>${report.image_count}</span>` : ''}
+                const reportsHtml = reportsByDate[date].map(report => {
+                    // For admins, the API returns a `users` object with the username.
+                    const authorHtml = report.users && report.users.username
+                        ? `<span class="report-author"><i class="fas fa-user-pen"></i> ${report.users.username}</span>`
+                        : '';
+
+                    return `
+                        <div class="archive-card" id="report-card-${report.id}">
+                            <div class="archive-card-header">
+                                <strong>${report.report_text.split('\n')[0]}</strong>
+                                <div class="header-meta">
+                                    ${authorHtml}
+                                    <span>${new Date(report.timestamp).toLocaleTimeString('ar-EG')}</span>
+                                </div>
                             </div>
-                            <div class="archive-card-actions">
-                                <button class="archive-btn copy" data-report-text="${report.report_text.replace(/"/g, '&quot;')}"><i class="fas fa-copy"></i></button>
-                                <button class="archive-btn delete" data-id="${report.id}"><i class="fas fa-trash"></i></button>
+                            <div class="archive-card-body">${report.report_text}</div>
+                            <div class="archive-card-footer">
+                                <div class="archive-image-thumbnails">
+                                    ${report.image_count > 0 ? `<i class="fas fa-images"></i> <span>${report.image_count}</span>` : ''}
+                                </div>
+                                <div class="archive-card-actions">
+                                    <button class="archive-btn copy" data-report-text="${report.report_text.replace(/"/g, '&quot;')}"><i class="fas fa-copy"></i></button>
+                                    <button class="archive-btn delete" data-id="${report.id}"><i class="fas fa-trash"></i></button>
+                                </div>
                             </div>
                         </div>
-                    </div>
-                `).join('');
+                    `;
+                }).join('');
 
                 return `
                     <div class="accordion-group">

@@ -405,6 +405,28 @@ main { padding: 2rem; max-width: 1200px; margin: 2rem auto; animation: fadeIn 0.
     color: #aaa;
 }
 
+.archive-card-header strong {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    flex-grow: 1;
+}
+
+.header-meta {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex-shrink: 0; /* Prevent this part from shrinking */
+}
+
+.report-author {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.8em;
+    color: var(--accent-color);
+}
+
 .archive-card-actions {
     display: flex;
     gap: 1rem;

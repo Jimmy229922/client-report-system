@@ -69,6 +69,7 @@ const verifyToken = (req, res, next) => {
         
         // if everything good, save to request for use in other routes
         req.userId = decoded.id;
+        req.username = decoded.username;
         next();
     });
 };
@@ -186,8 +187,9 @@ app.put('/api/profile/details', verifyToken, async (req, res) => {
 // 6. Protected API Endpoints
 app.post('/api/send-report', verifyToken, upload.array('images', 3), async (req, res) => {
     try {
-        // استخراج البيانات النصية من الطلب
+        // استخراج البيانات النصية واسم المستخدم من الطلب
         const { reportText } = req.body;
+        const username = req.username; // From verifyToken middleware
         // استخراج ملفات الصور
         const images = req.files;
 
@@ -195,6 +197,7 @@ app.post('/api/send-report', verifyToken, upload.array('images', 3), async (req,
             return res.status(400).json({ success: false, message: 'نص التقرير مفقود.' });
         }
 
+        const telegramMessage = `${reportText}\n\nبواسطة: ${username}`;
         const TELEGRAM_CAPTION_LIMIT = 1024;
 
         // التحقق من وجود صور
@@ -210,7 +213,7 @@ app.post('/api/send-report', verifyToken, upload.array('images', 3), async (req,
                 const sentPhotoMessages = await bot.telegram.sendMediaGroup(config.CHAT_ID, mediaGroup);
 
                 // 2. أرسل النص كرسالة رد على أول صورة تم إرسالها
-                await bot.telegram.sendMessage(config.CHAT_ID, reportText, {
+                await bot.telegram.sendMessage(config.CHAT_ID, telegramMessage, {
                     reply_to_message_id: sentPhotoMessages[0].message_id
                 });
             } else {
@@ -219,20 +222,20 @@ app.post('/api/send-report', verifyToken, upload.array('images', 3), async (req,
                 const mediaGroup = images.map((image, index) => ({
                     type: 'photo',
                     media: { source: image.buffer },
-                    caption: index === 0 ? reportText : '',
+                    caption: index === 0 ? telegramMessage : '',
                 }));
                 await bot.telegram.sendMediaGroup(config.CHAT_ID, mediaGroup);
             }
         } else {
             // إذا لم تكن هناك صور، أرسل النص فقط
-            await bot.telegram.sendMessage(config.CHAT_ID, reportText);
+            await bot.telegram.sendMessage(config.CHAT_ID, telegramMessage);
         }
 
         // بعد الإرسال الناجح، قم بحفظ التقرير في قاعدة البيانات
         const imageCount = images ? images.length : 0;
         const { error: insertError } = await supabase
             .from('reports')
-            .insert({ report_text: reportText, image_count: imageCount });
+            .insert({ report_text: reportText, image_count: imageCount, user_id: req.userId });
 
         if (insertError) {
             console.error('Error saving report to database:', insertError.message);
@@ -253,14 +256,23 @@ app.post('/api/send-report', verifyToken, upload.array('images', 3), async (req,
 });
 
 // Endpoint to get all reports
-app.get('/api/reports', verifyToken, async (req, res) => {
+app.get('/api/reports', verifyToken, async (req, res) => { // verifyToken provides req.userId
     const limit = req.query.limit ? parseInt(req.query.limit) : 0;
     const search = req.query.search || '';
+    const isAdmin = req.userId === 1;
 
-    let query = supabase.from('reports').select('*');
+    let query;
+
+    if (isAdmin) {
+        // Admin sees all reports and the username of the creator
+        query = supabase.from('reports').select('*, users(username)');
+    } else {
+        // Regular user sees only their own reports
+        query = supabase.from('reports').select('*').eq('user_id', req.userId);
+    }
 
     if (search) {
-        query = query.like('report_text', `%${search}%`);
+        query = query.ilike('report_text', `%${search}%`); // Use ilike for case-insensitive search
     }
 
     query = query.order('timestamp', { ascending: false });
@@ -281,10 +293,27 @@ app.get('/api/reports', verifyToken, async (req, res) => {
 });
 
 // Endpoint to delete a report
-app.delete('/api/reports/:id', verifyToken, async (req, res) => {
-    const { error, count } = await supabase.from('reports').delete({ count: 'exact' }).eq('id', req.params.id);
-    if (error) {
-        return res.status(500).json({ "error": error.message });
+app.delete('/api/reports/:id', verifyToken, async (req, res) => { // verifyToken provides req.userId
+    const reportId = req.params.id;
+    const userId = req.userId;
+    const isAdmin = userId === 1;
+
+    // First, get the report to check its owner
+    const { data: report, error: fetchError } = await supabase.from('reports').select('user_id').eq('id', reportId).single();
+
+    if (fetchError) {
+        return res.status(404).json({ "error": "التقرير غير موجود." });
+    }
+
+    // Check for permission
+    if (!isAdmin && report.user_id !== userId) {
+        return res.status(403).json({ "error": "ليس لديك صلاحية لحذف هذا التقرير." });
+    }
+
+    // Proceed with deletion
+    const { error: deleteError, count } = await supabase.from('reports').delete({ count: 'exact' }).eq('id', reportId);
+    if (deleteError) {
+        return res.status(500).json({ "error": deleteError.message });
     }
     res.json({ "message": "deleted", changes: count });
 });
