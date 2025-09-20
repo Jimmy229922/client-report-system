@@ -432,7 +432,8 @@ app.delete('/api/users/:id', verifyToken, verifyAdmin, async (req, res) => {
 // Endpoint for self-updating the application
 app.post('/api/system/update', verifyToken, (req, res) => {
     const projectRoot = path.join(__dirname, '..');
-    const command = 'git pull && npm install --prefix backend';
+    // Using `cd` is more reliable across different npm versions and platforms than `--prefix`.
+    const command = 'git pull && cd backend && npm install';
 
     exec(command, { cwd: projectRoot }, (err, stdout, stderr) => {
         if (err) {
