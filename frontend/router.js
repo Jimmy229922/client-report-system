@@ -1,10 +1,9 @@
-import { renderHomePage } from './page-home.js';
+import { renderHomePage, cleanupHomePage } from './page-home.js';
 import { renderArchivePage } from './page-archive.js';
 import { renderUsersPage } from './page-users.js';
 import { renderProfilePage } from './page-profile.js';
 import { createDepositReportPageHTML, createGeneralReportPageHTML, initCreateReportPage } from './page-report-form.js';
 import { showLoader, hideLoader, updateActiveLink } from './ui.js';
-import { fetchAndRenderHomePageData } from './page-home.js'; // Import the function to remove listener
 
 let isFormDirty = false;
 export function setFormDirty(isDirty) {
@@ -35,8 +34,8 @@ export function navigate() {
     }
     setFormDirty(false);
 
-    // Clean up old event listeners before navigating to a new page
-    document.removeEventListener('reportSent', fetchAndRenderHomePageData);
+    // Clean up old event listeners and intervals before navigating to a new page
+    cleanupHomePage();
 
     // Client-side route guard for admin page
     const userStr = localStorage.getItem('user');

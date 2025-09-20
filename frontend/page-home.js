@@ -2,6 +2,7 @@ import { fetchWithAuth } from './api.js';
 import { timeAgo } from './ui.js';
 
 let weeklyChart = null; // To hold the chart instance
+let healthCheckInterval = null;
 
 export async function fetchAndRenderHomePageData() {
     try {
@@ -61,6 +62,24 @@ export async function fetchAndRenderHomePageData() {
     } catch (error) { // This catch is now for truly unexpected errors
         console.error('An unexpected error occurred on the home page:', error);
     }
+}
+
+function updateSystemHealth() {
+    const container = document.getElementById('system-health-container');
+    if (!container) {
+        // If the container isn't on the page, stop checking
+        if (healthCheckInterval) clearInterval(healthCheckInterval);
+        return;
+    };
+
+    fetchWithAuth('/api/health')
+        .then(result => {
+            if (result.status === 'ok') renderSystemHealth(true);
+            else renderSystemHealth(false);
+        })
+        .catch(() => {
+            renderSystemHealth(false);
+        });
 }
 
 function renderRecentReports(reports) {
@@ -322,6 +341,18 @@ export function renderHomePage() {
     `;
     fetchAndRenderHomePageData();
 
+    // Clear any existing interval before setting a new one
+    if (healthCheckInterval) clearInterval(healthCheckInterval);
+    healthCheckInterval = setInterval(updateSystemHealth, 30000); // every 30 seconds
+
     // Listen for the custom event to refresh data in real-time
     document.addEventListener('reportSent', fetchAndRenderHomePageData);
+}
+
+export function cleanupHomePage() {
+    if (healthCheckInterval) {
+        clearInterval(healthCheckInterval);
+        healthCheckInterval = null;
+    }
+    document.removeEventListener('reportSent', fetchAndRenderHomePageData);
 }
