@@ -15,7 +15,7 @@ export function initIpWidget() {
 
     let isPinned = false;
     let isMonitoring = false;
-    let clipboardInterval = null;
+    let lastIp = '';
 
     const showWidget = () => {
         widget.classList.add('show');
@@ -32,24 +32,34 @@ export function initIpWidget() {
         resultDiv.innerHTML = '<span class="widget-placeholder">انسخ IP أو أدخله يدوياً</span>';
     };
 
-    const performLookup = (ip) => {
+    const performLookup = async (ip) => {
         if (!/^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$/.test(ip)) {
             resetWidget();
             return;
         }
 
-        // Use the globally available ipToCountry function from the library
-        const countryCode = window.ipToCountry.lookup(ip);
+        resultDiv.innerHTML = '<span class="widget-placeholder">جارٍ التحميل...</span>';
 
-        if (countryCode) {
-            const regionNames = new Intl.DisplayNames(['ar'], { type: 'region' });
-            const countryName = regionNames.of(countryCode) || countryCode;
-            resultDiv.innerHTML = `
-                <img src="https://flagcdn.com/w40/${countryCode.toLowerCase()}.png" alt="${countryCode}" style="margin-bottom: 0.5rem;">
-                ${countryName}
-            `;
-        } else {
-            resultDiv.innerHTML = 'غير معروف';
+        try {
+            const controller = new AbortController();
+            setTimeout(() => controller.abort(), 2000); // إلغاء بعد 2 ثانية
+
+            // استبدل هنا لو عايز API بدل المكتبة
+            const countryCode = window.ipToCountry.lookup(ip);
+
+            if (countryCode) {
+                const regionNames = new Intl.DisplayNames(['ar'], { type: 'region' });
+                const countryName = regionNames.of(countryCode) || countryCode;
+                resultDiv.innerHTML = `
+                    <img src="https://flagcdn.com/w40/${countryCode.toLowerCase()}.png" alt="${countryCode}" style="margin-bottom: 0.5rem;">
+                    ${countryName}
+                `;
+            } else {
+                resultDiv.innerHTML = 'غير معروف';
+            }
+        } catch (err) {
+            resultDiv.innerHTML = 'خطأ في التحميل';
+            console.warn('Lookup failed:', err);
         }
     };
 
@@ -61,32 +71,36 @@ export function initIpWidget() {
         try {
             const text = await navigator.clipboard.readText();
             const potentialIp = text.trim();
-            // Check if it's a valid IP and different from the current input value
-            if (/^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$/.test(potentialIp) && potentialIp !== ipInput.value) {
+            if (/^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$/.test(potentialIp) && potentialIp !== lastIp) {
                 showWidget();
                 ipInput.value = potentialIp;
-                performLookup(potentialIp);
+                lastIp = potentialIp;
+                await performLookup(potentialIp);
             }
         } catch (err) {
             if (err.name !== 'NotFoundError') {
-                console.warn('Could not read clipboard:', err.name);
+                console.warn('Could not read clipboard:', err);
             }
         }
     };
 
     const startMonitoring = () => {
-        if (clipboardInterval) return;
-        showWidget(); // Show the widget immediately when monitoring starts
+        if (isMonitoring) return;
+        showWidget();
         showToast('تم تفعيل مراقبة الحافظة.');
-        checkClipboard(); // Check immediately
-        clipboardInterval = setInterval(checkClipboard, 2000);
+        checkClipboard(); // تحقق فورًا
+        requestAnimationFrame(() => {
+            const checkLoop = () => {
+                checkClipboard();
+                if (isMonitoring) requestAnimationFrame(checkLoop);
+            };
+            checkLoop();
+        });
     };
 
     const stopMonitoring = () => {
-        if (!clipboardInterval) return;
+        isMonitoring = false;
         showToast('تم إيقاف مراقبة الحافظة.');
-        clearInterval(clipboardInterval);
-        clipboardInterval = null;
     };
 
     toggleBtn.addEventListener('click', () => {
