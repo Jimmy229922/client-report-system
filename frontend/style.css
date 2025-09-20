@@ -385,6 +385,8 @@ main { padding: 2rem; max-width: 1200px; margin: 2rem auto; animation: fadeIn 0.
     border-radius: 8px;
     box-shadow: 0 5px 25px rgba(0,0,0,0.3);
     transform: translateX(110%);
+    min-width: 300px;
+    min-height: 200px;
     opacity: 0;
     visibility: hidden;
     transition: transform 0.4s ease-in-out, opacity 0.4s ease-in-out, visibility 0.4s;
@@ -531,6 +533,12 @@ main { padding: 2rem; max-width: 1200px; margin: 2rem auto; animation: fadeIn 0.
     margin-left: 8px;
 }
 
+.history-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
 .widget-actions {
     display: flex;
     gap: 0.5rem;
@@ -538,6 +546,26 @@ main { padding: 2rem; max-width: 1200px; margin: 2rem auto; animation: fadeIn 0.
 
 #pin-widget-btn.pinned i {
     color: var(--accent-color);
+}
+
+.clear-history-btn {
+    background: none;
+    border: none;
+    color: #aaa;
+    font-size: 0.8rem;
+    cursor: pointer;
+}
+.clear-history-btn:hover {
+    color: var(--danger-color);
+}
+
+.widget-resizer {
+    position: absolute;
+    bottom: 0;
+    left: 0; /* For RTL */
+    width: 15px;
+    height: 15px;
+    cursor: nwse-resize;
 }
 
 .widget-body {

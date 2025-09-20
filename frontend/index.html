@@ -174,9 +174,13 @@
             <input type="text" id="widget-ip-input" placeholder="...جاري مراقبة الحافظة" autocomplete="off">
             <div id="widget-ip-result" class="widget-result"></div>
             <div id="widget-history-container" class="hidden">
-                <h4><i class="fas fa-history"></i> السجل الحديث</h4>
+                <div class="history-header">
+                    <h4><i class="fas fa-history"></i> السجل الحديث</h4>
+                    <button id="widget-clear-history-btn" class="clear-history-btn">مسح</button>
+                </div>
                 <ul id="widget-history-list"></ul>
             </div>
+            <div class="widget-resizer"></div>
         </div>
     </div>
 

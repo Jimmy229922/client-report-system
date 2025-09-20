@@ -1,7 +1,7 @@
 import { showToast } from './ui.js';
 
 export function initIpWidget() {
-    const openBtn = document.getElementById('quick-ip-check-btn');
+    const visibilityToggleBtn = document.getElementById('quick-ip-check-btn');
     const widget = document.getElementById('ip-widget');
     const header = document.querySelector('.widget-header');
     const closeBtn = document.getElementById('widget-close-btn');
@@ -10,18 +10,20 @@ export function initIpWidget() {
     const resultDiv = document.getElementById('widget-ip-result');
     const historyContainer = document.getElementById('widget-history-container');
     const historyList = document.getElementById('widget-history-list');
+    const clearHistoryBtn = document.getElementById('widget-clear-history-btn');
+    const resizer = document.querySelector('.widget-resizer');
 
-    if (!openBtn || !widget || !header || !closeBtn || !pinBtn || !ipInput || !resultDiv || !historyContainer || !historyList) {
+    if (!visibilityToggleBtn || !widget || !header || !closeBtn || !pinBtn || !ipInput || !resultDiv || !historyContainer || !historyList || !clearHistoryBtn || !resizer) {
         console.warn('IP Widget elements not found.');
         return;
     }
 
     let isPinned = false;
+    let lastCheckedIp = null;
     let history = [];
 
     const showWidget = () => {
         widget.classList.add('show');
-        setTimeout(() => ipInput.focus(), 50);
     };
 
     const hideWidget = () => {
@@ -81,20 +83,39 @@ export function initIpWidget() {
         }
     };
 
-    // --- Event Listeners ---
-    openBtn.addEventListener('click', (e) => {
-        e.stopPropagation(); // Prevent the document click listener from firing immediately
-        // If the widget is already shown, this click does nothing.
-        // If it's hidden, it shows it.
-        showWidget();
-    });
+    // --- Clipboard Monitoring ---
+    let lastCheckTime = 0;
+    const checkInterval = 2000; // 2 seconds
 
-    closeBtn.addEventListener('click', hideWidget);
+    const clipboardLoop = async (timestamp) => {
+        if (timestamp - lastCheckTime > checkInterval) {
+            lastCheckTime = timestamp;
 
-    pinBtn.addEventListener('click', () => {
-        isPinned = !isPinned;
-        pinBtn.classList.toggle('pinned', isPinned);
-        pinBtn.title = isPinned ? 'إلغاء تثبيت الأداة' : 'تثبيت الأداة';
+            if (document.hasFocus()) {
+                try {
+                    const text = await navigator.clipboard.readText();
+                    const potentialIp = text.trim();
+                    
+                    if (/^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$/.test(potentialIp) && potentialIp !== lastCheckedIp) {
+                        lastCheckedIp = potentialIp;
+                        showWidget();
+                        ipInput.value = potentialIp;
+                        await performLookup(potentialIp);
+                    }
+                } catch (err) {
+                    if (err.name !== 'NotFoundError') {
+                        console.warn('Could not read clipboard:', err.name);
+                    }
+                }
+            }
+        }
+        
+        window.requestAnimationFrame(clipboardLoop);
+    };
+
+    // The button now only controls visibility
+    visibilityToggleBtn.addEventListener('click', () => {
+        widget.classList.toggle('show');
     });
 
     ipInput.addEventListener('input', () => {
@@ -109,6 +130,22 @@ export function initIpWidget() {
         const ip = listItem.dataset.ip;
         ipInput.value = ip;
         performLookup(ip);
+    });
+
+    // --- Clear History ---
+    clearHistoryBtn.addEventListener('click', () => {
+        history = [];
+        updateHistory();
+        showToast('تم مسح السجل.');
+    });
+
+    // --- Event Listeners ---
+    closeBtn.addEventListener('click', hideWidget);
+
+    pinBtn.addEventListener('click', () => {
+        isPinned = !isPinned;
+        pinBtn.classList.toggle('pinned', isPinned);
+        pinBtn.title = isPinned ? 'إلغاء تثبيت الأداة' : 'تثبيت الأداة';
     });
 
     // --- Draggable Widget Logic ---
@@ -135,11 +172,34 @@ export function initIpWidget() {
 
     // --- Auto-hide on outside click ---
     document.addEventListener('click', (e) => {
-        if (!isPinned && widget.classList.contains('show') && !widget.contains(e.target) && !openBtn.contains(e.target)) {
+        if (!isPinned && widget.classList.contains('show') && !widget.contains(e.target) && !visibilityToggleBtn.contains(e.target)) {
             hideWidget();
         }
     });
 
+    // --- Resizable Widget Logic ---
+    resizer.addEventListener('mousedown', (e) => {
+        e.preventDefault();
+        let startX = e.clientX;
+        let startY = e.clientY;
+        let startWidth = parseInt(document.defaultView.getComputedStyle(widget).width, 10);
+        let startHeight = parseInt(document.defaultView.getComputedStyle(widget).height, 10);
+
+        function doDrag(e) {
+            widget.style.width = (startWidth - (e.clientX - startX)) + 'px'; // Inverted for RTL
+            widget.style.height = (startHeight + (e.clientY - startY)) + 'px';
+        }
+
+        function stopDrag() {
+            document.documentElement.removeEventListener('mousemove', doDrag, false);
+            document.documentElement.removeEventListener('mouseup', stopDrag, false);
+        }
+
+        document.documentElement.addEventListener('mousemove', doDrag, false);
+        document.documentElement.addEventListener('mouseup', stopDrag, false);
+    });
+
     // Initial setup
     updateHistory();
+    window.requestAnimationFrame(clipboardLoop); // Start monitoring immediately
 }
