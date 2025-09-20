@@ -355,7 +355,6 @@ main { padding: 2rem; max-width: 1200px; margin: 2rem auto; animation: fadeIn 0.
 
 /* --- تصميم القائمة العائمة (Widget) --- */
 .ip-widget {
-    display: none; /* مخفية افتراضياً */
     position: fixed;
     z-index: 2000;
     top: 80px;
@@ -365,11 +364,15 @@ main { padding: 2rem; max-width: 1200px; margin: 2rem auto; animation: fadeIn 0.
     border: 1px solid var(--border-color);
     border-radius: 8px;
     box-shadow: 0 5px 25px rgba(0,0,0,0.3);
-    transform: translateX(120%);
-    transition: transform 0.4s ease-in-out;
+    transform: translateX(110%);
+    opacity: 0;
+    visibility: hidden;
+    transition: transform 0.4s ease-in-out, opacity 0.4s ease-in-out, visibility 0.4s;
 }
 
 .ip-widget.show {
+    visibility: visible;
+    opacity: 1;
     transform: translateX(0);
 }
 

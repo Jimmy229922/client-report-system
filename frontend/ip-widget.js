@@ -76,6 +76,7 @@ export function initIpWidget() {
 
     const startMonitoring = () => {
         if (clipboardInterval) return;
+        showWidget(); // Show the widget immediately when monitoring starts
         showToast('تم تفعيل مراقبة الحافظة.');
         checkClipboard(); // Check immediately
         clipboardInterval = setInterval(checkClipboard, 2000);
