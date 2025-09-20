@@ -33,6 +33,40 @@ function initProfilePage() {
             showToast(error.message, true);
         }
     });
+
+    const changePasswordForm = document.getElementById('change-password-form');
+    if (changePasswordForm) {
+        changePasswordForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const currentPassword = document.getElementById('current-password').value;
+            const newPassword = document.getElementById('new-password').value;
+            const confirmPassword = document.getElementById('confirm-password').value;
+
+            if (newPassword !== confirmPassword) {
+                showToast('كلمتا المرور الجديدتان غير متطابقتين.', true);
+                return;
+            }
+
+            const submitBtn = changePasswordForm.querySelector('button[type="submit"]');
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'جاري الحفظ...';
+
+            try {
+                const result = await fetchWithAuth('/api/profile/password', {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ currentPassword, newPassword })
+                });
+                showToast(result.message);
+                changePasswordForm.reset();
+            } catch (error) {
+                showToast(error.message, true);
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'حفظ كلمة المرور';
+            }
+        });
+    }
 }
 
 export function renderProfilePage() {
@@ -69,7 +103,24 @@ export function renderProfilePage() {
                     </div>
                 </div>
             </div>
-            <!-- TODO: Add change password form here in another card -->
+            <div class="form-container" style="max-width: 100%; margin: 0;">
+                <h2 style="margin-top: 0; margin-bottom: 1.5rem; font-size: 1.5rem;">تغيير كلمة المرور</h2>
+                <form id="change-password-form">
+                    <div class="form-group">
+                        <label for="current-password">كلمة المرور الحالية</label>
+                        <input type="password" id="current-password" required autocomplete="current-password">
+                    </div>
+                    <div class="form-group">
+                        <label for="new-password">كلمة المرور الجديدة</label>
+                        <input type="password" id="new-password" required autocomplete="new-password" minlength="6">
+                    </div>
+                    <div class="form-group">
+                        <label for="confirm-password">تأكيد كلمة المرور الجديدة</label>
+                        <input type="password" id="confirm-password" required autocomplete="new-password">
+                    </div>
+                    <button type="submit" class="submit-btn">حفظ كلمة المرور</button>
+                </form>
+            </div>
         </div>
     `;
     initProfilePage();
