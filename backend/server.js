@@ -423,7 +423,17 @@ app.get('/api/health', (req, res) => {
 
 // Get all users
 app.get('/api/users', verifyToken, verifyAdmin, async (req, res) => {
-    const { data, error } = await supabase.from('users').select('id, username, email, avatar_url').order('id', { ascending: true });
+    const { search } = req.query;
+    let query = supabase.from('users').select('id, username, email, avatar_url');
+
+    if (search) {
+        // Search in both username and email fields
+        query = query.or(`username.ilike.%${search}%,email.ilike.%${search}%`);
+    }
+
+    query = query.order('id', { ascending: true });
+
+    const { data, error } = await query;
     if (error) {
         return res.status(500).json({ error: error.message });
     }

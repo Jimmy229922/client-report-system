@@ -1,13 +1,13 @@
 import { fetchWithAuth } from './api.js';
 import { showToast } from './ui.js';
 
-async function fetchAndRenderUsers() {
+async function fetchAndRenderUsers(searchTerm = '') {
     const tableBody = document.getElementById('users-table-body');
     if (!tableBody) return;
     tableBody.innerHTML = '<tr><td colspan="3" style="text-align:center;"><div class="spinner"></div></td></tr>';
 
     try {
-        const result = await fetchWithAuth('/api/users');
+        const result = await fetchWithAuth(`/api/users?search=${encodeURIComponent(searchTerm)}`);
 
         if (result.data && result.data.length > 0) {
             tableBody.innerHTML = result.data.map(user => {
@@ -162,6 +162,10 @@ export function renderUsersPage() {
         <div class="user-management-layout">
             <div class="user-list-container">
                 <h2>قائمة المستخدمين</h2>
+                <div class="search-container">
+                    <i class="fas fa-search"></i>
+                    <input type="text" id="users-search" class="search-input" placeholder="ابحث عن مستخدم بالاسم أو البريد الإلكتروني...">
+                </div>
                 <table id="users-table">
                     <thead><tr><th>اسم المستخدم</th><th>البريد الإلكتروني</th><th>الإجراءات</th></tr></thead>
                     <tbody id="users-table-body"></tbody>
@@ -182,4 +186,14 @@ export function renderUsersPage() {
     fetchAndRenderUsers();
     handleAddUser();
     handleUserActions();
+
+    // Add search logic
+    const searchInput = document.getElementById('users-search');
+    let debounceTimer;
+    searchInput.addEventListener('input', (e) => {
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(() => {
+            fetchAndRenderUsers(e.target.value);
+        }, 500);
+    });
 }

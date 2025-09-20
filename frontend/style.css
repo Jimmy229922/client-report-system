@@ -1020,10 +1020,6 @@ main { padding: 2rem; max-width: 1200px; margin: 2rem auto; animation: fadeIn 0.
     margin-right: 10px; /* Use margin-right for RTL */
 }
 
-.value-container .edit-btn {
-    /* This is now handled by the more generic .edit-btn rule */
-}
-
 .edit-btn:hover {
     color: var(--accent-color);
 }
