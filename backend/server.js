@@ -298,7 +298,7 @@ app.get('/api/stats', verifyToken, async (req, res) => {
         supabase.from('reports').select('*', { count: 'exact', head: true }).like('report_text', '%#new-positions%'),
         supabase.from('reports').select('*', { count: 'exact', head: true }).like('report_text', '%#credit-out%'),
         supabase.from('reports').select('*', { count: 'exact', head: true }).like('report_text', '%تقرير تحويل الحسابات%'),
-        supabase.from('reports').select('*', { count: 'exact', head: true }).like('report_text', '%#payouts%'),
+        supabase.from('reports').select('*', { count: 'exact', head: true }).like('report_text', '%#payouts%')
     ];
 
     const results = await Promise.all(queries);
