@@ -258,7 +258,8 @@ app.post('/api/send-report', verifyToken, upload.array('images', 3), async (req,
         // Robustly find and separate the footer (hashtags and mentions)
         const footerRegex = /(\n\s*#\w+|\n\s*@\w+)+$/;
         const footerMatch = reportText.match(footerRegex);
-        let footer = footerMatch ? footerMatch[0].trim() : '';
+        // Trim and collapse multiple newlines to a single one to ensure clean formatting.
+        let footer = footerMatch ? footerMatch[0].trim().replace(/\n\s*\n/g, '\n') : '';
         const mainText = footerMatch ? reportText.substring(0, footerMatch.index).trim() : reportText;
 
         // Specifically remove #account_transfer from the footer for sending, but it remains in the DB

@@ -286,6 +286,13 @@ main { padding: 2rem; max-width: 1200px; margin: 2rem auto; animation: fadeIn 0.
     transition: all 0.2s ease;
 }
 
+.form-hint {
+    display: block;
+    margin-top: 0.5rem;
+    font-size: 0.8rem;
+    color: #aaa;
+}
+
 .copy-btn:hover {
     background-color: var(--accent-color);
     color: white;

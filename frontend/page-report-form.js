@@ -73,6 +73,7 @@ function getFormFields(reportType) {
             <div class="form-group">
                 <label for="emails">الإيميلات (كل إيميل في سطر)</label>
                 <textarea id="emails" name="emails" rows="4" placeholder="example1@mail.com\nexample2@mail.com" required></textarea>
+                <small class="form-hint">اضغط Enter للإرسال، أو Shift+Enter لسطر جديد.</small>
             </div>
             ${imageUploadField}
             ${formActions}
@@ -111,6 +112,7 @@ function getFormFields(reportType) {
             <div class="form-group">
                 <label for="notes">ملاحظات إضافية</label>
                 <textarea id="notes" name="notes" rows="3" placeholder="اكتب أي ملاحظات أخرى هنا..."></textarea>
+                <small class="form-hint">اضغط Enter للإرسال، أو Shift+Enter لسطر جديد.</small>
             </div>
             ${imageUploadField}
             ${formActions}
@@ -138,6 +140,7 @@ function getFormFields(reportType) {
             <div class="form-group">
                 <label for="notes">الملاحظات</label>
                 <textarea id="notes" name="notes" rows="4" placeholder="اكتب ملاحظاتك هنا..."></textarea>
+                <small class="form-hint">اضغط Enter للإرسال، أو Shift+Enter لسطر جديد.</small>
             </div>
             ${imageUploadField}
             ${formActions}
@@ -306,6 +309,16 @@ export function initCreateReportPage() {
 
         ipInput.addEventListener('input', debounce(handleIpLookup, 500));
     }
+
+    // Add keydown listener to textareas for Enter submission
+    form.querySelectorAll('textarea').forEach(textarea => {
+        textarea.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault(); // Prevent new line
+                form.querySelector('.submit-btn').click(); // Trigger form submission
+            }
+        });
+    });
 
     const handleFiles = (files) => {
         for (const file of files) {
