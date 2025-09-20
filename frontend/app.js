@@ -1,7 +1,6 @@
-import { handleTheme } from './ui.js';
+import { handleTheme, updateNavbarUser, showToast } from './ui.js';
 import { navigate } from './router.js';
 import { fetchWithAuth } from './api.js';
-import { showToast } from './ui.js';
 
 function handleImagePreviewModal() {
     const modal = document.getElementById('image-preview-modal');
@@ -24,19 +23,63 @@ function handleImagePreviewModal() {
 function setupUIForUser() {
     const userManagementLink = document.getElementById('user-management-link');
     const updateAppBtn = document.getElementById('update-app-btn');
-    const navbarUsername = document.getElementById('navbar-username');
-    const userStr = localStorage.getItem('user');
+    updateNavbarUser(); // Update username and avatar
 
+    const userStr = localStorage.getItem('user');
     if (userStr) {
         const user = JSON.parse(userStr);
-        if (navbarUsername) {
-            navbarUsername.textContent = user.username;
-        }
         if (user.id === 1) { // Admin-only UI elements
             if (userManagementLink) userManagementLink.classList.remove('hidden');
             if (updateAppBtn) updateAppBtn.classList.remove('hidden');
         }
     }
+}
+
+function showUpdateOverlay() {
+    let overlay = document.getElementById('update-overlay');
+    if (!overlay) {
+        overlay = document.createElement('div');
+        overlay.id = 'update-overlay';
+        overlay.style.cssText = `
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background-color: rgba(0, 0, 0, 0.8); backdrop-filter: blur(5px);
+            z-index: 10000; display: flex; flex-direction: column;
+            justify-content: center; align-items: center; color: white;
+            transition: opacity 0.3s;
+        `;
+        document.body.appendChild(overlay);
+    }
+    overlay.innerHTML = `
+        <div class="spinner"></div>
+        <p style="margin-top: 1rem;">جاري إعادة تشغيل السيرفر... الرجاء الانتظار.</p>
+    `;
+    overlay.classList.remove('hidden');
+}
+
+function checkServerStatus(attempts = 0) {
+    const maxAttempts = 30; // Try for 30 seconds (30 * 1000ms)
+    if (attempts >= maxAttempts) {
+        const overlay = document.getElementById('update-overlay');
+        if(overlay) {
+            overlay.innerHTML = `
+                <i class="fas fa-times-circle" style="font-size: 3rem; color: var(--danger-color);"></i>
+                <p style="margin-top: 1rem;">فشل الاتصال بالسيرفر بعد التحديث.</p>
+                <p>الرجاء محاولة تحديث الصفحة يدوياً.</p>
+                <button class="submit-btn" style="margin-top: 1.5rem; width: auto; padding: 0.5rem 1rem;" onclick="location.reload(true)">تحديث الصفحة</button>
+            `;
+        }
+        return;
+    }
+
+    setTimeout(async () => {
+        try {
+            const response = await fetch('/api/health');
+            if (response.ok) {
+                showToast('تم إعادة تشغيل السيرفر بنجاح!');
+                setTimeout(() => location.reload(), 1000);
+            } else { checkServerStatus(attempts + 1); }
+        } catch (error) { checkServerStatus(attempts + 1); }
+    }, 1000);
 }
 
 async function handleAppUpdate() {
@@ -58,15 +101,8 @@ async function handleAppUpdate() {
         showToast(result.message);
 
         if (result.message.includes('سيتم إعادة تشغيل السيرفر')) {
-            const mainContent = document.getElementById('main-content');
-            mainContent.innerHTML = `
-                <div class="form-container" style="text-align: center; max-width: 600px; margin: 2rem auto;">
-                    <h2 style="color: var(--success-color);"><i class="fas fa-check-circle"></i> تم التحديث بنجاح!</h2>
-                    <p style="margin-top: 1rem;">يقوم السيرفر الآن بإعادة التشغيل بآخر إصدار.</p>
-                    <p>الرجاء الانتظار بضع ثوانٍ ثم قم بتحديث الصفحة يدوياً.</p>
-                    <button class="submit-btn" style="margin-top: 1.5rem;" onclick="location.reload(true)">تحديث الصفحة الآن</button>
-                </div>
-            `;
+            showUpdateOverlay();
+            checkServerStatus();
         }
     } catch (error) {
         // Display multiline errors in a readable way

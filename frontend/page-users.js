@@ -12,16 +12,23 @@ async function fetchAndRenderUsers() {
         const result = await response.json();
 
         if (result.data && result.data.length > 0) {
-            tableBody.innerHTML = result.data.map(user => `
+            tableBody.innerHTML = result.data.map(user => {
+                const avatarHtml = user.avatar_url
+                    ? `<img src="${user.avatar_url}" class="navbar-avatar" style="margin-left: 10px;">`
+                    : `<span class="profile-avatar-placeholder" style="width: 32px; height: 32px; font-size: 1rem; margin-left: 10px;">
+                           <i class="fas fa-user"></i>
+                       </span>`;
+
+                return `
                 <tr id="user-row-${user.id}">
-                    <td data-field="username">${user.username}</td>
+                    <td data-field="username" style="display: flex; align-items: center;">${avatarHtml} ${user.username}</td>
                     <td data-field="email">${user.email}</td>
                     <td class="user-actions">
                         <button class="archive-btn" data-action="edit" data-id="${user.id}" title="تعديل المستخدم"><i class="fas fa-edit"></i></button>
                         <button class="archive-btn delete" data-action="delete" data-id="${user.id}" title="حذف المستخدم"><i class="fas fa-trash"></i></button>
                     </td>
                 </tr>
-            `).join('');
+            `}).join('');
         } else {
             tableBody.innerHTML = '<tr><td colspan="3" style="text-align:center;">لا يوجد مستخدمين.</td></tr>';
         }

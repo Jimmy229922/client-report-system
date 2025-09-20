@@ -164,6 +164,12 @@ body {
 .dropdown-content a:hover { background-color: var(--accent-color); color: white; }
 .dropdown:hover .dropdown-content { display: block; }
 .dropdown .nav-link i { font-size: 0.8em; margin-right: 5px; }
+.navbar-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    object-fit: cover;
+}
 .dropdown-divider {
     height: 1px;
     margin: 0.5rem 0;
@@ -876,6 +882,12 @@ main { padding: 2rem; max-width: 1200px; margin: 2rem auto; animation: fadeIn 0.
     font-size: 1.5rem;
 }
 
+#navbar-avatar-container {
+    display: flex;
+    align-items: center;
+    font-size: 1.8rem; /* For the icon */
+}
+
 .nav-actions .dropdown .dropdown-content {
     left: 0;
     right: auto;
@@ -896,14 +908,56 @@ main { padding: 2rem; max-width: 1200px; margin: 2rem auto; animation: fadeIn 0.
     padding: 2rem;
     border-radius: 8px;
     border: 1px solid var(--border-color);
-    display: flex;
+    display: grid;
+    grid-template-columns: auto 1fr;
     align-items: center;
     gap: 1.5rem;
 }
 
-.profile-info-card .icon {
+.profile-avatar-container {
+    position: relative;
+    width: 100px;
+    height: 100px;
+    cursor: pointer;
+}
+
+.profile-avatar, .profile-avatar-placeholder {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 3px solid var(--border-color);
+}
+
+.profile-avatar-placeholder {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background-color: var(--input-bg);
     font-size: 3rem;
-    color: var(--accent-color);
+    color: #aaa;
+}
+
+.avatar-edit-overlay {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 40%;
+    background-color: rgba(0,0,0,0.6);
+    color: white;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border-bottom-left-radius: 50px;
+    border-bottom-right-radius: 50px;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+    cursor: pointer;
+}
+
+.profile-avatar-container:hover .avatar-edit-overlay {
+    opacity: 1;
 }
 
 .profile-info-card .username {

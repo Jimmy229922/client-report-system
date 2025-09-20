@@ -98,11 +98,11 @@ app.post('/api/login', async (req, res) => {
     const passwordIsValid = bcrypt.compareSync(password, user.password);
     if (!passwordIsValid) return res.status(401).json({ auth: false, token: null, message: 'البريد الإلكتروني أو كلمة المرور غير صحيحة.' });
 
-    const token = jwt.sign({ id: user.id, username: user.username, email: user.email }, config.JWT_SECRET, {
+    const token = jwt.sign({ id: user.id, username: user.username, email: user.email, avatar_url: user.avatar_url }, config.JWT_SECRET, {
         expiresIn: 86400 // 24 hours
     });
 
-    res.status(200).json({ auth: true, token: token, user: { id: user.id, username: user.username, email: user.email } });
+    res.status(200).json({ auth: true, token: token, user: { id: user.id, username: user.username, email: user.email, avatar_url: user.avatar_url } });
 });
 
 app.put('/api/profile/password', verifyToken, async (req, res) => {
@@ -176,12 +176,65 @@ app.put('/api/profile/details', verifyToken, async (req, res) => {
 
     const { data: updatedUser, error: fetchError } = await supabase
         .from('users')
-        .select('id, username, email')
+        .select('id, username, email, avatar_url')
         .eq('id', userId)
         .single();
 
     if (fetchError) { return res.json({ message: "تم تحديث البيانات بنجاح." }); }
     res.json({ message: "تم تحديث البيانات بنجاح.", user: updatedUser });
+});
+
+app.post('/api/profile/avatar', verifyToken, upload.single('avatar'), async (req, res) => {
+    const userId = req.userId;
+    const file = req.file;
+
+    if (!file) {
+        return res.status(400).json({ message: 'لم يتم رفع أي صورة.' });
+    }
+
+    try {
+        // 1. Get current user data to find old avatar
+        const { data: user, error: fetchError } = await supabase
+            .from('users')
+            .select('avatar_url')
+            .eq('id', userId)
+            .single();
+
+        if (fetchError) throw fetchError;
+
+        // 2. If an old avatar exists, delete it from storage
+        if (user.avatar_url) {
+            const oldAvatarPath = user.avatar_url.split('/avatars/')[1];
+            if (oldAvatarPath) {
+                const { error: removeError } = await supabase.storage.from('avatars').remove([oldAvatarPath]);
+                if (removeError) {
+                    // Log the error but don't block the upload of the new one
+                    console.error('Failed to remove old avatar:', removeError.message);
+                }
+            }
+        }
+
+        // 3. Upload the new avatar
+        const fileExt = path.extname(file.originalname);
+        const fileName = `user_${userId}/${Date.now()}${fileExt}`;
+
+        const { error: uploadError } = await supabase.storage.from('avatars').upload(fileName, file.buffer, { contentType: file.mimetype, upsert: true });
+        if (uploadError) throw uploadError;
+
+        // 4. Get the public URL of the new avatar
+        const { data: publicUrlData } = supabase.storage.from('avatars').getPublicUrl(fileName);
+        const publicUrl = publicUrlData.publicUrl;
+
+        // 5. Update the user's record in the database
+        const { data: updatedUser, error: updateError } = await supabase.from('users').update({ avatar_url: publicUrl }).eq('id', userId).select('id, username, email, avatar_url').single();
+        if (updateError) throw updateError;
+
+        res.json({ message: 'تم تحديث الصورة الشخصية بنجاح.', user: updatedUser });
+
+    } catch (error) {
+        console.error('Avatar upload error:', error);
+        res.status(500).json({ message: 'حدث خطأ أثناء رفع الصورة.', error: error.message });
+    }
 });
 
 // 6. Protected API Endpoints
@@ -361,11 +414,16 @@ app.get('/api/stats/weekly', verifyToken, async (req, res) => {
     res.json({ message: "success", data });
 });
 
+// Health check endpoint for the update process
+app.get('/api/health', (req, res) => {
+    res.status(200).json({ status: 'ok' });
+});
+
 // --- User Management Endpoints ---
 
 // Get all users
 app.get('/api/users', verifyToken, verifyAdmin, async (req, res) => {
-    const { data, error } = await supabase.from('users').select('id, username, email').order('id', { ascending: true });
+    const { data, error } = await supabase.from('users').select('id, username, email, avatar_url').order('id', { ascending: true });
     if (error) {
         return res.status(500).json({ error: error.message });
     }
@@ -391,7 +449,7 @@ app.post('/api/users', verifyToken, verifyAdmin, async (req, res) => {
 
     const { data, error } = await supabase
         .from('users')
-        .insert({ username, email, password: hash })
+        .insert({ username, email, password: hash, avatar_url: null })
         .select('id, username, email')
         .single();
 
@@ -441,7 +499,7 @@ app.put('/api/users/:id', verifyToken, verifyAdmin, async (req, res) => {
         updateData.password = hash;
     }
 
-    const { data, error } = await supabase.from('users').update(updateData).eq('id', id).select('id, username, email').single();
+    const { data, error } = await supabase.from('users').update(updateData).eq('id', id).select('id, username, email, avatar_url').single();
 
     if (error) {
         if (error.code === '23505') {
@@ -492,7 +550,7 @@ app.post('/api/system/update', verifyToken, (req, res) => {
 
         // Use a short delay to ensure the response is sent before exiting
         setTimeout(() => {
-            const subprocess = spawn(process.argv[0], process.argv.slice(1), {
+            const subprocess = spawn(process.argv[0], [...process.argv.slice(1), '--restarted'], {
                 detached: true,
                 cwd: process.cwd(),
                 stdio: 'ignore'
@@ -528,7 +586,7 @@ async function initializeAdmin() {
       const hash = bcrypt.hashSync("password", salt);
       const { error: insertError } = await supabase
         .from('users')
-        .insert({ id: 1, username: 'INZO LLC', email: 'admin@inzo.llc', password: hash });
+        .insert({ id: 1, username: 'INZO LLC', email: 'admin@inzo.llc', password: hash, avatar_url: null });
 
       if (insertError) {
         console.error('Failed to create default admin user:', insertError);
@@ -538,10 +596,14 @@ async function initializeAdmin() {
     }
 }
 
+const isRestart = process.argv.includes('--restarted');
+
 initializeAdmin().then(() => {
     app.listen(port, () => {
         const url = `http://localhost:${port}`;
         console.log(`🚀 Supabase connected. Server is running at ${url}`);
-        import('open').then(openModule => openModule.default(url)).catch(() => {});
+        if (!isRestart) {
+            import('open').then(openModule => openModule.default(url)).catch(() => {});
+        }
     });
 });

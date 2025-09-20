@@ -32,6 +32,22 @@ export function updateActiveLink(path) {
     });
 }
 
+export function updateNavbarUser() {
+    const navbarUsername = document.getElementById('navbar-username');
+    const navbarAvatarContainer = document.getElementById('navbar-avatar-container');
+    const userStr = localStorage.getItem('user');
+
+    if (userStr && navbarUsername && navbarAvatarContainer) {
+        const user = JSON.parse(userStr);
+        navbarUsername.textContent = user.username;
+        if (user.avatar_url) {
+            navbarAvatarContainer.innerHTML = `<img src="${user.avatar_url}" alt="Avatar" class="navbar-avatar">`;
+        } else {
+            navbarAvatarContainer.innerHTML = `<i class="fas fa-user-circle"></i>`;
+        }
+    }
+}
+
 export function handleTheme() {
     const themeToggleBtn = document.getElementById('theme-toggle-btn');
     const themeIcon = themeToggleBtn.querySelector('i');
