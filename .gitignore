@@ -1,10 +1,6 @@
 # Dependencies
 /backend/node_modules
 
-# Environment files
-.env
-/backend/.env
-
 # Database file
 /backend/reports.db
 

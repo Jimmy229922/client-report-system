@@ -49,14 +49,23 @@ async function setup() {
 
   const jwtSecret = crypto.randomBytes(32).toString('hex');
 
-  const envContent = `BOT_TOKEN=${botToken.trim()}\nCHAT_ID=${chatId.trim()}\nJWT_SECRET=${jwtSecret}\n\nSUPABASE_URL=${supabaseUrl.trim()}\nSUPABASE_KEY=${supabaseKey.trim()}`;
+  const config = {
+    BOT_TOKEN: botToken.trim(),
+    CHAT_ID: chatId.trim(),
+    JWT_SECRET: jwtSecret,
+    SUPABASE_URL: supabaseUrl.trim(),
+    SUPABASE_KEY: supabaseKey.trim()
+  };
+
+  const configContent = JSON.stringify(config, null, 2);
 
   try {
-    fs.writeFileSync('.env', envContent);
-    console.log('\n\n\x1b[32m%s\x1b[0m', '✅ Setup complete! .env file created successfully.'); // Green text
-    console.log('You can now run "start-server.bat" to start the application.');
+    fs.writeFileSync('config.json', configContent);
+    console.log('\n\n\x1b[32m%s\x1b[0m', '✅ Setup complete! config.json file created successfully.'); // Green text
+    console.log('IMPORTANT: You must now commit this `config.json` file to GitHub.');
+    console.log('After that, your friend can pull the changes and run the application directly.');
   } catch (error) {
-    console.error('\n\n\x1b[31m%s\x1b[0m', '❌ Failed to create .env file:', error); // Red text
+    console.error('\n\n\x1b[31m%s\x1b[0m', '❌ Failed to create config.json file:', error); // Red text
   } finally {
     rl.close();
   }

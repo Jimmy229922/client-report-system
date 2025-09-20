@@ -1,5 +1,17 @@
 // 1. استيراد المكتبات
-require('dotenv').config(); // لتحميل المتغيرات من ملف .env
+let config;
+try {
+    // First, try to load the shared config file.
+    config = require('./config.json');
+} catch (error) {
+    // If it fails, it means the setup has not been run.
+    console.error('---');
+    console.error('FATAL ERROR: Configuration file `config.json` not found.');
+    console.error('This file contains essential settings for the application to run.');
+    console.error('Please run the `setup.bat` script in the main project folder to generate it.');
+    console.error('---');
+    process.exit(1); // Exit the application with an error code
+}
 const express = require('express');
 const cors = require('cors');
 const multer = require('multer');
@@ -11,23 +23,24 @@ const jwt = require('jsonwebtoken');
 const { exec, spawn } = require('child_process');
 
 // Check for essential environment variables on startup and provide a detailed error message
-const requiredEnvVars = ['BOT_TOKEN', 'CHAT_ID', 'JWT_SECRET', 'SUPABASE_URL', 'SUPABASE_KEY'];
-const missingVars = requiredEnvVars.filter(varName => !process.env[varName]);
+const requiredConfigKeys = ['BOT_TOKEN', 'CHAT_ID', 'JWT_SECRET', 'SUPABASE_URL', 'SUPABASE_KEY'];
+const missingKeys = requiredConfigKeys.filter(key => !config[key]);
 
-if (missingVars.length > 0) {
+if (missingKeys.length > 0) {
     console.error('---');
-    console.error('FATAL ERROR: Missing required environment variables.');
-    console.error(`The following variables are missing or empty in your .env file: ${missingVars.join(', ')}`);
+    console.error('FATAL ERROR: Missing required configuration keys.');
+    console.error(`The following keys are missing or empty in your config.json file: ${missingKeys.join(', ')}`);
+    console.error('Please run `setup.bat` again to regenerate the configuration.');
     console.error('---');
     process.exit(1); // Exit the application with an error code
 }
 
 // 2. إعدادات أساسية
 const app = express();
-const port = process.env.PORT || 3001;
-const bot = new Telegraf(process.env.BOT_TOKEN);
+const port = config.PORT || 3001;
+const bot = new Telegraf(config.BOT_TOKEN);
 // 2.5. إعداد Supabase
-const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY);
+const supabase = createClient(config.SUPABASE_URL, config.SUPABASE_KEY);
 
 
 // 3. إعداد Multer (للتعامل مع الصور)
@@ -51,7 +64,7 @@ const verifyToken = (req, res, next) => {
         token = token.slice(7, token.length);
     }
 
-    jwt.verify(token, process.env.JWT_SECRET, (err, decoded) => {
+    jwt.verify(token, config.JWT_SECRET, (err, decoded) => {
         if (err) return res.status(401).send({ auth: false, message: 'Failed to authenticate token.' });
         
         // if everything good, save to request for use in other routes
@@ -84,7 +97,7 @@ app.post('/api/login', async (req, res) => {
     const passwordIsValid = bcrypt.compareSync(password, user.password);
     if (!passwordIsValid) return res.status(401).json({ auth: false, token: null, message: 'البريد الإلكتروني أو كلمة المرور غير صحيحة.' });
 
-    const token = jwt.sign({ id: user.id, username: user.username, email: user.email }, process.env.JWT_SECRET, {
+    const token = jwt.sign({ id: user.id, username: user.username, email: user.email }, config.JWT_SECRET, {
         expiresIn: 86400 // 24 hours
     });
 
@@ -194,10 +207,10 @@ app.post('/api/send-report', verifyToken, upload.array('images', 3), async (req,
                     type: 'photo',
                     media: { source: image.buffer },
                 }));
-                const sentPhotoMessages = await bot.telegram.sendMediaGroup(process.env.CHAT_ID, mediaGroup);
+                const sentPhotoMessages = await bot.telegram.sendMediaGroup(config.CHAT_ID, mediaGroup);
 
                 // 2. أرسل النص كرسالة رد على أول صورة تم إرسالها
-                await bot.telegram.sendMessage(process.env.CHAT_ID, reportText, {
+                await bot.telegram.sendMessage(config.CHAT_ID, reportText, {
                     reply_to_message_id: sentPhotoMessages[0].message_id
                 });
             } else {
@@ -208,11 +221,11 @@ app.post('/api/send-report', verifyToken, upload.array('images', 3), async (req,
                     media: { source: image.buffer },
                     caption: index === 0 ? reportText : '',
                 }));
-                await bot.telegram.sendMediaGroup(process.env.CHAT_ID, mediaGroup);
+                await bot.telegram.sendMediaGroup(config.CHAT_ID, mediaGroup);
             }
         } else {
             // إذا لم تكن هناك صور، أرسل النص فقط
-            await bot.telegram.sendMessage(process.env.CHAT_ID, reportText);
+            await bot.telegram.sendMessage(config.CHAT_ID, reportText);
         }
 
         // بعد الإرسال الناجح، قم بحفظ التقرير في قاعدة البيانات
