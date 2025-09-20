@@ -30,8 +30,9 @@ function getFormFields(reportType) {
     const commonFields = `
         <div class="form-group ip-group">
             <label for="ip-input">IP Address</label>
+            <input type="text" id="ip-input" name="ip" placeholder="الصق الـ IP هنا لجلب الدولة" autocomplete="off">
             <i id="country-icon" class="fas fa-globe"></i>
-            <input type="text" id="ip-input" name="ip" placeholder="الصق الـ IP هنا لجلب الدولة">
+            <button type="button" id="clear-ip-btn" class="clear-btn hidden" title="مسح">&times;</button>
         </div>
         <div class="form-group">
             <label for="country">الدولة</label>
@@ -228,6 +229,28 @@ export function initCreateReportPage() {
     const copyBtn = form.querySelector('#copy-report-btn');
     uploadedFiles = [];
 
+    const ipInput = form.querySelector('#ip-input');
+    const clearIpBtn = form.querySelector('#clear-ip-btn');
+
+    if (ipInput && clearIpBtn) {
+        ipInput.addEventListener('input', () => {
+            clearIpBtn.classList.toggle('hidden', ipInput.value.length === 0);
+        });
+        clearIpBtn.addEventListener('click', () => {
+            ipInput.value = '';
+            // Manually clear country fields since the debounced lookup won't fire immediately
+            const countryInput = form.querySelector('#country');
+            const countryIcon = form.querySelector('#country-icon');
+            if (countryInput) countryInput.value = '';
+            if (countryIcon) {
+                countryIcon.className = 'fas fa-globe';
+                countryIcon.innerHTML = '';
+            }
+            clearIpBtn.classList.add('hidden');
+            ipInput.focus();
+        });
+    }
+
     form.addEventListener('input', () => setFormDirty(true));
 
     if (form.querySelector('#transfer-source-select')) {
@@ -417,7 +440,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const observer = new MutationObserver(() => {
             const ipInput = document.getElementById('ip-input');
             if (ipInput && !ipInput.dataset.listenerAttached) {
-                ipInput.addEventListener('input', debounce(() => handleIpLookup(ipInput), 500));
+                ipInput.addEventListener('input', debounce(() => handleIpLookup(ipInput), 300));
                 ipInput.dataset.listenerAttached = 'true';
             }
         });

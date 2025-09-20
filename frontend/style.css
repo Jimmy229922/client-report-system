@@ -265,7 +265,28 @@ main { padding: 2rem; max-width: 1200px; margin: 2rem auto; animation: fadeIn 0.
 .form-group input:focus, .form-group textarea:focus, .form-group select:focus { outline: none; border-color: var(--accent-color); box-shadow: 0 0 0 3px rgba(77, 91, 249, 0.3); }
 .ip-group { position: relative; }
 #country-icon { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); font-size: 1.2rem; color: #aaa; display: flex; align-items: center; }
-#ip-input { padding-left: 40px; }
+#ip-input { padding-left: 75px; }
+
+.clear-btn {
+    position: absolute;
+    left: 45px; /* Position it to the right of the country icon */
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    color: #aaa;
+    cursor: pointer;
+    font-size: 1.5rem;
+    line-height: 1;
+    padding: 0 5px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.clear-btn:hover {
+    color: var(--text-color);
+}
 
 .submit-btn { width: 100%; padding: 1rem; background-color: var(--accent-color); color: white; border: none; border-radius: 5px; font-size: 1.1rem; font-weight: bold; cursor: pointer; transition: background-color 0.2s ease; }
 .submit-btn:hover { background-color: #3a48c2; }
