@@ -427,7 +427,7 @@ app.get('/api/health', (req, res) => {
 // Get all users
 app.get('/api/users', verifyToken, verifyAdmin, async (req, res) => {
     const { search } = req.query;
-    let query = supabase.from('users').select('id, username, email, avatar_url');
+    let query = supabase.from('users').select('id, username, email, avatar_url, created_at');
 
     if (search) {
         // Search in both username and email fields
@@ -463,7 +463,7 @@ app.post('/api/users', verifyToken, verifyAdmin, async (req, res) => {
     const { data, error } = await supabase
         .from('users')
         .insert({ username, email, password: hash, avatar_url: null })
-        .select('id, username, email')
+        .select('id, username, email, avatar_url, created_at')
         .single();
 
     if (error) {
@@ -512,7 +512,7 @@ app.put('/api/users/:id', verifyToken, verifyAdmin, async (req, res) => {
         updateData.password = hash;
     }
 
-    const { data, error } = await supabase.from('users').update(updateData).eq('id', id).select('id, username, email, avatar_url').single();
+    const { data, error } = await supabase.from('users').update(updateData).eq('id', id).select('id, username, email, avatar_url, created_at').single();
 
     if (error) {
         if (error.code === '23505') {

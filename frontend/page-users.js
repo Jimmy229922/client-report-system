@@ -5,8 +5,9 @@ let allUsers = []; // Store the fetched users
 
 async function fetchAndRenderUsers(searchTerm = '') {
     const tableBody = document.getElementById('users-table-body');
-    if (!tableBody) return;
-    tableBody.innerHTML = '<tr><td colspan="3" style="text-align:center;"><div class="spinner"></div></td></tr>';
+    const tableHead = document.querySelector('#users-table thead tr');
+    if (!tableBody || !tableHead) return;
+    tableBody.innerHTML = `<tr><td colspan="${tableHead.children.length}" style="text-align:center;"><div class="spinner"></div></td></tr>`;
 
     try {
         const result = await fetchWithAuth(`/api/users?search=${encodeURIComponent(searchTerm)}`);
@@ -31,6 +32,7 @@ async function fetchAndRenderUsers(searchTerm = '') {
                         <span>${user.email}</span>
                         <button class="archive-btn copy-email" data-email="${user.email}" title="نسخ البريد الإلكتروني"><i class="fas fa-copy"></i></button>
                     </td>
+                    <td data-field="created_at">${new Date(user.created_at).toLocaleDateString('ar-EG')}</td>
                     <td class="user-actions">
                         <button class="archive-btn" data-action="edit" data-id="${user.id}" title="تعديل المستخدم"><i class="fas fa-edit"></i></button>
                         ${deleteButton}
@@ -38,7 +40,7 @@ async function fetchAndRenderUsers(searchTerm = '') {
                 </tr>
             `}).join('');
         } else {
-            tableBody.innerHTML = '<tr><td colspan="3" style="text-align:center;">لا يوجد مستخدمين.</td></tr>';
+            tableBody.innerHTML = `<tr><td colspan="${tableHead.children.length}" style="text-align:center;">لا يوجد مستخدمين.</td></tr>`;
         }
     } catch (error) {
         showToast(error.message, true);
@@ -278,7 +280,7 @@ export function renderUsersPage() {
                     <input type="text" id="users-search" class="search-input" placeholder="ابحث عن مستخدم بالاسم أو البريد الإلكتروني...">
                 </div>
                 <table id="users-table">
-                    <thead><tr><th>اسم المستخدم</th><th>البريد الإلكتروني</th><th>الإجراءات</th></tr></thead>
+                    <thead><tr><th>اسم المستخدم</th><th>البريد الإلكتروني</th><th>تاريخ الإنشاء</th><th>الإجراءات</th></tr></thead>
                     <tbody id="users-table-body"></tbody>
                 </table>
             </div>
