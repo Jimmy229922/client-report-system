@@ -180,7 +180,10 @@ app.put('/api/profile/details', verifyToken, async (req, res) => {
         .eq('id', userId)
         .single();
 
-    if (fetchError) { return res.json({ message: "تم تحديث البيانات بنجاح." }); }
+    if (fetchError) {
+        console.error('Failed to fetch user after details update:', fetchError);
+        return res.status(500).json({ message: "تم تحديث البيانات، ولكن فشل استرجاعها. الرجاء تحديث الصفحة." });
+    }
     res.json({ message: "تم تحديث البيانات بنجاح.", user: updatedUser });
 });
 

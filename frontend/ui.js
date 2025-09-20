@@ -37,13 +37,27 @@ export function updateNavbarUser() {
     const navbarAvatarContainer = document.getElementById('navbar-avatar-container');
     const userStr = localStorage.getItem('user');
 
-    if (userStr && navbarUsername && navbarAvatarContainer) {
-        const user = JSON.parse(userStr);
-        navbarUsername.textContent = user.username;
-        if (user.avatar_url) {
-            navbarAvatarContainer.innerHTML = `<img src="${user.avatar_url}" alt="Avatar" class="navbar-avatar">`;
-        } else {
-            navbarAvatarContainer.innerHTML = `<i class="fas fa-user-circle"></i>`;
+    if (navbarUsername && navbarAvatarContainer) {
+        // Check for invalid strings like "undefined" before attempting to parse.
+        if (userStr && userStr !== 'undefined' && userStr !== 'null') {
+            try {
+                const user = JSON.parse(userStr);
+                // Ensure user object is valid after parsing
+                if (user && user.username) {
+                    navbarUsername.textContent = user.username;
+                    if (user.avatar_url) {
+                        navbarAvatarContainer.innerHTML = `<img src="${user.avatar_url}" alt="Avatar" class="navbar-avatar">`;
+                    } else {
+                        navbarAvatarContainer.innerHTML = `<i class="fas fa-user-circle"></i>`;
+                    }
+                }
+            } catch (error) {
+                console.error("Corrupted user data in localStorage. Clearing and reloading.", error);
+                // If parsing fails, the data is corrupt. Clean up and reload to the login page.
+                localStorage.removeItem('user');
+                localStorage.removeItem('token');
+                location.reload();
+            }
         }
     }
 }
