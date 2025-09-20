@@ -2,7 +2,7 @@ import { fetchWithAuth } from './api.js';
 
 let weeklyChart = null; // To hold the chart instance
 
-async function fetchAndRenderHomePageData() {
+export async function fetchAndRenderHomePageData() {
     try {
         // Use Promise.allSettled to allow one to fail without breaking the other
         const results = await Promise.allSettled([
