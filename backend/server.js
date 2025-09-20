@@ -396,8 +396,12 @@ app.delete('/api/reports/:id', verifyToken, async (req, res) => { // verifyToken
 
 // Endpoint for statistics
 app.get('/api/stats', verifyToken, async (req, res) => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
     const queries = [
         supabase.from('reports').select('*', { count: 'exact', head: true }),
+        supabase.from('reports').select('*', { count: 'exact', head: true }).gte('timestamp', today.toISOString()),
         supabase.from('reports').select('*', { count: 'exact', head: true }).ilike('report_text', '%#suspicious%'),
         supabase.from('reports').select('*', { count: 'exact', head: true }).ilike('report_text', '%#deposit%'),
         supabase.from('reports').select('*', { count: 'exact', head: true }).ilike('report_text', '%#new-position%'),
@@ -407,12 +411,12 @@ app.get('/api/stats', verifyToken, async (req, res) => {
     ];
 
     const results = await Promise.all(queries);
-    const [total, suspicious, deposit, new_positions, credit_out, account_transfer, payouts] = results.map(r => r.count);
+    const [total, reports_today, suspicious, deposit, new_positions, credit_out, account_transfer, payouts] = results.map(r => r.count);
 
     const errors = results.filter(r => r.error);
     if (errors.length > 0) return res.status(500).json({ error: errors[0].error.message });
 
-    res.json({ message: "success", data: { total, suspicious, deposit, new_positions, credit_out, account_transfer, payouts } });
+    res.json({ message: "success", data: { total, reports_today, suspicious, deposit, new_positions, credit_out, account_transfer, payouts } });
 });
 
 // Endpoint for weekly stats

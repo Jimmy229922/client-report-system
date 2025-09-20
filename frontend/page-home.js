@@ -39,12 +39,11 @@ async function fetchAndRenderHomePageData() {
 }
 
 function renderStatCards(stats) {
-    const statsGrid = document.getElementById('stats-grid');
-    if (!statsGrid) return;
+    const totalReportsContainer = document.querySelector('.total-reports-container');
+    const subStatsGrid = document.querySelector('.sub-stats-grid');
 
-    // Separate the total card from the rest
-    statsGrid.innerHTML = `
-        <div class="total-reports-container">
+    if (totalReportsContainer) {
+        totalReportsContainer.innerHTML = `
             <a href="#archive" class="stat-card total-reports">
                 <div class="stat-card-icon"><i class="fas fa-file-alt"></i></div>
                 <div class="stat-card-info">
@@ -52,8 +51,18 @@ function renderStatCards(stats) {
                     <p>${stats.total || 0}</p>
                 </div>
             </a>
-        </div>
-        <div class="sub-stats-grid">
+        `;
+    }
+
+    if (subStatsGrid) {
+        subStatsGrid.innerHTML = `
+            <a href="#archive" class="stat-card reports-today">
+                <div class="stat-card-icon"><i class="fas fa-calendar-day"></i></div>
+                <div class="stat-card-info">
+                    <h3>Reports Today <small>تقارير اليوم</small></h3>
+                    <p>${stats.reports_today || 0}</p>
+                </div>
+            </a>
             <a href="#reports/suspicious" class="stat-card suspicious">
                 <div class="stat-card-icon"><i class="fas fa-user-secret"></i></div>
                 <div class="stat-card-info">
@@ -96,7 +105,8 @@ function renderStatCards(stats) {
                     <p>${stats.payouts || 0}</p>
                 </div>
             </a>
-        </div>`;
+        `;
+    }
 }
 
 function renderWeeklyChart(weeklyData) {
@@ -193,7 +203,12 @@ export function renderHomePage() {
         </div>
         <div class="home-grid">
             <div id="stats-grid" class="stats-grid">
-                <div class="spinner"></div>
+                <div class="total-reports-container">
+                    <div class="stat-card total-reports loading"><div class="spinner"></div></div>
+                </div>
+                <div class="sub-stats-grid">
+                    ${Array(6).fill('<div class="stat-card loading"><div class="spinner"></div></div>').join('')}
+                </div>
             </div>
             <div class="chart-card">
                 <h3><i class="fas fa-chart-bar"></i> النشاط الأسبوعي</h3>

@@ -365,32 +365,54 @@ export function initCreateReportPage() {
     });
 }
 
-function handleLocalIpLookup(ipInput) {
+// --- Self-attaching IP Lookup for Report Forms ---
+
+// Helper function to delay execution
+function debounce(func, delay) {
+    let timeout;
+    return function(...args) {
+        clearTimeout(timeout);
+        timeout = setTimeout(() => func.apply(this, args), delay);
+    };
+}
+
+async function handleIpLookup(ipInput) {
     const form = ipInput.closest('form');
     if (!form) return;
 
     const ip = ipInput.value.trim();
     const countryInput = form.querySelector('#country');
     const countryIcon = form.querySelector('#country-icon');
+
     if (!countryInput || !countryIcon) return;
 
+    // Reset fields if IP is invalid
     if (!/^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$/.test(ip)) {
         countryInput.value = "";
         countryIcon.className = 'fas fa-globe';
         countryIcon.innerHTML = '';
         return;
     }
-    
-    // Use the globally available ipToCountry function from the library
-    const countryCode = window.ipToCountry.lookup(ip);
-    if (countryCode) {
-        // The library only gives the code, we need a way to get the name.
-        // A simple mapping can be used, or we can use Intl.DisplayNames
-        const regionNames = new Intl.DisplayNames(['ar'], { type: 'region' });
-        countryInput.value = regionNames.of(countryCode) || countryCode;
-        countryIcon.innerHTML = `<img src="https://flagcdn.com/w20/${countryCode.toLowerCase()}.png" alt="${countryCode}">`;
-    } else {
-        countryInput.value = 'غير معروف';
+
+    countryInput.value = "جاري البحث...";
+    countryIcon.className = 'fas fa-spinner fa-spin';
+    countryIcon.innerHTML = '';
+
+    // Use the new, faster ipwhois.io API
+    try {
+        const response = await fetch(`https://ipwhois.app/json/${ip}`);
+        const data = await response.json();
+        if (data.success) {
+            countryInput.value = data.country;
+            countryIcon.className = 'fas fa-globe';
+            countryIcon.innerHTML = `<img src="${data.country_flag}" alt="${data.country_code}" style="width: 20px; height: auto;">`;
+        } else {
+            throw new Error(data.message || 'Invalid IP address');
+        }
+    } catch (error) {
+        console.error('IP lookup failed:', error.message);
+        countryInput.value = 'فشل البحث';
+        countryIcon.className = 'fas fa-exclamation-triangle';
         countryIcon.innerHTML = '';
     }
 }
@@ -402,8 +424,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const observer = new MutationObserver(() => {
             const ipInput = document.getElementById('ip-input');
             if (ipInput && !ipInput.dataset.listenerAttached) {
-                ipInput.addEventListener('input', () => handleLocalIpLookup(ipInput));
-                ipInput.addEventListener('blur', () => handleLocalIpLookup(ipInput)); // Trigger on click-away
+                ipInput.addEventListener('input', debounce(() => handleIpLookup(ipInput), 300));
                 ipInput.dataset.listenerAttached = 'true';
             }
         });
