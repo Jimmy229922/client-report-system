@@ -139,7 +139,19 @@ function initProfilePage() {
 
 export function renderProfilePage() {
     const userStr = localStorage.getItem('user');
-    const user = userStr ? JSON.parse(userStr) : { username: 'مستخدم', email: 'غير محدد', avatar_url: null };
+    let user = { username: 'مستخدم', email: 'غير محدد', avatar_url: null }; // Default user
+
+    if (userStr && userStr !== 'undefined' && userStr !== 'null') {
+        try {
+            user = JSON.parse(userStr);
+        } catch (error) {
+            console.error("Corrupted user data in localStorage (profile page). Clearing and reloading.", error);
+            localStorage.removeItem('user');
+            localStorage.removeItem('token');
+            location.reload();
+            return; // Stop rendering to prevent further errors
+        }
+    }
 
     const mainContent = document.getElementById('main-content');
     mainContent.innerHTML = `

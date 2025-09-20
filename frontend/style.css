@@ -1116,3 +1116,27 @@ main { padding: 2rem; max-width: 1200px; margin: 2rem auto; animation: fadeIn 0.
     padding-top: 1.5rem;
     border-top: 1px solid var(--border-color);
 }
+
+/* --- Password Strength Meter --- */
+.password-strength-meter {
+    display: flex;
+    gap: 4px;
+    height: 5px;
+    margin-top: 8px;
+    border-radius: 5px;
+    overflow: hidden;
+}
+
+.strength-bar {
+    flex: 1;
+    height: 100%;
+    background-color: var(--border-color);
+    transition: background-color 0.3s ease;
+}
+
+.strength-text {
+    display: block;
+    margin-top: 4px;
+    font-size: 0.8rem;
+    min-height: 1em; /* Reserve space to prevent layout shift */
+}

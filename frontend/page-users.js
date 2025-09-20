@@ -43,6 +43,43 @@ async function fetchAndRenderUsers(searchTerm = '') {
     }
 }
 
+function updatePasswordStrength(password, meterElement, textElement) {
+    const strength = {
+        0: { text: "ضعيفة جداً", color: "var(--danger-color)" },
+        1: { text: "ضعيفة", color: "#ff9800" },
+        2: { text: "متوسطة", color: "#FFCE56" },
+        3: { text: "قوية", color: "#4CAF50" },
+        4: { text: "قوية جداً", color: "var(--success-color)" }
+    };
+
+    let score = 0;
+    if (password.length === 0) {
+        score = -1; // Special case for empty
+    } else {
+        if (password.length >= 8) score++;
+        if (/[a-z]/.test(password) && /[A-Z]/.test(password)) score++;
+        if (/[0-9]/.test(password)) score++;
+        if (/[^A-Za-z0-9]/.test(password)) score++;
+        if (password.length < 6) score = 0;
+    }
+
+    const bars = meterElement.querySelectorAll('.strength-bar');
+    bars.forEach((bar, index) => {
+        if (index < score) {
+            bar.style.backgroundColor = strength[score].color;
+        } else {
+            bar.style.backgroundColor = 'var(--border-color)';
+        }
+    });
+
+    if (score >= 0) {
+        textElement.textContent = strength[score].text;
+        textElement.style.color = strength[score].color;
+    } else {
+        textElement.textContent = '';
+    }
+}
+
 function handleAddUser() {
     const form = document.getElementById('add-user-form');
     form.addEventListener('submit', async (e) => {
@@ -188,9 +225,20 @@ export function renderUsersPage() {
             <div class="add-user-container form-container">
                 <h2>إضافة مستخدم جديد</h2>
                 <form id="add-user-form">
-                    <div class="form-group"><label for="new-username">اسم المستخدم (للعرض)</label><input type="text" id="new-username" name="new-username" required></div>
-                    <div class="form-group"><label for="new-email">البريد الإلكتروني (للدخول)</label><input type="email" id="new-email" name="new-email" required></div>
-                    <div class="form-group"><label for="new-password">كلمة المرور</label><input type="password" id="new-password" name="new-password" required></div>
+                    <div class="form-group">
+                        <label for="new-username">اسم المستخدم (للعرض)</label>
+                        <input type="text" id="new-username" name="new-username" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="new-email">البريد الإلكتروني (للدخول)</label>
+                        <input type="email" id="new-email" name="new-email" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="new-password">كلمة المرور</label>
+                        <input type="password" id="new-password" name="new-password" required>
+                        <div class="password-strength-meter"><div class="strength-bar"></div><div class="strength-bar"></div><div class="strength-bar"></div><div class="strength-bar"></div></div>
+                        <small id="new-password-strength-text" class="strength-text"></small>
+                    </div>
                     <button type="submit" class="submit-btn">إضافة مستخدم</button>
                 </form>
             </div>
@@ -209,5 +257,20 @@ export function renderUsersPage() {
         debounceTimer = setTimeout(() => {
             fetchAndRenderUsers(e.target.value);
         }, 500);
+    });
+
+    // Add password strength meter logic
+    const newPasswordInput = document.getElementById('new-password');
+    const newPasswordMeter = newPasswordInput.nextElementSibling;
+    const newPasswordText = newPasswordMeter.nextElementSibling;
+    newPasswordInput.addEventListener('input', () => {
+        updatePasswordStrength(newPasswordInput.value, newPasswordMeter, newPasswordText);
+    });
+
+    const editPasswordInput = document.getElementById('edit-password');
+    const editPasswordMeter = editPasswordInput.nextElementSibling;
+    const editPasswordText = editPasswordMeter.nextElementSibling;
+    editPasswordInput.addEventListener('input', () => {
+        updatePasswordStrength(editPasswordInput.value, editPasswordMeter, editPasswordText);
     });
 }

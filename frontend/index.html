@@ -129,7 +129,9 @@
                     </div>
                     <div class="form-group">
                         <label for="edit-password">كلمة مرور جديدة (اختياري)</label>
-                        <input type="password" id="edit-password" placeholder="اتركه فارغاً لعدم التغيير" minlength="6">
+                        <input type="password" id="edit-password" placeholder="اتركه فارغاً لعدم التغيير">
+                        <div class="password-strength-meter"><div class="strength-bar"></div><div class="strength-bar"></div><div class="strength-bar"></div><div class="strength-bar"></div></div>
+                        <small id="edit-password-strength-text" class="strength-text"></small>
                     </div>
                     <button type="submit" class="submit-btn">حفظ التغييرات</button>
                 </form>
