@@ -1,6 +1,16 @@
 import { fetchWithAuth } from './api.js';
 import { showToast } from './ui.js';
 
+function getReportType(reportText) {
+    if (reportText.includes('#suspicious')) return 'تقارير مشبوهة';
+    if (reportText.includes('#deposit')) return 'إيداعات';
+    if (reportText.includes('#new-position')) return 'صفقات جديدة';
+    if (reportText.includes('#credit-out')) return 'سحب رصيد';
+    if (reportText.includes('تقرير تحويل الحسابات')) return 'تحويل حسابات'; // No hashtag for this one
+    if (reportText.includes('#payouts')) return 'دفعات (PAYOUTS)';
+    return 'تقارير أخرى'; // Fallback category
+}
+
 async function fetchAndRenderArchive(searchTerm = '') {
     const archiveGrid = document.getElementById('archive-grid');
     if (!archiveGrid) return;
@@ -10,15 +20,15 @@ async function fetchAndRenderArchive(searchTerm = '') {
         const result = await response.json();
 
         if (result.data && result.data.length > 0) {
-            const reportsByDate = result.data.reduce((acc, report) => {
-                const date = new Date(report.timestamp).toLocaleDateString('ar-EG', { year: 'numeric', month: 'long', day: 'numeric' });
-                if (!acc[date]) acc[date] = [];
-                acc[date].push(report);
+            const reportsByType = result.data.reduce((acc, report) => {
+                const type = getReportType(report.report_text);
+                if (!acc[type]) acc[type] = [];
+                acc[type].push(report);
                 return acc;
             }, {});
 
-            archiveGrid.innerHTML = Object.keys(reportsByDate).map(date => {
-                const reportsHtml = reportsByDate[date].map(report => {
+            archiveGrid.innerHTML = Object.keys(reportsByType).sort().map(type => {
+                const reportsHtml = reportsByType[type].map(report => {
                     // For admins, show author only if it's not the admin themselves (ID 1)
                     const authorHtml = report.users && report.users.username && report.user_id !== 1
                         ? `<span class="report-author"><i class="fas fa-user-pen"></i> ${report.users.username}</span>`
@@ -50,7 +60,7 @@ async function fetchAndRenderArchive(searchTerm = '') {
                 return `
                     <div class="accordion-group">
                         <div class="accordion-header">
-                            <span>${date}</span>
+                            <span>${type} (${reportsByType[type].length})</span>
                             <i class="fas fa-chevron-down"></i>
                         </div>
                         <div class="accordion-content">${reportsHtml}</div>

@@ -198,10 +198,13 @@ app.post('/api/send-report', verifyToken, upload.array('images', 3), async (req,
             return res.status(400).json({ success: false, message: 'نص التقرير مفقود.' });
         }
 
+        // Remove the #account_transfer hashtag from the text before sending to Telegram
+        const textForTelegram = reportText.replace(/#account_transfer\s*/g, '').trim();
+
         // Conditionally add the author based on user ID. Only add if not the admin (ID 1).
         const telegramMessage = userId === 1
-            ? reportText
-            : `${reportText}\n\nبواسطة: ${username}`;
+            ? textForTelegram
+            : `${textForTelegram}\n\nبواسطة: ${username}`;
         const TELEGRAM_CAPTION_LIMIT = 1024;
 
         // التحقق من وجود صور
@@ -326,12 +329,12 @@ app.delete('/api/reports/:id', verifyToken, async (req, res) => { // verifyToken
 app.get('/api/stats', verifyToken, async (req, res) => {
     const queries = [
         supabase.from('reports').select('*', { count: 'exact', head: true }),
-        supabase.from('reports').select('*', { count: 'exact', head: true }).like('report_text', '%#suspicious%'),
-        supabase.from('reports').select('*', { count: 'exact', head: true }).like('report_text', '%#deposit%'),
-        supabase.from('reports').select('*', { count: 'exact', head: true }).like('report_text', '%#new-position%'),
-        supabase.from('reports').select('*', { count: 'exact', head: true }).like('report_text', '%#credit-out%'),
-        supabase.from('reports').select('*', { count: 'exact', head: true }).like('report_text', '%تقرير تحويل الحسابات%'),
-        supabase.from('reports').select('*', { count: 'exact', head: true }).like('report_text', '%#payouts%')
+        supabase.from('reports').select('*', { count: 'exact', head: true }).ilike('report_text', '%#suspicious%'),
+        supabase.from('reports').select('*', { count: 'exact', head: true }).ilike('report_text', '%#deposit%'),
+        supabase.from('reports').select('*', { count: 'exact', head: true }).ilike('report_text', '%#new-position%'),
+        supabase.from('reports').select('*', { count: 'exact', head: true }).ilike('report_text', '%#credit-out%'),
+        supabase.from('reports').select('*', { count: 'exact', head: true }).ilike('report_text', '%تقرير تحويل الحسابات%'),
+        supabase.from('reports').select('*', { count: 'exact', head: true }).ilike('report_text', '%#payouts%')
     ];
 
     const results = await Promise.all(queries);

@@ -1,26 +1,24 @@
 import { fetchWithAuth } from './api.js';
-import { timeAgo } from './ui.js';
 
-let statsChart = null; // To hold the chart instance
+let weeklyChart = null; // To hold the chart instance
 
-async function fetchAndRenderStats() {
+async function fetchAndRenderHomePageData() {
     try {
-        // Fetch general stats and recent reports in parallel
-        const [statsResponse, reportsResponse] = await Promise.all([
+        // Fetch general stats and weekly activity in parallel
+        const [statsResponse, weeklyStatsResponse] = await Promise.all([
             fetchWithAuth('/api/stats'),
-            fetchWithAuth('/api/reports?limit=5') // Fetch last 5 reports
+            fetchWithAuth('/api/stats/weekly')
         ]);
 
         const statsResult = await statsResponse.json();
-        const reportsResult = await reportsResponse.json();
+        const weeklyStatsResult = await weeklyStatsResponse.json();
 
         if (statsResult.data) {
             renderStatCards(statsResult.data);
-            renderDistributionChart(statsResult.data);
         }
 
-        if (reportsResult.data) {
-            renderRecentReports(reportsResult.data);
+        if (weeklyStatsResult.data) {
+            renderWeeklyChart(weeklyStatsResult.data);
         }
 
     } catch (error) {
@@ -29,9 +27,9 @@ async function fetchAndRenderStats() {
         if (statsGrid) {
             statsGrid.innerHTML = '<p>فشل تحميل الإحصائيات.</p>';
         }
-        const recentReportsContainer = document.getElementById('recent-reports-container');
-        if (recentReportsContainer) {
-            recentReportsContainer.innerHTML = '<p>فشل تحميل أحدث التقارير.</p>';
+        const chartCard = document.querySelector('.chart-card');
+        if(chartCard) {
+            chartCard.innerHTML = '<h3>النشاط الأسبوعي</h3><p>فشل تحميل بيانات الرسم البياني.</p>';
         }
     }
 }
@@ -93,139 +91,109 @@ function renderStatCards(stats) {
     `;
 }
 
-function renderDistributionChart(stats) {
-    const ctx = document.getElementById('stats-chart');
+function renderWeeklyChart(weeklyData) {
+    const ctx = document.getElementById('weekly-chart');
     if (!ctx) return;
 
-    if (statsChart) {
-        statsChart.destroy();
+    if (weeklyChart) {
+        weeklyChart.destroy();
     }
 
-    const labels = [
-        'Suspicious',
-        'Deposit',
-        'New Position',
-        'Credit Out',
-        'تحويل حسابات',
-        'PAYOUTS'
-    ];
-    const data = [
-        stats.suspicious || 0,
-        stats.deposit || 0,
-        stats.new_positions || 0,
-        stats.credit_out || 0,
-        stats.account_transfer || 0,
-        stats.payouts || 0
-    ];
+    // Prepare data for the last 7 days, ensuring correct order
+    const last7Days = [...Array(7)].map((_, i) => {
+        const d = new Date();
+        d.setDate(d.getDate() - i);
+        return d.toISOString().split('T')[0];
+    }).reverse();
 
-    // Filter out labels/data with 0 count to keep the chart clean
-    const filteredLabels = [];
-    const filteredData = [];
-    data.forEach((value, index) => {
-        if (value > 0) {
-            filteredLabels.push(labels[index]);
-            filteredData.push(value);
-        }
+    const chartLabels = last7Days.map(dateStr => new Date(dateStr).toLocaleDateString('ar-EG', { weekday: 'short', day: 'numeric' }));
+    const chartData = last7Days.map(dateStr => {
+        const found = weeklyData.find(d => d.date === dateStr);
+        return found ? found.count : 0;
     });
 
-    if (filteredData.length === 0) {
-        document.getElementById('chart-container').innerHTML = '<p class="chart-placeholder">لا توجد بيانات لعرضها في الرسم البياني بعد.</p>';
-        return;
-    }
-
-    statsChart = new Chart(ctx, {
-        type: 'doughnut',
+    weeklyChart = new Chart(ctx, {
+        type: 'line',
         data: {
-            labels: filteredLabels,
+            labels: chartLabels,
             datasets: [{
-                label: 'توزيع التقارير',
-                data: filteredData,
-                backgroundColor: [
-                    '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40'
-                ],
-                borderColor: 'var(--card-bg)',
-                borderWidth: 2,
-                hoverOffset: 4
+                label: 'التقارير المرسلة',
+                data: chartData,
+                borderColor: 'var(--accent-color)',
+                backgroundColor: 'rgba(77, 91, 249, 0.2)',
+                fill: true,
+                tension: 0.4,
+                pointBackgroundColor: '#fff',
+                pointBorderColor: 'var(--accent-color)',
+                pointHoverRadius: 7,
+                pointHoverBackgroundColor: 'var(--accent-color)',
             }]
         },
         options: {
             responsive: true,
             maintainAspectRatio: false,
-            plugins: {
-                legend: {
-                    position: 'bottom',
-                    labels: {
-                        color: 'var(--text-color)',
-                        font: {
-                            family: 'inherit'
-                        }
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        color: '#aaa',
+                        stepSize: 1 // Ensure y-axis shows whole numbers
+                    },
+                    grid: {
+                        color: 'rgba(255, 255, 255, 0.1)'
                     }
                 },
-                title: {
-                    display: true,
-                    text: 'توزيع أنواع التقارير',
-                    color: 'var(--text-color)',
-                    font: {
-                        size: 16,
-                        family: 'inherit'
+                x: {
+                    ticks: {
+                        color: '#aaa'
+                    },
+                    grid: {
+                        display: false
                     }
+                }
+            },
+            plugins: {
+                legend: {
+                    display: false
                 }
             }
         }
     });
 }
 
-function renderRecentReports(reports) {
-    const container = document.getElementById('recent-reports-container');
-    if (!container) return;
-
-    if (reports.length === 0) {
-        container.innerHTML = '<p>لا توجد تقارير حديثة.</p>';
-        return;
-    }
-
-    const reportsHtml = reports.map(report => {
-        // For admins, show author only if it's not the admin themselves (ID 1)
-        const authorHtml = report.users && report.users.username && report.user_id !== 1
-            ? `<span class="report-author"><i class="fas fa-user-pen"></i> ${report.users.username}</span>`
-            : '';
-        return `
-            <div class="recent-report-item">
-                <div class="recent-report-header">
-                    <a href="#archive" class="recent-report-title">${report.report_text.split('\n')[0]}</a>
-                    <span class="recent-report-time">${timeAgo(report.timestamp)}</span>
-                </div>
-                ${authorHtml ? `<div class="recent-report-author">${authorHtml}</div>` : ''}
-            </div>
-        `;
-    }).join('');
-
-    container.innerHTML = reportsHtml;
-}
-
-
 export function renderHomePage() {
     const mainContent = document.getElementById('main-content');
     mainContent.innerHTML = `
-        <h1 class="page-title">لوحة التحكم الرئيسية</h1>
-        <div class="home-layout">
-            <div class="home-main-column">
-                <h2>نظرة عامة</h2>
+        <div class="dashboard-header">
+            <h1>لوحة التحكم</h1>
+            <p>نظرة عامة سريعة على نشاط النظام والإحصائيات الرئيسية.</p>
+        </div>
+        <div class="home-grid">
+            <div class="main-content-area">
                 <div id="stats-grid" class="stats-grid">
                     <div class="spinner"></div>
                 </div>
-                <h2 style="margin-top: 2rem;">أحدث التقارير</h2>
-                <div id="recent-reports-container" class="recent-reports-container">
-                    <div class="spinner"></div>
+                <div class="chart-card">
+                    <h3><i class="fas fa-chart-bar"></i> النشاط الأسبوعي</h3>
+                    <div class="chart-container">
+                        <canvas id="weekly-chart"></canvas>
+                    </div>
                 </div>
             </div>
-            <div class="home-sidebar-column">
-                <h2>توزيع التقارير</h2>
-                <div class="chart-container" id="chart-container">
-                    <canvas id="stats-chart"></canvas>
+            <div class="sidebar-area">
+                <div class="quick-actions-card">
+                    <h3><i class="fas fa-bolt"></i> إجراءات سريعة</h3>
+                    <ul class="quick-actions-list">
+                        <li><a href="#reports/suspicious"><i class="fas fa-user-secret"></i> <span>تقرير مشبوه</span></a></li>
+                        <li><a href="#reports/deposit"><i class="fas fa-money-bill-wave"></i> <span>تقرير إيداع</span></a></li>
+                        <li><a href="#reports/new-position"><i class="fas fa-chart-line"></i> <span>تقرير صفقة جديدة</span></a></li>
+                        <li><a href="#reports/credit-out"><i class="fas fa-credit-card"></i> <span>تقرير سحب رصيد</span></a></li>
+                        <li><a href="#reports/account-transfer"><i class="fas fa-exchange-alt"></i> <span>تحويل حسابات</span></a></li>
+                        <li><a href="#reports/payouts"><i class="fas fa-hand-holding-usd"></i> <span>تقرير دفعات</span></a></li>
+                    </ul>
                 </div>
             </div>
         </div>
     `;
-    fetchAndRenderStats();
+    fetchAndRenderHomePageData();
 }
