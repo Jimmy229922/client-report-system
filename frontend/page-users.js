@@ -16,14 +16,18 @@ async function fetchAndRenderUsers(searchTerm = '') {
                     : `<span class="profile-avatar-placeholder" style="width: 32px; height: 32px; font-size: 1rem; margin-left: 10px;">
                            <i class="fas fa-user"></i>
                        </span>`;
+                
+                const isAdmin = user.id === 1;
+                const adminBadge = isAdmin ? `<span class="admin-badge">مسؤول</span>` : '';
+                const deleteButton = !isAdmin ? `<button class="archive-btn delete" data-action="delete" data-id="${user.id}" title="حذف المستخدم"><i class="fas fa-trash"></i></button>` : '';
 
                 return `
-                <tr id="user-row-${user.id}">
-                    <td data-field="username" style="display: flex; align-items: center;">${avatarHtml} ${user.username}</td>
+                <tr id="user-row-${user.id}" class="${isAdmin ? 'admin-row' : ''}">
+                    <td data-field="username" style="display: flex; align-items: center;">${avatarHtml} ${user.username} ${adminBadge}</td>
                     <td data-field="email">${user.email}</td>
                     <td class="user-actions">
                         <button class="archive-btn" data-action="edit" data-id="${user.id}" title="تعديل المستخدم"><i class="fas fa-edit"></i></button>
-                        <button class="archive-btn delete" data-action="delete" data-id="${user.id}" title="حذف المستخدم"><i class="fas fa-trash"></i></button>
+                        ${deleteButton}
                     </td>
                 </tr>
             `}).join('');

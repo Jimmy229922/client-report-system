@@ -27,10 +27,20 @@ function setupUIForUser() {
 
     const userStr = localStorage.getItem('user');
     if (userStr) {
-        const user = JSON.parse(userStr);
-        if (user.id === 1) { // Admin-only UI elements
-            if (userManagementLink) userManagementLink.classList.remove('hidden');
-            if (updateAppBtn) updateAppBtn.classList.remove('hidden');
+        // Defensive check to prevent crash from corrupted data
+        if (userStr && userStr !== 'undefined' && userStr !== 'null') {
+            try {
+                const user = JSON.parse(userStr);
+                if (user && user.id === 1) { // Admin-only UI elements
+                    if (userManagementLink) userManagementLink.classList.remove('hidden');
+                    if (updateAppBtn) updateAppBtn.classList.remove('hidden');
+                }
+            } catch (error) {
+                console.error("Corrupted user data in localStorage (app.js). Clearing and reloading.", error);
+                localStorage.removeItem('user');
+                localStorage.removeItem('token');
+                location.reload();
+            }
         }
     }
 }
