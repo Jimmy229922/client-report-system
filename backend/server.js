@@ -428,6 +428,17 @@ app.get('/api/stats/weekly', verifyToken, async (req, res) => {
     res.json({ message: "success", data });
 });
 
+// Endpoint for recent reports
+app.get('/api/reports/recent', verifyToken, async (req, res) => {
+    const { data, error } = await supabase
+        .from('reports')
+        .select('id, report_text, timestamp, users(username)')
+        .order('timestamp', { ascending: false })
+        .limit(5);
+    if (error) return res.status(500).json({ error: error.message });
+    res.json({ message: "success", data });
+});
+
 // Health check endpoint for the update process
 app.get('/api/health', (req, res) => {
     res.status(200).json({ status: 'ok' });

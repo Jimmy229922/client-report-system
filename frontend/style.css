@@ -757,7 +757,7 @@ main { padding: 2rem; max-width: 1200px; margin: 2rem auto; animation: fadeIn 0.
     flex: 1; /* Take up available space */
     min-width: 300px;
     position: relative;
-    height: 350px; /* Adjust height for the new layout */
+    height: 350px;
 }
 
 /* --- Home Page Layout --- */

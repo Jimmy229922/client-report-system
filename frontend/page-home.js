@@ -1,4 +1,5 @@
 import { fetchWithAuth } from './api.js';
+import { timeAgo } from './ui.js';
 
 let weeklyChart = null; // To hold the chart instance
 
@@ -7,7 +8,8 @@ export async function fetchAndRenderHomePageData() {
         // Use Promise.allSettled to allow one to fail without breaking the other
         const results = await Promise.allSettled([
             fetchWithAuth('/api/stats'),
-            fetchWithAuth('/api/stats/weekly')
+            fetchWithAuth('/api/stats/weekly'),
+            fetchWithAuth('/api/reports/recent')
         ]);
 
         const statsResult = results[0];
@@ -33,9 +35,42 @@ export async function fetchAndRenderHomePageData() {
             }
         }
 
+        const recentReportsResult = results[2];
+        if (recentReportsResult.status === 'fulfilled' && recentReportsResult.value.data) {
+            renderRecentReports(recentReportsResult.value.data);
+        } else {
+            console.error('Failed to fetch recent reports:', recentReportsResult.reason);
+            const recentReportsContainer = document.getElementById('recent-reports-container');
+            if (recentReportsContainer) {
+                recentReportsContainer.innerHTML = '<p>فشل تحميل أحدث التقارير.</p>';
+            }
+        }
+
     } catch (error) { // This catch is now for truly unexpected errors
         console.error('An unexpected error occurred on the home page:', error);
     }
+}
+
+function renderRecentReports(reports) {
+    const container = document.getElementById('recent-reports-container');
+    if (!container) return;
+
+    if (reports.length === 0) {
+        container.innerHTML = '<p>لا توجد تقارير حديثة.</p>';
+        return;
+    }
+
+    container.innerHTML = reports.map(report => `
+        <div class="recent-report-item">
+            <div class="recent-report-header">
+                <a href="#archive" class="recent-report-title">${report.report_text.split('\n')[0]}</a>
+                <span class="recent-report-time">${timeAgo(report.timestamp)}</span>
+            </div>
+            <div class="recent-report-author">
+                بواسطة: ${report.users ? report.users.username : '<em>محذوف</em>'}
+            </div>
+        </div>
+    `).join('');
 }
 
 function renderStatCards(stats) {
@@ -202,18 +237,26 @@ export function renderHomePage() {
             <p>نظرة عامة سريعة على نشاط النظام والإحصائيات الرئيسية.</p>
         </div>
         <div class="home-grid">
-            <div id="stats-grid" class="stats-grid">
-                <div class="total-reports-container">
-                    <div class="stat-card total-reports loading"><div class="spinner"></div></div>
+            <div class="home-main-column">
+                <div id="stats-grid" class="stats-grid">
+                    <div class="total-reports-container">
+                        <div class="stat-card total-reports loading"><div class="spinner"></div></div>
+                    </div>
+                    <div class="sub-stats-grid">
+                        ${Array(6).fill('<div class="stat-card loading"><div class="spinner"></div></div>').join('')}
+                    </div>
                 </div>
-                <div class="sub-stats-grid">
-                    ${Array(6).fill('<div class="stat-card loading"><div class="spinner"></div></div>').join('')}
+                <div class="chart-card">
+                    <h3><i class="fas fa-chart-bar"></i> النشاط الأسبوعي</h3>
+                    <div class="chart-container">
+                        <canvas id="weekly-chart"></canvas>
+                    </div>
                 </div>
             </div>
-            <div class="chart-card">
-                <h3><i class="fas fa-chart-bar"></i> النشاط الأسبوعي</h3>
-                <div class="chart-container">
-                    <canvas id="weekly-chart"></canvas>
+            <div class="home-sidebar-column">
+                <h2><i class="fas fa-history"></i> أحدث التقارير</h2>
+                <div id="recent-reports-container" class="recent-reports-container">
+                    <div class="spinner"></div>
                 </div>
             </div>
         </div>
