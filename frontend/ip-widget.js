@@ -10,8 +10,8 @@ function debounce(func, delay) {
 
 // API 1: ip-api.com (returns JSON)
 async function fetchCountryFromIpApi(ip) {
-    // Note: The free endpoint for ip-api.com is HTTP. This is fine for localhost.
-    const response = await fetch(`http://ip-api.com/json/${ip}?fields=status,country,message`);
+    // Using HTTPS for better security and to avoid mixed-content issues.
+    const response = await fetch(`https://ip-api.com/json/${ip}?fields=status,country,message`);
     if (!response.ok) {
         throw new Error('ip-api.com network response was not ok');
     }
