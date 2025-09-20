@@ -225,7 +225,11 @@ function handleUserActions() {
                     showToast('تم حذف المستخدم بنجاح.');
                     // Remove the user from the local cache
                     allUsers = allUsers.filter(u => u.id != userId);
-                    row.remove();
+                    // Animate before removing
+                    row.classList.add('row-fade-out');
+                    setTimeout(() => {
+                        row.remove();
+                    }, 400); // Match the transition duration in CSS
                 } catch (error) {
                     showToast(error.message, true);
                 }

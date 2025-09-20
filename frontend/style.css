@@ -903,6 +903,12 @@ main { padding: 2rem; max-width: 1200px; margin: 2rem auto; animation: fadeIn 0.
     background-color: rgba(77, 91, 249, 0.05); /* A subtle highlight */
 }
 
+.row-fade-out {
+    opacity: 0;
+    transform: translateX(-30px);
+    transition: opacity 0.4s ease-out, transform 0.4s ease-out;
+}
+
 /* Adjust nav-actions for profile dropdown */
 .nav-actions .dropdown .nav-link {
     display: flex;
