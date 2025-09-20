@@ -170,9 +170,11 @@ export function initApp() {
     }
 
     document.getElementById('logout-btn').addEventListener('click', () => {
-        localStorage.removeItem('token');
-        localStorage.removeItem('user'); // Clear user info on logout
-        location.reload();
+        if (confirm('هل أنت متأكد من أنك تريد تسجيل الخروج؟')) {
+            localStorage.removeItem('token');
+            localStorage.removeItem('user'); // Clear user info on logout
+            location.reload();
+        }
     });
 
     window.addEventListener('hashchange', navigate);
