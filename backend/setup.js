@@ -40,9 +40,11 @@ async function setup() {
     return;
   }
 
-  const supabaseKey = await question('Enter your Supabase anon public Key: ');
+  console.log('\nIMPORTANT: For the backend to work correctly, you must use the "service_role" key.');
+  console.log('You can find this in your Supabase project under: Settings > API > Project API keys');
+  const supabaseKey = await question('Enter your Supabase service_role Key: ');
   if (!supabaseKey || !supabaseKey.trim()) {
-    console.error('\nError: Supabase Key is required. Setup aborted.');
+    console.error('\nError: Supabase service_role Key is required. Setup aborted.');
     rl.close();
     return;
   }

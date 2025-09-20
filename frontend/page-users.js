@@ -238,7 +238,7 @@ function handleUserActions() {
         }
 
         try {
-            await fetchWithAuth(`/api/users/${userId}`, {
+            const result = await fetchWithAuth(`/api/users/${userId}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
@@ -246,7 +246,20 @@ function handleUserActions() {
 
             showToast('تم تحديث بيانات المستخدم بنجاح.');
             closeEditModal();
-            fetchAndRenderUsers(); // Refresh the entire list to show changes
+            
+            // --- Optimistic UI Update ---
+            // Update the specific row instead of reloading the whole table
+            const updatedUser = result.user;
+            const userRow = document.getElementById(`user-row-${updatedUser.id}`);
+            if (userRow) {
+                userRow.querySelector('[data-field="username"]').innerHTML = `${userRow.querySelector('img, span.profile-avatar-placeholder').outerHTML} ${updatedUser.username} ${userRow.querySelector('.admin-badge')?.outerHTML || ''}`;
+                userRow.querySelector('[data-field="email"] span').textContent = updatedUser.email;
+            }
+            // Update the user in the local cache
+            const userIndex = allUsers.findIndex(u => u.id == updatedUser.id);
+            if (userIndex > -1) {
+                allUsers[userIndex] = updatedUser;
+            }
         } catch (error) {
             showToast(error.message, true);
         }
