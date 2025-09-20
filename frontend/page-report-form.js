@@ -109,11 +109,6 @@ function getFormFields(reportType) {
                     <label for="bonus-banned">محظور</label>
                 </div>
             </div>
-            <div class="form-group">
-                <label for="notes">ملاحظات إضافية</label>
-                <textarea id="notes" name="notes" rows="3" placeholder="اكتب أي ملاحظات أخرى هنا..."></textarea>
-                <small class="form-hint">اضغط Enter للإرسال، أو Shift+Enter لسطر جديد.</small>
-            </div>
             ${imageUploadField}
             ${formActions}
         `;
@@ -201,7 +196,7 @@ function getReportText(reportType, form) {
              + `نسبة الهامش: ${marginPercentage || 'N/A'}\n`
              + `الأرباح للصفقات العائمة: ${floatingProfits || 'NA'}\n\n`
              + `الأرباح للصفقات العائمة (${profitStatus})\n`
-             + `الـ IP الأخير (${ipMatchStatus}) لبلد التسجيل، العميل ${bonusStatus}${common.notes !== 'لا يوجد' ? `، ${common.notes}` : ''}`;
+             + `الـ IP الأخير (${ipMatchStatus}) لبلد التسجيل، العميل ${bonusStatus}`;
     
     } else { // General and Account Transfer
         const transferSourceSelect = form.querySelector('#transfer-source-select');
@@ -228,7 +223,6 @@ export function initCreateReportPage() {
     const pageTitle = document.querySelector('.page-title').innerText.replace('إنشاء تقرير: ', '');
     form.innerHTML = getFormFields(pageTitle);
 
-    const ipInput = form.querySelector('#ip-input');
     const uploadArea = form.querySelector('#upload-area');
     const imagePreviews = form.querySelector('#image-previews');
     const copyBtn = form.querySelector('#copy-report-btn');
@@ -244,72 +238,6 @@ export function initCreateReportPage() {
         });
     }
 
-    if (ipInput) {
-        // Debounce function to avoid API calls on every keystroke
-        const debounce = (func, delay) => {
-            let timeout;
-            return function(...args) {
-                const context = this;
-                clearTimeout(timeout);
-                timeout = setTimeout(() => func.apply(context, args), delay);
-            };
-        };
-
-        const handleIpLookup = async () => {
-            const ip = ipInput.value.trim();
-            const countryInput = form.querySelector('#country');
-            const countryIcon = form.querySelector('#country-icon');
-
-            // Reset fields if IP is invalid
-            if (!/^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$/.test(ip)) {
-                countryInput.value = "";
-                countryIcon.className = 'fas fa-globe';
-                countryIcon.innerHTML = '';
-                return;
-            }
-
-            countryInput.value = "جاري البحث...";
-            countryIcon.className = 'fas fa-spinner fa-spin';
-            countryIcon.innerHTML = '';
-
-            try {
-                // Primary API: ip-api.com (more reliable)
-                const response = await fetch(`https://ip-api.com/json/${ip}?fields=status,country,countryCode,message`);
-                const data = await response.json();
-                if (data.status === 'success' && data.countryCode) {
-                    countryInput.value = data.country;
-                    countryIcon.className = 'fas fa-globe';
-                    countryIcon.innerHTML = `<img src="https://flagcdn.com/w20/${data.countryCode.toLowerCase()}.png" alt="${data.countryCode}">`;
-                    return;
-                }
-                throw new Error(data.message || 'Primary API failed or missing country code');
-            } catch (error1) {
-                console.warn('Primary IP lookup failed:', error1.message, 'Trying fallback...');
-                try {
-                    // Fallback API: ipapi.co
-                    const response = await fetch(`https://ipapi.co/${ip}/json/`);
-                    const data = await response.json();
-                    if (data.error) {
-                        countryInput.value = data.reason || 'IP غير صالح';
-                        countryIcon.className = 'fas fa-question-circle';
-                        countryIcon.innerHTML = '';
-                    } else {
-                        countryInput.value = data.country_name;
-                        countryIcon.className = 'fas fa-globe';
-                        countryIcon.innerHTML = `<img src="https://flagcdn.com/w20/${data.country_code.toLowerCase()}.png" alt="${data.country_code}">`;
-                    }
-                } catch (error2) {
-                    console.error('Fallback IP lookup also failed:', error2.message);
-                    countryInput.value = 'فشل البحث عن الدولة';
-                    countryIcon.className = 'fas fa-exclamation-triangle';
-                    countryIcon.innerHTML = '';
-                }
-            }
-        };
-
-        ipInput.addEventListener('input', debounce(handleIpLookup, 500));
-    }
-
     // Add keydown listener to textareas for Enter submission
     form.querySelectorAll('textarea').forEach(textarea => {
         textarea.addEventListener('keydown', (e) => {
@@ -318,6 +246,14 @@ export function initCreateReportPage() {
                 form.querySelector('.submit-btn').click(); // Trigger form submission
             }
         });
+    });
+
+    // Add keydown listener to the form for Enter submission on non-textarea inputs
+    form.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && e.target.tagName !== 'TEXTAREA') {
+            e.preventDefault();
+            form.querySelector('.submit-btn').click();
+        }
     });
 
     const handleFiles = (files) => {
@@ -405,3 +341,86 @@ export function initCreateReportPage() {
         });
     });
 }
+
+// --- Self-attaching IP Lookup for Report Forms ---
+
+// Helper function to delay execution
+function debounce(func, delay) {
+    let timeout;
+    return function(...args) {
+        clearTimeout(timeout);
+        timeout = setTimeout(() => func.apply(this, args), delay);
+    };
+}
+
+async function handleIpLookup(ipInput) {
+    const form = ipInput.closest('form');
+    if (!form) return;
+
+    const ip = ipInput.value.trim();
+    const countryInput = form.querySelector('#country');
+    const countryIcon = form.querySelector('#country-icon');
+
+    if (!countryInput || !countryIcon) return;
+
+    // Reset fields if IP is invalid
+    if (!/^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$/.test(ip)) {
+        countryInput.value = "";
+        countryIcon.className = 'fas fa-globe';
+        countryIcon.innerHTML = '';
+        return;
+    }
+
+    countryInput.value = "جاري البحث...";
+    countryIcon.className = 'fas fa-spinner fa-spin';
+    countryIcon.innerHTML = '';
+
+    try {
+        // Primary API: ip-api.com
+        const response = await fetch(`https://ip-api.com/json/${ip}?fields=status,country,countryCode,message`);
+        const data = await response.json();
+        if (data.status === 'success' && data.countryCode) {
+            countryInput.value = data.country;
+            countryIcon.className = 'fas fa-globe';
+            countryIcon.innerHTML = `<img src="https://flagcdn.com/w20/${data.countryCode.toLowerCase()}.png" alt="${data.countryCode}">`;
+            return;
+        }
+        throw new Error(data.message || 'Primary API failed');
+    } catch (error1) {
+        console.warn('Primary IP lookup failed:', error1.message, 'Trying fallback...');
+        try {
+            // Fallback API: ipapi.co
+            const response = await fetch(`https://ipapi.co/${ip}/json/`);
+            const data = await response.json();
+            if (data.error) {
+                countryInput.value = data.reason || 'IP غير صالح';
+                countryIcon.className = 'fas fa-question-circle';
+                countryIcon.innerHTML = '';
+            } else {
+                countryInput.value = data.country_name;
+                countryIcon.className = 'fas fa-globe';
+                countryIcon.innerHTML = `<img src="https://flagcdn.com/w20/${data.country_code.toLowerCase()}.png" alt="${data.country_code}">`;
+            }
+        } catch (error2) {
+            console.error('Fallback IP lookup also failed:', error2.message);
+            countryInput.value = 'فشل البحث عن الدولة';
+            countryIcon.className = 'fas fa-exclamation-triangle';
+            countryIcon.innerHTML = '';
+        }
+    }
+}
+
+// Use a MutationObserver to detect when a report form is added to the DOM.
+document.addEventListener('DOMContentLoaded', () => {
+    const mainContent = document.getElementById('main-content');
+    if (mainContent) {
+        const observer = new MutationObserver(() => {
+            const ipInput = document.getElementById('ip-input');
+            if (ipInput && !ipInput.dataset.listenerAttached) {
+                ipInput.addEventListener('input', debounce(() => handleIpLookup(ipInput), 500));
+                ipInput.dataset.listenerAttached = 'true';
+            }
+        });
+        observer.observe(mainContent, { childList: true, subtree: true });
+    }
+});
