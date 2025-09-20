@@ -39,55 +39,55 @@ function renderStatCards(stats) {
     if (!statsGrid) return;
 
     statsGrid.innerHTML = `
-        <div class="stat-card">
+        <a href="#home" class="stat-card total-reports">
             <div class="stat-card-icon"><i class="fas fa-file-alt"></i></div>
             <div class="stat-card-info">
                 <h3>Total Reports <small>إجمالي التقارير</small></h3>
                 <p>${stats.total || 0}</p>
             </div>
-        </div>
-        <div class="stat-card">
+        </a>
+        <a href="#reports/suspicious" class="stat-card">
             <div class="stat-card-icon"><i class="fas fa-user-secret"></i></div>
             <div class="stat-card-info">
                 <h3>Suspicious <small>تقارير مشبوهة</small></h3>
                 <p>${stats.suspicious || 0}</p>
             </div>
-        </div>
-        <div class="stat-card">
+        </a>
+        <a href="#reports/deposit" class="stat-card">
             <div class="stat-card-icon"><i class="fas fa-money-bill-wave"></i></div>
             <div class="stat-card-info">
                 <h3>Deposit <small>إيداعات</small></h3>
                 <p>${stats.deposit || 0}</p>
             </div>
-        </div>
-        <div class="stat-card">
+        </a>
+        <a href="#reports/new-position" class="stat-card">
             <div class="stat-card-icon"><i class="fas fa-chart-line"></i></div>
             <div class="stat-card-info">
                 <h3>New Position <small>صفقات جديدة</small></h3>
                 <p>${stats.new_positions || 0}</p>
             </div>
-        </div>
-        <div class="stat-card">
+        </a>
+        <a href="#reports/credit-out" class="stat-card">
             <div class="stat-card-icon"><i class="fas fa-credit-card"></i></div>
             <div class="stat-card-info">
                 <h3>Credit Out <small>سحب رصيد</small></h3>
                 <p>${stats.credit_out || 0}</p>
             </div>
-        </div>
-        <div class="stat-card">
+        </a>
+        <a href="#reports/account-transfer" class="stat-card">
             <div class="stat-card-icon"><i class="fas fa-exchange-alt"></i></div>
             <div class="stat-card-info">
                 <h3>Account Transfer <small>تحويل حسابات</small></h3>
                 <p>${stats.account_transfer || 0}</p>
             </div>
-        </div>
-        <div class="stat-card">
+        </a>
+        <a href="#reports/payouts" class="stat-card">
             <div class="stat-card-icon"><i class="fas fa-hand-holding-usd"></i></div>
             <div class="stat-card-info">
                 <h3>PAYOUTS <small>دفعات</small></h3>
                 <p>${stats.payouts || 0}</p>
             </div>
-        </div>
+        </a>
     `;
 }
 
@@ -169,28 +169,13 @@ export function renderHomePage() {
             <p>نظرة عامة سريعة على نشاط النظام والإحصائيات الرئيسية.</p>
         </div>
         <div class="home-grid">
-            <div class="main-content-area">
-                <div id="stats-grid" class="stats-grid">
-                    <div class="spinner"></div>
-                </div>
-                <div class="chart-card">
-                    <h3><i class="fas fa-chart-bar"></i> النشاط الأسبوعي</h3>
-                    <div class="chart-container">
-                        <canvas id="weekly-chart"></canvas>
-                    </div>
-                </div>
+            <div id="stats-grid" class="stats-grid full-width">
+                <div class="spinner"></div>
             </div>
-            <div class="sidebar-area">
-                <div class="quick-actions-card">
-                    <h3><i class="fas fa-bolt"></i> إجراءات سريعة</h3>
-                    <ul class="quick-actions-list">
-                        <li><a href="#reports/suspicious"><i class="fas fa-user-secret"></i> <span>تقرير مشبوه</span></a></li>
-                        <li><a href="#reports/deposit"><i class="fas fa-money-bill-wave"></i> <span>تقرير إيداع</span></a></li>
-                        <li><a href="#reports/new-position"><i class="fas fa-chart-line"></i> <span>تقرير صفقة جديدة</span></a></li>
-                        <li><a href="#reports/credit-out"><i class="fas fa-credit-card"></i> <span>تقرير سحب رصيد</span></a></li>
-                        <li><a href="#reports/account-transfer"><i class="fas fa-exchange-alt"></i> <span>تحويل حسابات</span></a></li>
-                        <li><a href="#reports/payouts"><i class="fas fa-hand-holding-usd"></i> <span>تقرير دفعات</span></a></li>
-                    </ul>
+            <div class="chart-card full-width">
+                <h3><i class="fas fa-chart-bar"></i> النشاط الأسبوعي</h3>
+                <div class="chart-container">
+                    <canvas id="weekly-chart"></canvas>
                 </div>
             </div>
         </div>
