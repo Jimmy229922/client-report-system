@@ -1,7 +1,7 @@
 import { handleTheme, updateNavbarUser, showToast } from './ui.js';
 import { navigate } from './router.js';
 import { fetchWithAuth } from './api.js';
-import { initQuickIpModal } from './quick-ip-modal.js';
+import { initIpWidget } from './ip-widget.js';
 
 function handleImagePreviewModal() {
     const modal = document.getElementById('image-preview-modal');
@@ -163,7 +163,7 @@ async function handleAppUpdate() {
 export function initApp() {
     handleTheme();
     handleImagePreviewModal();
-    initQuickIpModal();
+    initIpWidget();
     setupUIForUser(); // Setup UI based on user role
 
     const updateBtn = document.getElementById('update-app-btn');

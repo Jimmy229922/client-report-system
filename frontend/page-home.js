@@ -163,6 +163,21 @@ function renderWeeklyChart(weeklyData) {
             }
         }
     });
+
+    // Listen for theme changes to update chart colors
+    document.addEventListener('themeChanged', () => {
+        if (weeklyChart) {
+            const isDarkMode = document.documentElement.getAttribute('data-theme') === 'dark';
+            const tickColor = isDarkMode ? '#aaa' : '#666';
+            const gridColor = isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)';
+
+            weeklyChart.options.scales.y.ticks.color = tickColor;
+            weeklyChart.options.scales.x.ticks.color = tickColor;
+            weeklyChart.options.scales.y.grid.color = gridColor;
+            
+            weeklyChart.update();
+        }
+    });
 }
 
 export function renderHomePage() {

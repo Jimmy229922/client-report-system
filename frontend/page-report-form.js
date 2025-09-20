@@ -403,6 +403,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const ipInput = document.getElementById('ip-input');
             if (ipInput && !ipInput.dataset.listenerAttached) {
                 ipInput.addEventListener('input', () => handleLocalIpLookup(ipInput));
+                ipInput.addEventListener('blur', () => handleLocalIpLookup(ipInput)); // Trigger on click-away
                 ipInput.dataset.listenerAttached = 'true';
             }
         });
