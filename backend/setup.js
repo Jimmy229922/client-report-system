@@ -22,16 +22,34 @@ async function setup() {
     return;
   }
 
-  const chatId = await question('Enter your CHAT_ID (the ID of the group or channel): ');
+  const chatId = await question('Enter your Telegram CHAT_ID (the ID of the group or channel): ');
   if (!chatId || !chatId.trim()) {
     console.error('\nError: CHAT_ID is required. Setup aborted.');
     rl.close();
     return;
   }
 
+  console.log('\n--- Supabase Details ---');
+  console.log('You can get these from your Supabase project API settings.');
+  console.log('------------------------\n');
+
+  const supabaseUrl = await question('Enter your Supabase Project URL: ');
+  if (!supabaseUrl || !supabaseUrl.trim()) {
+    console.error('\nError: Supabase URL is required. Setup aborted.');
+    rl.close();
+    return;
+  }
+
+  const supabaseKey = await question('Enter your Supabase anon public Key: ');
+  if (!supabaseKey || !supabaseKey.trim()) {
+    console.error('\nError: Supabase Key is required. Setup aborted.');
+    rl.close();
+    return;
+  }
+
   const jwtSecret = crypto.randomBytes(32).toString('hex');
 
-  const envContent = `BOT_TOKEN=${botToken.trim()}\nCHAT_ID=${chatId.trim()}\nJWT_SECRET=${jwtSecret}`;
+  const envContent = `BOT_TOKEN=${botToken.trim()}\nCHAT_ID=${chatId.trim()}\nJWT_SECRET=${jwtSecret}\n\nSUPABASE_URL=${supabaseUrl.trim()}\nSUPABASE_KEY=${supabaseKey.trim()}`;
 
   try {
     fs.writeFileSync('.env', envContent);

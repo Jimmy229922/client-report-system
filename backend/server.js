@@ -4,14 +4,14 @@ const express = require('express');
 const cors = require('cors');
 const multer = require('multer');
 const { Telegraf } = require('telegraf');
-const sqlite3 = require('sqlite3').verbose();
+const { createClient } = require('@supabase/supabase-js');
 const path = require('path');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { exec, spawn } = require('child_process');
 
 // Check for essential environment variables on startup and provide a detailed error message
-const requiredEnvVars = ['BOT_TOKEN', 'CHAT_ID', 'JWT_SECRET'];
+const requiredEnvVars = ['BOT_TOKEN', 'CHAT_ID', 'JWT_SECRET', 'SUPABASE_URL', 'SUPABASE_KEY'];
 const missingVars = requiredEnvVars.filter(varName => !process.env[varName]);
 
 if (missingVars.length > 0) {
@@ -26,6 +26,9 @@ if (missingVars.length > 0) {
 const app = express();
 const port = process.env.PORT || 3001;
 const bot = new Telegraf(process.env.BOT_TOKEN);
+// 2.5. إعداد Supabase
+const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY);
+
 
 // 3. إعداد Multer (للتعامل مع الصور)
 // سيتم تخزين الصور في الذاكرة مؤقتاً بدلاً من حفظها على القرص
@@ -37,114 +40,6 @@ app.use(express.json()); // لتحليل البيانات من نوع JSON
 app.use(express.urlencoded({ extended: true })); // لتحليل البيانات من النماذج
 // تقديم ملفات الواجهة الأمامية بشكل ثابت
 app.use(express.static(path.join(__dirname, '../frontend')));
-
-// 4.5. إعداد قاعدة البيانات
-const db = new sqlite3.Database('./reports.db', (err) => {
-    if (err) {
-        console.error('Error opening database', err.message);
-    } else {
-        console.log('Database connected successfully.');
-        db.serialize(() => {
-            db.run(`CREATE TABLE IF NOT EXISTS reports (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                report_text TEXT NOT NULL,
-                timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
-                image_count INTEGER DEFAULT 0
-            )`);
-
-            const migrateUsersAndStart = () => {
-                db.run(`CREATE TABLE IF NOT EXISTS users (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    username TEXT NOT NULL,
-                    email TEXT UNIQUE,
-                    password TEXT NOT NULL
-                )`);
-
-                // Chain the rest of the setup to ensure order and start the server at the end
-                db.all("PRAGMA table_info(users)", (err, columns) => {
-                    if (err) { console.error("DB Migration Check Error:", err); return; }
-
-                    const hasEmailColumn = columns.some(col => col.name === 'email');
-
-                    const onDbReady = () => {
-                        db.get("SELECT COUNT(id) as count FROM users", (err, row) => {
-                            if (err) { console.error("Error checking for users:", err.message); return; }
-
-                            if (row && row.count === 0) {
-                                console.log("Users table is empty. Creating default admin user...");
-                                const salt = bcrypt.genSaltSync(10);
-                                const hash = bcrypt.hashSync("password", salt);
-                                db.run('INSERT INTO users (username, email, password) VALUES (?, ?, ?)', ['INZO LLC', 'admin@inzo.llc', hash], () => {
-                                    console.log('✓ Default user "INZO LLC" created.');
-                                    app.listen(port, () => {
-                                        const url = `http://localhost:${port}`;
-                                        console.log(`🚀 السيرفر يعمل على المنفذ ${url}`);
-                                        console.log(`إذا لم يفتح المتصفح تلقائياً، قم بنسخ الرابط أعلاه ولصقه في المتصفح.`);                                        
-                                        // Try to open the browser, but don't let it crash the server if it fails.
-                                        import('open').then(openModule => {
-                                            openModule.default(url);
-                                        }).catch(err => {
-                                            console.warn('Could not open browser automatically. Please open it manually.');
-                                        });
-                                    });
-                                });
-                            } else {
-                                app.listen(port, () => {
-                                    const url = `http://localhost:${port}`;
-                                    console.log(`🚀 السيرفر يعمل على المنفذ ${url}`);
-                                    console.log(`إذا لم يفتح المتصفح تلقائياً، قم بنسخ الرابط أعلاه ولصقه في المتصفح.`);                                    
-                                    import('open').then(openModule => {
-                                        openModule.default(url);
-                                    }).catch(err => {
-                                        console.warn('Could not open browser automatically. Please open it manually.');
-                                    });
-                                });
-                            }
-                        });
-                    };
-
-                    if (!hasEmailColumn) {
-                        console.log("Database schema is outdated. Applying migration...");
-                        // Step 1: Add the column without the UNIQUE constraint.
-                        db.run("ALTER TABLE users ADD COLUMN email TEXT", (alterErr) => {
-                            if (alterErr) { console.error("Migration Failed (Step 1/3 - Add Column):", alterErr); return; }
-                            console.log("✓ Step 1/3: 'email' column added.");
-                            // Step 2: Populate the email and update username for the original default admin user.
-                            db.run("UPDATE users SET email = ?, username = ? WHERE id = 1 AND username = 'admin'", ['admin@inzo.llc', 'INZO LLC'], (updateErr) => {
-                                if (updateErr) { console.error("Migration Failed (Step 2/3 - Populate Data):", updateErr); return; }
-                                console.log("✓ Step 2/3: Default admin data updated.");
-                                // Step 3: Create a UNIQUE index on the now-populated column.
-                                db.run("CREATE UNIQUE INDEX IF NOT EXISTS idx_users_email ON users (email)", (indexErr) => {
-                                    if (indexErr) { console.error("Migration Failed (Step 3/3 - Create Index):", indexErr); return; }
-                                    console.log("✓ Step 3/3: Unique index on 'email' created. Migration complete.");
-                                    onDbReady();
-                                });
-                            });
-                        });
-                    } else {
-                        onDbReady();
-                    }
-                });
-            };
-
-            // First, check and migrate the 'reports' table.
-            db.all("PRAGMA table_info(reports)", (err, columns) => {
-                if (err) { console.error("DB Migration Check Error (reports):", err); return; }
-                const hasImageCount = columns.some(col => col.name === 'image_count');
-                if (!hasImageCount) {
-                    console.log("Applying migration: Adding 'image_count' to 'reports' table...");
-                    db.run("ALTER TABLE reports ADD COLUMN image_count INTEGER DEFAULT 0", (alterErr) => {
-                        if (alterErr) { console.error("Migration Failed (reports):", alterErr); return; }
-                        console.log("✓ 'reports' table migrated.");
-                        migrateUsersAndStart(); // Chain to the next step
-                    });
-                } else {
-                    migrateUsersAndStart(); // Chain to the next step
-                }
-            });
-        });
-    }
-});
 
 const verifyToken = (req, res, next) => {
     let token = req.headers['authorization'];
@@ -175,24 +70,28 @@ const verifyAdmin = (req, res, next) => {
 };
 
 // 5. Authentication Endpoints & Middleware
-app.post('/api/login', (req, res) => {
+app.post('/api/login', async (req, res) => {
     const { email, password } = req.body;
-    db.get('SELECT * FROM users WHERE email = ?', [email], (err, user) => {
-        if (err) return res.status(500).json({ message: 'Server error.' });
-        if (!user) return res.status(404).json({ message: 'البريد الإلكتروني أو كلمة المرور غير صحيحة.' });
+    const { data: user, error } = await supabase
+        .from('users')
+        .select('*')
+        .eq('email', email)
+        .single();
 
-        const passwordIsValid = bcrypt.compareSync(password, user.password);
-        if (!passwordIsValid) return res.status(401).json({ auth: false, token: null, message: 'البريد الإلكتروني أو كلمة المرور غير صحيحة.' });
+    if (error && error.code !== 'PGRST116') return res.status(500).json({ message: 'Server error.' });
+    if (!user) return res.status(404).json({ message: 'البريد الإلكتروني أو كلمة المرور غير صحيحة.' });
 
-        const token = jwt.sign({ id: user.id, username: user.username, email: user.email }, process.env.JWT_SECRET, {
-            expiresIn: 86400 // 24 hours
-        });
+    const passwordIsValid = bcrypt.compareSync(password, user.password);
+    if (!passwordIsValid) return res.status(401).json({ auth: false, token: null, message: 'البريد الإلكتروني أو كلمة المرور غير صحيحة.' });
 
-        res.status(200).json({ auth: true, token: token, user: { id: user.id, username: user.username, email: user.email } });
+    const token = jwt.sign({ id: user.id, username: user.username, email: user.email }, process.env.JWT_SECRET, {
+        expiresIn: 86400 // 24 hours
     });
+
+    res.status(200).json({ auth: true, token: token, user: { id: user.id, username: user.username, email: user.email } });
 });
 
-app.put('/api/profile/password', verifyToken, (req, res) => {
+app.put('/api/profile/password', verifyToken, async (req, res) => {
     const { currentPassword, newPassword } = req.body;
     const userId = req.userId;
 
@@ -204,26 +103,29 @@ app.put('/api/profile/password', verifyToken, (req, res) => {
         return res.status(400).json({ message: "يجب أن تكون كلمة المرور الجديدة 6 أحرف على الأقل." });
     }
 
-    db.get('SELECT * FROM users WHERE id = ?', [userId], (err, user) => {
-        if (err) return res.status(500).json({ message: 'Server error.' });
-        if (!user) return res.status(404).json({ message: 'User not found.' });
+    const { data: user, error } = await supabase
+        .from('users')
+        .select('*')
+        .eq('id', userId)
+        .single();
 
-        const passwordIsValid = bcrypt.compareSync(currentPassword, user.password);
-        if (!passwordIsValid) {
-            return res.status(401).json({ message: 'كلمة المرور الحالية غير صحيحة.' });
-        }
+    if (error) return res.status(500).json({ message: 'Server error.' });
+    if (!user) return res.status(404).json({ message: 'User not found.' });
 
-        const salt = bcrypt.genSaltSync(10);
-        const hash = bcrypt.hashSync(newPassword, salt);
+    const passwordIsValid = bcrypt.compareSync(currentPassword, user.password);
+    if (!passwordIsValid) {
+        return res.status(401).json({ message: 'كلمة المرور الحالية غير صحيحة.' });
+    }
 
-        db.run(`UPDATE users SET password = ? WHERE id = ?`, [hash, userId], function(err) {
-            if (err) { return res.status(500).json({ error: err.message }); }
-            res.json({ message: "تم تغيير كلمة المرور بنجاح." });
-        });
-    });
+    const salt = bcrypt.genSaltSync(10);
+    const hash = bcrypt.hashSync(newPassword, salt);
+
+    const { error: updateError } = await supabase.from('users').update({ password: hash }).eq('id', userId);
+    if (updateError) { return res.status(500).json({ error: updateError.message }); }
+    res.json({ message: "تم تغيير كلمة المرور بنجاح." });
 });
 
-app.put('/api/profile/details', verifyToken, (req, res) => {
+app.put('/api/profile/details', verifyToken, async (req, res) => {
     const { username, email } = req.body;
     const userId = req.userId;
 
@@ -236,39 +138,36 @@ app.put('/api/profile/details', verifyToken, (req, res) => {
         return res.status(403).json({ message: "لا يمكن تغيير اسم المستخدم الخاص بالمسؤول." });
     }
 
-    const sqlParts = [];
-    const params = [];
+    const updateData = {};
 
     if (username) {
-        sqlParts.push('username = ?');
-        params.push(username);
+        updateData.username = username;
     }
 
     if (email) {
         if (!/^\S+@\S+\.\S+$/.test(email)) {
             return res.status(400).json({ message: "صيغة البريد الإلكتروني غير صالحة." });
         }
-        sqlParts.push('email = ?');
-        params.push(email);
+        updateData.email = email;
     }
 
-    const sql = `UPDATE users SET ${sqlParts.join(', ')} WHERE id = ?`;
-    params.push(userId);
+    const { error: updateError } = await supabase.from('users').update(updateData).eq('id', userId);
 
-    db.run(sql, params, function(err) {
-        if (err) {
-            if (err.message.includes('UNIQUE constraint failed')) {
-                return res.status(409).json({ message: "البريد الإلكتروني موجود بالفعل." });
-            }
-            return res.status(500).json({ error: err.message });
+    if (updateError) {
+        if (updateError.code === '23505') { // Unique constraint violation
+            return res.status(409).json({ message: "البريد الإلكتروني موجود بالفعل." });
         }
-        if (this.changes === 0) { return res.status(404).json({ message: "المستخدم غير موجود." }); }
-        
-        db.get('SELECT id, username, email FROM users WHERE id = ?', [userId], (err, updatedUser) => {
-            if (err) { return res.json({ message: "تم تحديث البيانات بنجاح." }); }
-            res.json({ message: "تم تحديث البيانات بنجاح.", user: updatedUser });
-        });
-    });
+        return res.status(500).json({ error: updateError.message });
+    }
+
+    const { data: updatedUser, error: fetchError } = await supabase
+        .from('users')
+        .select('id, username, email')
+        .eq('id', userId)
+        .single();
+
+    if (fetchError) { return res.json({ message: "تم تحديث البيانات بنجاح." }); }
+    res.json({ message: "تم تحديث البيانات بنجاح.", user: updatedUser });
 });
 
 // 6. Protected API Endpoints
@@ -318,14 +217,13 @@ app.post('/api/send-report', verifyToken, upload.array('images', 3), async (req,
 
         // بعد الإرسال الناجح، قم بحفظ التقرير في قاعدة البيانات
         const imageCount = images ? images.length : 0;
-        db.run(`INSERT INTO reports (report_text, image_count) VALUES (?, ?)`, [reportText, imageCount], function(err) {
-            if (err) {
-                console.error('Error saving report to database:', err.message);
-                // Don't block the user, just log the error
-            } else {
-                console.log(`Report saved to database with ID: ${this.lastID}`);
-            }
-        });
+        const { error: insertError } = await supabase
+            .from('reports')
+            .insert({ report_text: reportText, image_count: imageCount });
+
+        if (insertError) {
+            console.error('Error saving report to database:', insertError.message);
+        }
 
         // إرسال رد ناجح إلى الواجهة الأمامية
         return res.status(200).json({ success: true, message: 'تم إرسال التقرير بنجاح!' });
@@ -342,102 +240,85 @@ app.post('/api/send-report', verifyToken, upload.array('images', 3), async (req,
 });
 
 // Endpoint to get all reports
-app.get('/api/reports', verifyToken, (req, res) => {
-    const limit = req.query.limit ? parseInt(req.query.limit) : -1;
+app.get('/api/reports', verifyToken, async (req, res) => {
+    const limit = req.query.limit ? parseInt(req.query.limit) : 0;
     const search = req.query.search || '';
 
-    const query = `
-        SELECT * FROM reports 
-        WHERE report_text LIKE ? 
-        ORDER BY timestamp DESC 
-        LIMIT ?
-    `;
-    const params = [`%${search}%`, limit];
-    db.all(query, params, (err, rows) => {
-        if (err) {
-            res.status(500).json({ "error": err.message });
-            return;
-        }
-        res.json({
-            "message": "success",
-            "data": rows
-        });
+    let query = supabase.from('reports').select('*');
+
+    if (search) {
+        query = query.like('report_text', `%${search}%`);
+    }
+
+    query = query.order('timestamp', { ascending: false });
+
+    if (limit > 0) {
+        query = query.limit(limit);
+    }
+
+    const { data, error } = await query;
+
+    if (error) {
+        return res.status(500).json({ "error": error.message });
+    }
+    res.json({
+        "message": "success",
+        "data": data
     });
 });
 
 // Endpoint to delete a report
-app.delete('/api/reports/:id', verifyToken, (req, res) => {
-    db.run(`DELETE FROM reports WHERE id = ?`, req.params.id, function(err) {
-        if (err) {
-            res.status(500).json({ "error": res.message });
-            return;
-        }
-        res.json({ "message": "deleted", changes: this.changes });
-    });
+app.delete('/api/reports/:id', verifyToken, async (req, res) => {
+    const { error, count } = await supabase.from('reports').delete({ count: 'exact' }).eq('id', req.params.id);
+    if (error) {
+        return res.status(500).json({ "error": error.message });
+    }
+    res.json({ "message": "deleted", changes: count });
 });
 
 // Endpoint for statistics
-app.get('/api/stats', verifyToken, (req, res) => {
-    // Using a single, more efficient query
-    const query = `
-        SELECT
-            COUNT(*) AS total,
-            SUM(CASE WHEN report_text LIKE '%#suspicious%' THEN 1 ELSE 0 END) AS suspicious,
-            SUM(CASE WHEN report_text LIKE '%#deposit_percentages%' THEN 1 ELSE 0 END) AS deposit,
-            SUM(CASE WHEN report_text LIKE '%#new-positions%' THEN 1 ELSE 0 END) AS new_positions,
-            SUM(CASE WHEN report_text LIKE '%#credit-out%' THEN 1 ELSE 0 END) AS credit_out,
-            SUM(CASE WHEN report_text LIKE 'تقرير تحويل الحسابات%' THEN 1 ELSE 0 END) AS account_transfer,
-            SUM(CASE WHEN report_text LIKE '%#payouts%' THEN 1 ELSE 0 END) AS payouts
-        FROM reports
-    `;
+app.get('/api/stats', verifyToken, async (req, res) => {
+    const queries = [
+        supabase.from('reports').select('*', { count: 'exact', head: true }),
+        supabase.from('reports').select('*', { count: 'exact', head: true }).like('report_text', '%#suspicious%'),
+        supabase.from('reports').select('*', { count: 'exact', head: true }).like('report_text', '%#deposit_percentages%'),
+        supabase.from('reports').select('*', { count: 'exact', head: true }).like('report_text', '%#new-positions%'),
+        supabase.from('reports').select('*', { count: 'exact', head: true }).like('report_text', '%#credit-out%'),
+        supabase.from('reports').select('*', { count: 'exact', head: true }).like('report_text', 'تقرير تحويل الحسابات%'),
+        supabase.from('reports').select('*', { count: 'exact', head: true }).like('report_text', '%#payouts%'),
+    ];
 
-    db.get(query, (err, row) => {
-        if (err) {
-            res.status(500).json({ "error": err.message });
-            return;
-        }
-        res.json({ message: "success", data: row });
-    });
+    const results = await Promise.all(queries);
+    const [total, suspicious, deposit, new_positions, credit_out, account_transfer, payouts] = results.map(r => r.count);
+
+    const errors = results.filter(r => r.error);
+    if (errors.length > 0) return res.status(500).json({ error: errors[0].error.message });
+
+    res.json({ message: "success", data: { total, suspicious, deposit, new_positions, credit_out, account_transfer, payouts } });
 });
 
 // Endpoint for weekly stats
-app.get('/api/stats/weekly', verifyToken, (req, res) => {
-    const sevenDaysAgo = new Date();
-    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-
-    const query = `
-        SELECT
-            strftime('%Y-%m-%d', timestamp, 'localtime') as date,
-            COUNT(*) as count
-        FROM reports
-        WHERE timestamp >= ?
-        GROUP BY date
-        ORDER BY date ASC
-    `;
-
-    db.all(query, [sevenDaysAgo.toISOString()], (err, rows) => {
-        if (err) {
-            res.status(500).json({ "error": err.message });
-            return;
-        }
-        res.json({ message: "success", data: rows });
-    });
+app.get('/api/stats/weekly', verifyToken, async (req, res) => {
+    const { data, error } = await supabase.rpc('get_weekly_stats');
+    if (error) {
+        return res.status(500).json({ "error": error.message });
+    }
+    res.json({ message: "success", data });
 });
 
 // --- User Management Endpoints ---
 
 // Get all users
-app.get('/api/users', verifyToken, verifyAdmin, (req, res) => {
-    db.all("SELECT id, username, email FROM users ORDER BY id ASC", [], (err, rows) => {
-        if (err) {
-            return res.status(500).json({ error: err.message });
-        }
-        res.json({ message: "success", data: rows });
-    });
+app.get('/api/users', verifyToken, verifyAdmin, async (req, res) => {
+    const { data, error } = await supabase.from('users').select('id, username, email').order('id', { ascending: true });
+    if (error) {
+        return res.status(500).json({ error: error.message });
+    }
+    res.json({ message: "success", data });
 });
 
 // Add a new user
-app.post('/api/users', verifyToken, verifyAdmin, (req, res) => {
+app.post('/api/users', verifyToken, verifyAdmin, async (req, res) => {
     const { username, email, password } = req.body;
 
     if (!username || !email || !password) {
@@ -453,20 +334,23 @@ app.post('/api/users', verifyToken, verifyAdmin, (req, res) => {
     const salt = bcrypt.genSaltSync(10);
     const hash = bcrypt.hashSync(password, salt);
 
-    const sql = 'INSERT INTO users (username, email, password) VALUES (?, ?, ?)';
-    db.run(sql, [username, email, hash], function(err) {
-        if (err) {
-            if (err.message.includes('UNIQUE constraint failed')) {
-                return res.status(409).json({ message: "البريد الإلكتروني موجود بالفعل." });
-            }
-            return res.status(500).json({ error: err.message });
+    const { data, error } = await supabase
+        .from('users')
+        .insert({ username, email, password: hash })
+        .select('id, username, email')
+        .single();
+
+    if (error) {
+        if (error.code === '23505') { // Unique constraint violation
+            return res.status(409).json({ message: "البريد الإلكتروني موجود بالفعل." });
         }
-        res.status(201).json({ message: "User created", data: { id: this.lastID, username: username, email: email } });
-    });
+        return res.status(500).json({ error: error.message });
+    }
+    res.status(201).json({ message: "User created", data });
 });
 
 // Update user data (username, email, password)
-app.put('/api/users/:id', verifyToken, verifyAdmin, (req, res) => {
+app.put('/api/users/:id', verifyToken, verifyAdmin, async (req, res) => {
     const { password, username, email } = req.body;
     const { id } = req.params;
 
@@ -479,20 +363,17 @@ app.put('/api/users/:id', verifyToken, verifyAdmin, (req, res) => {
         return res.status(400).json({ message: "لا يوجد بيانات للتحديث." });
     }
 
-    const sqlParts = [];
-    const params = [];
+    const updateData = {};
 
     if (username) {
-        sqlParts.push('username = ?');
-        params.push(username);
+        updateData.username = username;
     }
 
     if (email) {
         if (!/^\S+@\S+\.\S+$/.test(email)) {
             return res.status(400).json({ message: "صيغة البريد الإلكتروني غير صالحة." });
         }
-        sqlParts.push('email = ?');
-        params.push(email);
+        updateData.email = email;
     }
 
     // Only validate and hash password if it's a non-empty string
@@ -502,42 +383,37 @@ app.put('/api/users/:id', verifyToken, verifyAdmin, (req, res) => {
         }
         const salt = bcrypt.genSaltSync(10);
         const hash = bcrypt.hashSync(password, salt);
-        sqlParts.push('password = ?');
-        params.push(hash);
+        updateData.password = hash;
     }
 
-    const sql = `UPDATE users SET ${sqlParts.join(', ')} WHERE id = ?`;
-    params.push(id);
+    const { data, error } = await supabase.from('users').update(updateData).eq('id', id).select('id, username, email').single();
 
-    db.run(sql, params, function(err) {
-        if (err) { 
-            if (err.message.includes('UNIQUE constraint failed')) {
-                return res.status(409).json({ message: "البريد الإلكتروني موجود بالفعل." });
-            }
-            return res.status(500).json({ error: err.message }); 
+    if (error) {
+        if (error.code === '23505') {
+            return res.status(409).json({ message: "البريد الإلكتروني موجود بالفعل." });
         }
-        if (this.changes === 0) { return res.status(404).json({ message: "المستخدم غير موجود." }); }
-        
-        db.get('SELECT id, username, email FROM users WHERE id = ?', [id], (err, updatedUser) => {
-            if (err) { return res.json({ message: "تم تحديث بيانات المستخدم بنجاح." }); }
-            // Return the updated user object to help frontend stay in sync
-            res.json({ message: "تم تحديث بيانات المستخدم بنجاح.", user: updatedUser });
-        });
-    });
+        return res.status(500).json({ error: error.message });
+    }
+
+    if (!data) {
+        return res.status(404).json({ message: "المستخدم غير موجود." });
+    }
+
+    res.json({ message: "تم تحديث بيانات المستخدم بنجاح.", user: data });
 });
 
 // Delete a user
-app.delete('/api/users/:id', verifyToken, verifyAdmin, (req, res) => {
+app.delete('/api/users/:id', verifyToken, verifyAdmin, async (req, res) => {
     const idToDelete = parseInt(req.params.id, 10);
 
     if (idToDelete === 1) { return res.status(403).json({ message: "لا يمكن حذف المستخدم المسؤول الافتراضي." }); }
     if (idToDelete === req.userId) { return res.status(403).json({ message: "لا يمكنك حذف نفسك." }); }
 
-    db.run(`DELETE FROM users WHERE id = ?`, idToDelete, function(err) {
-        if (err) { return res.status(500).json({ error: err.message }); }
-        if (this.changes === 0) { return res.status(404).json({ message: "المستخدم غير موجود." }); }
-        res.json({ message: "تم حذف المستخدم بنجاح." });
-    });
+    const { error, count } = await supabase.from('users').delete({ count: 'exact' }).eq('id', idToDelete);
+
+    if (error) { return res.status(500).json({ error: error.message }); }
+    if (count === 0) { return res.status(404).json({ message: "المستخدم غير موجود." }); }
+    res.json({ message: "تم حذف المستخدم بنجاح." });
 });
 
 // Endpoint for self-updating the application
@@ -575,4 +451,41 @@ app.post('/api/system/update', verifyToken, verifyAdmin, (req, res) => {
 app.use((req, res) => {
     // For any request that doesn't match a previous route, send the index.html file.
     res.sendFile(path.join(__dirname, '../frontend/index.html'));
+});
+
+async function initializeAdmin() {
+    const { data, error } = await supabase
+      .from('users')
+      .select('id')
+      .eq('id', 1)
+      .single();
+
+    // PGRST116 = "The result contains 0 rows" which is expected if admin doesn't exist
+    if (error && error.code !== 'PGRST116') {
+      console.error('Error checking for admin user:', error);
+      return;
+    }
+
+    if (!data) {
+      console.log("Default admin user not found. Creating...");
+      const salt = bcrypt.genSaltSync(10);
+      const hash = bcrypt.hashSync("password", salt);
+      const { error: insertError } = await supabase
+        .from('users')
+        .insert({ id: 1, username: 'INZO LLC', email: 'admin@inzo.llc', password: hash });
+
+      if (insertError) {
+        console.error('Failed to create default admin user:', insertError);
+      } else {
+        console.log('✓ Default admin user created.');
+      }
+    }
+}
+
+initializeAdmin().then(() => {
+    app.listen(port, () => {
+        const url = `http://localhost:${port}`;
+        console.log(`🚀 Supabase connected. Server is running at ${url}`);
+        import('open').then(openModule => openModule.default(url)).catch(() => {});
+    });
 });
