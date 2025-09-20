@@ -39,6 +39,7 @@ export function handleLogin() {
             } else {
                 loginError.textContent = error.message;
             }
+            e.target.password.value = ''; // Clear password field on error
         }
     });
 }

@@ -89,7 +89,7 @@ app.post('/api/login', async (req, res) => {
     const { data: user, error } = await supabase
         .from('users')
         .select('*')
-        .eq('email', email)
+        .eq('email', email.toLowerCase())
         .single();
 
     if (error && error.code !== 'PGRST116') return res.status(500).json({ message: 'Server error.' });
@@ -162,7 +162,7 @@ app.put('/api/profile/details', verifyToken, async (req, res) => {
         if (!/^\S+@\S+\.\S+$/.test(email)) {
             return res.status(400).json({ message: "صيغة البريد الإلكتروني غير صالحة." });
         }
-        updateData.email = email;
+        updateData.email = email.toLowerCase();
     }
 
     const { error: updateError } = await supabase.from('users').update(updateData).eq('id', userId);
@@ -462,7 +462,7 @@ app.post('/api/users', verifyToken, verifyAdmin, async (req, res) => {
 
     const { data, error } = await supabase
         .from('users')
-        .insert({ username, email, password: hash, avatar_url: null })
+        .insert({ username, email: email.toLowerCase(), password: hash, avatar_url: null })
         .select('id, username, email, avatar_url, created_at')
         .single();
 
@@ -499,7 +499,7 @@ app.put('/api/users/:id', verifyToken, verifyAdmin, async (req, res) => {
         if (!/^\S+@\S+\.\S+$/.test(email)) {
             return res.status(400).json({ message: "صيغة البريد الإلكتروني غير صالحة." });
         }
-        updateData.email = email;
+        updateData.email = email.toLowerCase();
     }
 
     // Only validate and hash password if it's a non-empty string
