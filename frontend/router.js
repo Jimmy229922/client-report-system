@@ -49,7 +49,7 @@ export function navigate() {
         }
     }
 
-    if (window.location.hash === '#users' && (!user || user.id !== 1)) {
+    if (window.location.hash === '#users' && (!user || (user.id !== 1 && user.email !== 'admin@inzo.com'))) {
         console.warn('Access denied to user management page.');
         window.location.hash = '#home'; // Redirect to home
         return; // Stop navigation

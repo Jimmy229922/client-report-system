@@ -35,7 +35,7 @@ function setupUIForUser() {
             try {
                 const user = JSON.parse(userStr);
                 // Show admin-only links
-                if (user && user.id === 1) { // Admin-only UI elements
+                if (user && (user.id === 1 || user.email === 'admin@inzo.com')) { // Admin-only UI elements
                     if (userManagementLink) userManagementLink.classList.remove('hidden');
                 }
             } catch (error) {

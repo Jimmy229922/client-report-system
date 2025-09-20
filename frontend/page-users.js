@@ -2,6 +2,7 @@ import { fetchWithAuth } from './api.js';
 import { showToast } from './ui.js';
 
 let allUsers = []; // Store the fetched users
+let currentSort = { column: 'id', direction: 'asc' };
 
 function createUserRow(user) {
     const avatarHtml = user.avatar_url
@@ -30,6 +31,34 @@ function createUserRow(user) {
     `;
 }
 
+function renderUserTable() {
+    const tableBody = document.getElementById('users-table-body');
+    const tableHead = document.querySelector('#users-table thead tr');
+    if (!tableBody || !tableHead) return;
+
+    // Sort the users array
+    allUsers.sort((a, b) => {
+        const valA = a[currentSort.column];
+        const valB = b[currentSort.column];
+        const comparison = valA > valB ? 1 : (valA < valB ? -1 : 0);
+        return currentSort.direction === 'desc' ? comparison * -1 : comparison;
+    });
+
+    if (allUsers.length > 0) {
+        tableBody.innerHTML = allUsers.map(user => createUserRow(user)).join('');
+    } else {
+        tableBody.innerHTML = `<tr><td colspan="${tableHead.children.length}" style="text-align:center;">لا يوجد مستخدمين.</td></tr>`;
+    }
+
+    // Update sort indicators on headers
+    document.querySelectorAll('#users-table th[data-sort]').forEach(th => {
+        th.classList.remove('sort-asc', 'sort-desc');
+        if (th.dataset.sort === currentSort.column) {
+            th.classList.add(currentSort.direction === 'asc' ? 'sort-asc' : 'sort-desc');
+        }
+    });
+}
+
 async function fetchAndRenderUsers(searchTerm = '') {
     const tableBody = document.getElementById('users-table-body');
     const tableHead = document.querySelector('#users-table thead tr');
@@ -39,12 +68,8 @@ async function fetchAndRenderUsers(searchTerm = '') {
     try {
         const result = await fetchWithAuth(`/api/users?search=${encodeURIComponent(searchTerm)}`);
         allUsers = result.data || []; // Store users
-
-        if (allUsers.length > 0) {
-            tableBody.innerHTML = allUsers.map(user => createUserRow(user)).join('');
-        } else {
-            tableBody.innerHTML = `<tr><td colspan="${tableHead.children.length}" style="text-align:center;">لا يوجد مستخدمين.</td></tr>`;
-        }
+        currentSort = { column: 'id', direction: 'asc' }; // Reset sort on new fetch/search
+        renderUserTable();
     } catch (error) {
         showToast(error.message, true);
         tableBody.innerHTML = `<tr><td colspan="${tableHead.children.length}" style="text-align:center;">${error.message}</td></tr>`;
@@ -292,7 +317,12 @@ export function renderUsersPage() {
                     <input type="text" id="users-search" class="search-input" placeholder="ابحث عن مستخدم بالاسم أو البريد الإلكتروني...">
                 </div>
                 <table id="users-table">
-                    <thead><tr><th>اسم المستخدم</th><th>البريد الإلكتروني</th><th>تاريخ الإنشاء</th><th>الإجراءات</th></tr></thead>
+                    <thead><tr>
+                        <th data-sort="username">اسم المستخدم</th>
+                        <th data-sort="email">البريد الإلكتروني</th>
+                        <th data-sort="created_at">تاريخ الإنشاء</th>
+                        <th>الإجراءات</th>
+                    </tr></thead>
                     <tbody id="users-table-body"></tbody>
                 </table>
             </div>
@@ -331,6 +361,20 @@ export function renderUsersPage() {
         debounceTimer = setTimeout(() => {
             fetchAndRenderUsers(e.target.value);
         }, 500);
+    });
+
+    // Add sorting logic
+    document.querySelectorAll('#users-table th[data-sort]').forEach(header => {
+        header.addEventListener('click', () => {
+            const column = header.dataset.sort;
+            if (currentSort.column === column) {
+                currentSort.direction = currentSort.direction === 'asc' ? 'desc' : 'asc';
+            } else {
+                currentSort.column = column;
+                currentSort.direction = 'asc';
+            }
+            renderUserTable();
+        });
     });
 
     // Add password strength meter logic
