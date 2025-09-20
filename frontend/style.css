@@ -396,12 +396,19 @@ main { padding: 2rem; max-width: 1200px; margin: 2rem auto; animation: fadeIn 0.
     transform: translateX(0);
 }
 
+.ip-widget.dragging {
+    cursor: grabbing;
+    user-select: none;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.4);
+}
+
 .widget-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
     padding: 0.75rem 1rem;
     border-bottom: 1px solid var(--border-color);
+    cursor: move;
 }
 
 .widget-header h3 {
@@ -409,6 +416,47 @@ main { padding: 2rem; max-width: 1200px; margin: 2rem auto; animation: fadeIn 0.
     font-size: 1rem;
 }
 
+/* --- Widget History Styles --- */
+#widget-history-container {
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border-color);
+}
+
+#widget-history-container h4 {
+    font-size: 0.8rem;
+    color: #aaa;
+    margin-bottom: 0.5rem;
+    text-align: right;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+#widget-history-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    max-height: 150px;
+    overflow-y: auto;
+    font-size: 0.9rem;
+}
+
+#widget-history-list li {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.35rem 0.25rem;
+}
+
+#widget-history-list .history-ip {
+    font-family: 'Courier New', Courier, monospace;
+    color: var(--accent-color);
+    direction: ltr;
+}
+
+#widget-history-list .history-country {
+    color: #ccc;
+}
 .widget-header h3 i {
     margin-left: 8px;
 }
