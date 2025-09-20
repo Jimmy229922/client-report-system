@@ -106,7 +106,7 @@ app.post('/api/login', async (req, res) => {
     res.status(200).json({ auth: true, token: token, user: { id: user.id, username: user.username, email: user.email, avatar_url: user.avatar_url } });
 });
 
-app.put('/api/profile/password', verifyToken, async (req, res) => {
+app.put('/api/profile/password', verifyToken, verifyAdmin, async (req, res) => {
     const { currentPassword, newPassword } = req.body;
     const userId = req.userId;
 
@@ -140,7 +140,7 @@ app.put('/api/profile/password', verifyToken, async (req, res) => {
     res.json({ message: "تم تغيير كلمة المرور بنجاح." });
 });
 
-app.put('/api/profile/details', verifyToken, async (req, res) => {
+app.put('/api/profile/details', verifyToken, verifyAdmin, async (req, res) => {
     const { username, email } = req.body;
     const userId = req.userId;
 
@@ -188,7 +188,7 @@ app.put('/api/profile/details', verifyToken, async (req, res) => {
     res.json({ message: "تم تحديث البيانات بنجاح.", user: updatedUser });
 });
 
-app.post('/api/profile/avatar', verifyToken, upload.single('avatar'), async (req, res) => {
+app.post('/api/profile/avatar', verifyToken, verifyAdmin, async (req, res) => {
     const userId = req.userId;
     const file = req.file;
 
@@ -255,19 +255,24 @@ app.post('/api/send-report', verifyToken, upload.array('images', 3), async (req,
             return res.status(400).json({ success: false, message: 'نص التقرير مفقود.' });
         }
 
-        // Remove the #account_transfer hashtag from the text before sending to Telegram
-        const textForTelegram = reportText.replace(/#account_transfer\s*/g, '').trim();
+        // Robustly find and separate the footer (hashtags and mentions)
+        const footerRegex = /(\n\s*#\w+|\n\s*@\w+)+$/;
+        const footerMatch = reportText.match(footerRegex);
+        let footer = footerMatch ? footerMatch[0].trim() : '';
+        const mainText = footerMatch ? reportText.substring(0, footerMatch.index).trim() : reportText;
 
-        // Extract hashtags and mentions
-        const hashtagAndMentionsMatch = textForTelegram.match(/(#\w+\s*(@\w+\s*)*)/);
-        const mainText = hashtagAndMentionsMatch ? textForTelegram.replace(hashtagAndMentionsMatch[0], '').trim() : textForTelegram;
-        const footer = hashtagAndMentionsMatch ? hashtagAndMentionsMatch[0].trim() : '';
+        // Specifically remove #account_transfer from the footer for sending, but it remains in the DB
+        if (footer.includes('#account_transfer')) {
+            footer = footer.replace(/#account_transfer\s*/g, '').trim();
+        }
 
-        // Conditionally add the author based on user ID. Only add if not the admin (ID 1).
-        const authorLine = userId === 1 ? '' : `\n\nبواسطة: ${username}`;
+        // Conditionally add the author to the report title. Only add if not the admin.
+        const authorSuffix = (userId !== 1 && username) ? ` (بواسطة: ${username})` : '';
+        const reportTitle = mainText.split('\n')[0];
+        const reportBody = mainText.substring(reportTitle.length).trim();
         
         // Construct the final message
-        const telegramMessage = `${mainText}${authorLine}${footer ? `\n\n${footer}` : ''}`.trim();
+        const telegramMessage = `${reportTitle}${authorSuffix}\n\n${reportBody}${footer ? `\n\n${footer}` : ''}`.trim();
         const TELEGRAM_CAPTION_LIMIT = 1024;
 
         // التحقق من وجود صور

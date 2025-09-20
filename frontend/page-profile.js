@@ -165,6 +165,8 @@ export function renderProfilePage() {
         }
     }
 
+    const isAdmin = user && (user.id === 1 || user.email === 'admin@inzo.com');
+
     const mainContent = document.getElementById('main-content');
     mainContent.innerHTML = `
         <h1 class="page-title">الملف الشخصي</h1>
@@ -175,24 +177,19 @@ export function renderProfilePage() {
                         ? `<img src="${user.avatar_url}" alt="الصورة الشخصية" id="profile-avatar-img" class="profile-avatar">`
                         : `<div class="profile-avatar-placeholder"><i class="fas fa-user"></i></div>`
                     }
-                    <label for="avatar-upload-input" class="avatar-edit-overlay">
-                        <i class="fas fa-camera"></i>
-                    </label>
-                    <input type="file" id="avatar-upload-input" accept="image/png, image/jpeg, image/webp" class="hidden">
+                    ${isAdmin ? `
+                        <label for="avatar-upload-input" class="avatar-edit-overlay">
+                            <i class="fas fa-camera"></i>
+                        </label>
+                        <input type="file" id="avatar-upload-input" accept="image/png, image/jpeg, image/webp" class="hidden">
+                    ` : ''}
                 </div>
                 <div class="profile-details">
                     <div class="profile-field" data-field="username">
                         <label>اسم المستخدم</label>
                         <div class="value-container">
                             <span>${user.username}</span>
-                            <input type="text" class="hidden profile-edit-input" value="${user.username}">
-                            ${user.id !== 1 ? `
-                                <button class="edit-btn" data-field="username" title="تعديل"><i class="fas fa-pen"></i></button>
-                                <div class="edit-actions hidden">
-                                    <button class="save-btn" data-field="username" title="حفظ"><i class="fas fa-check"></i></button>
-                                    <button class="cancel-btn" data-field="username" title="إلغاء"><i class="fas fa-times"></i></button>
-                                </div>
-                            ` : ''}
+                            <!-- Editing username is disabled from profile page. Admin can edit from User Management. -->
                         </div>
                     </div>
                     <div class="profile-field" data-field="email">
@@ -200,36 +197,40 @@ export function renderProfilePage() {
                         <div class="value-container">
                             <span style="flex-grow: 0;">${user.email}</span>
                             <button class="copy-btn" data-email="${user.email}" title="نسخ"><i class="fas fa-copy"></i></button>
-                            <input type="email" class="hidden profile-edit-input" value="${user.email}">
-                            <div class="edit-controls">
-                                <button class="edit-btn" data-field="email" title="تعديل"><i class="fas fa-pen"></i></button>
-                                <div class="edit-actions hidden">
-                                    <button class="save-btn" data-field="email" title="حفظ"><i class="fas fa-check"></i></button>
-                                    <button class="cancel-btn" data-field="email" title="إلغاء"><i class="fas fa-times"></i></button>
+                            ${isAdmin ? `
+                                <input type="email" class="hidden profile-edit-input" value="${user.email}">
+                                <div class="edit-controls">
+                                    <button class="edit-btn" data-field="email" title="تعديل"><i class="fas fa-pen"></i></button>
+                                    <div class="edit-actions hidden">
+                                        <button class="save-btn" data-field="email" title="حفظ"><i class="fas fa-check"></i></button>
+                                        <button class="cancel-btn" data-field="email" title="إلغاء"><i class="fas fa-times"></i></button>
+                                    </div>
                                 </div>
-                            </div>
+                            ` : ''}
                         </div>
                     </div>
                 </div>
             </div>
-            <div class="form-container" style="max-width: 100%; margin: 0; grid-column: 1 / -1;">
-                <h2 style="margin-top: 0; margin-bottom: 1.5rem; font-size: 1.5rem;">تغيير كلمة المرور</h2>
-                <form id="change-password-form">
-                    <div class="form-group">
-                        <label for="current-password">كلمة المرور الحالية</label>
-                        <input type="password" id="current-password" required autocomplete="current-password">
-                    </div>
-                    <div class="form-group">
-                        <label for="new-password">كلمة المرور الجديدة</label>
-                        <input type="password" id="new-password" required autocomplete="new-password" minlength="6">
-                    </div>
-                    <div class="form-group">
-                        <label for="confirm-password">تأكيد كلمة المرور الجديدة</label>
-                        <input type="password" id="confirm-password" required autocomplete="new-password">
-                    </div>
-                    <button type="submit" class="submit-btn">حفظ كلمة المرور</button>
-                </form>
-            </div>
+            ${isAdmin ? `
+                <div class="form-container" style="max-width: 100%; margin: 0; grid-column: 1 / -1;">
+                    <h2 style="margin-top: 0; margin-bottom: 1.5rem; font-size: 1.5rem;">تغيير كلمة المرور</h2>
+                    <form id="change-password-form">
+                        <div class="form-group">
+                            <label for="current-password">كلمة المرور الحالية</label>
+                            <input type="password" id="current-password" required autocomplete="current-password">
+                        </div>
+                        <div class="form-group">
+                            <label for="new-password">كلمة المرور الجديدة</label>
+                            <input type="password" id="new-password" required autocomplete="new-password" minlength="6">
+                        </div>
+                        <div class="form-group">
+                            <label for="confirm-password">تأكيد كلمة المرور الجديدة</label>
+                            <input type="password" id="confirm-password" required autocomplete="new-password">
+                        </div>
+                        <button type="submit" class="submit-btn">حفظ كلمة المرور</button>
+                    </form>
+                </div>
+            ` : ''}
         </div>
     `;
     initProfilePage();

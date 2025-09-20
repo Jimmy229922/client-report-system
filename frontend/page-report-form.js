@@ -159,18 +159,27 @@ function getReportText(reportType, form) {
     const common = getCommonReportData(form);
     const mentions = '\n\n@Mudarballoul\n@batoulhassan';
 
+    const reportTypeMap = {
+        'Suspicious Report': { title: 'suspicious', hash: '#suspicious' },
+        'Deposit Report': { title: 'Deposit Report', hash: '#deposit_percentages' },
+        'New Position Report': { title: 'new-positions', hash: '#new-positions' },
+        'Credit Out Report': { title: 'credit-out', hash: '#credit-out' },
+        'تحويل الحسابات': { title: 'تحويل الحسابات', hash: '#account_transfer' },
+        'PAYOUTS': { title: 'PAYOUTS', hash: '#payouts' },
+    };
+
+    const { title, hash } = reportTypeMap[reportType] || { title: reportType, hash: '' };
+    let body = '';
+    const footer = `\n\n${hash}${mentions}`;
+
     if (reportType === 'PAYOUTS') {
         const walletAddress = form.querySelector('#wallet-address').value;
         const emails = form.querySelector('#emails').value;
-        return `تقرير PAYOUTS\n\n`
-            + `عنوان المحفظة: ${walletAddress || 'غير محدد'}\n\n`
-            + `الإيميلات:\n${emails || 'لا يوجد'}\n\n`
-            + `اكثر من عميل يسحب علي نفس عنوان المحفظة`
-            + `\n\n#Payouts\n@Mudarballoul`;
-    }
+        body = `عنوان المحفظة: ${walletAddress || 'غير محدد'}\n\n`
+             + `الإيميلات:\n${emails || 'لا يوجد'}\n\n`
+             + `اكثر من عميل يسحب علي نفس عنوان المحفظة`;
 
-
-    if (reportType === 'Deposit Report') {
+    } else if (reportType === 'Deposit Report') {
         let marginPercentage = form.querySelector('#margin-percentage').value;
         let floatingProfits = form.querySelector('#floating-profits').value;
         const profitStatus = floatingProfits.includes('-') ? 'سالب' : 'موجب';
@@ -181,44 +190,34 @@ function getReportText(reportType, form) {
         if (floatingProfits && !floatingProfits.startsWith('$') && !floatingProfits.startsWith('-$')) {
             floatingProfits = floatingProfits.startsWith('-') ? `-$${floatingProfits.substring(1)}` : `$${floatingProfits}`;
         }
+        
+        body = `الدولة: ${common.country}\n`
+             + `الـ IP: ${common.ip}\n`
+             + `الإيميل: ${common.email}\n`
+             + `رقم الحساب: ${common.accountNumber}\n`
+             + `نسبة الهامش: ${marginPercentage || 'N/A'}\n`
+             + `الأرباح للصفقات العائمة: ${floatingProfits || 'NA'}\n\n`
+             + `الأرباح للصفقات العائمة (${profitStatus})\n`
+             + `الـ IP الأخير (${ipMatchStatus}) لبلد التسجيل، العميل ${bonusStatus}${common.notes !== 'لا يوجد' ? `، ${common.notes}` : ''}`;
+    
+    } else { // General and Account Transfer
+        const transferSourceSelect = form.querySelector('#transfer-source-select');
+        let transferSource = transferSourceSelect.value;
+        if (transferSource === 'other') {
+            transferSource = form.querySelector('#transfer-source-other').value;
+        } else if (!transferSource) {
+            transferSource = 'لم يتم الاختيار';
+        }
 
-        return `تقرير Deposit Report\n\n`
-            + `الدولة: ${common.country}\n`
-            + `الـ IP: ${common.ip}\n`
-            + `الإيميل: ${common.email}\n`
-            + `رقم الحساب: ${common.accountNumber}\n`
-            + `نسبة الهامش: ${marginPercentage || 'N/A'}\n`
-            + `الأرباح للصفقات العائمة: ${floatingProfits || 'N/A'}\n\n`
-            + `الأرباح للصفقات العائمة (${profitStatus})\n`
-            + `الـ IP الأخير (${ipMatchStatus}) لبلد التسجيل، العميل ${bonusStatus}${common.notes !== 'لا يوجد' ? `، ${common.notes}` : ''}`
-            + `\n\n#deposit_percentages${mentions}`;
+        body = `الـ IP: ${common.ip}\n`
+             + `الدولة: ${common.country}\n`
+             + `الإيميل: ${common.email}\n`
+             + `رقم الحساب: ${common.accountNumber}\n`
+             + `مصدر التحويل: ${transferSource}\n`
+             + `الملاحظات: ${common.notes}`;
     }
 
-    // For General and Account Transfer reports
-    const transferSourceSelect = form.querySelector('#transfer-source-select');
-    let transferSource = transferSourceSelect.value;
-    if (transferSource === 'other') {
-        transferSource = form.querySelector('#transfer-source-other').value;
-    } else if (!transferSource) {
-        transferSource = 'لم يتم الاختيار';
-    }
-
-    const reportTypeMap = {
-        'Suspicious Report': { title: 'suspicious', hash: '#suspicious' },
-        'New Position Report': { title: 'new-positions', hash: '#new-positions' },
-        'Credit Out Report': { title: 'credit-out', hash: '#credit-out' },
-        'تحويل الحسابات': { title: 'تحويل الحسابات', hash: '#account_transfer' },
-    };
-    const { title, hash } = reportTypeMap[reportType] || { title: reportType, hash: '' };
-
-    return `تقرير ${title}\n`
-        + `الـ IP: ${common.ip}\n`
-        + `الدولة: ${common.country}\n`
-        + `الإيميل: ${common.email}\n`
-        + `رقم الحساب: ${common.accountNumber}\n`
-        + `مصدر التحويل: ${transferSource}\n`
-        + `الملاحظات: ${common.notes}`
-        + `\n\n${hash}${mentions}`;
+    return `تقرير ${title}\n\n${body}${footer}`;
 }
 
 export function initCreateReportPage() {
