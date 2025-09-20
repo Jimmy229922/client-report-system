@@ -93,11 +93,18 @@ async function handleAppUpdate() {
     try {
         const result = await fetchWithAuth('/api/system/update', { method: 'POST' });
 
-        showToast(result.message);
-
-        if (result.message.includes('سيتم إعادة تشغيل السيرفر')) {
-            showUpdateOverlay();
-            checkServerStatus();
+        // Defensive check to ensure the response has the expected structure
+        if (result && result.message) {
+            showToast(result.message);
+            if (result.message.includes('سيتم إعادة تشغيل السيرفر')) {
+                showUpdateOverlay();
+                checkServerStatus();
+            }
+        } else {
+            // This case should not happen, but we handle it to prevent a crash.
+            const errorMessage = 'استجابة غير متوقعة من السيرفر أثناء التحديث.';
+            showToast(errorMessage, true);
+            console.error('Unexpected update response:', result);
         }
     } catch (error) {
         // Display multiline errors in a readable way
