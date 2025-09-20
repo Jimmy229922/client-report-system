@@ -45,6 +45,18 @@ function initProfilePage() {
         const field = button.dataset.field;
         if (!field) return;
 
+        if (button.classList.contains('copy-btn')) {
+            const email = button.dataset.email;
+            if (email) {
+                navigator.clipboard.writeText(email).then(() => {
+                    showToast('تم نسخ البريد الإلكتروني.');
+                }).catch(err => {
+                    showToast('فشل نسخ البريد الإلكتروني.', true);
+                });
+            }
+            return;
+        }
+
         const fieldContainer = button.closest('.profile-field');
         const valueSpan = fieldContainer.querySelector('span');
         const input = fieldContainer.querySelector('input[type="text"], input[type="email"]');
@@ -186,12 +198,15 @@ export function renderProfilePage() {
                     <div class="profile-field" data-field="email">
                         <label>البريد الإلكتروني</label>
                         <div class="value-container">
-                            <span>${user.email}</span>
+                            <span style="flex-grow: 0;">${user.email}</span>
+                            <button class="copy-btn" data-email="${user.email}" title="نسخ"><i class="fas fa-copy"></i></button>
                             <input type="email" class="hidden profile-edit-input" value="${user.email}">
-                            <button class="edit-btn" data-field="email" title="تعديل"><i class="fas fa-pen"></i></button>
-                            <div class="edit-actions hidden">
-                                <button class="save-btn" data-field="email" title="حفظ"><i class="fas fa-check"></i></button>
-                                <button class="cancel-btn" data-field="email" title="إلغاء"><i class="fas fa-times"></i></button>
+                            <div class="edit-controls">
+                                <button class="edit-btn" data-field="email" title="تعديل"><i class="fas fa-pen"></i></button>
+                                <div class="edit-actions hidden">
+                                    <button class="save-btn" data-field="email" title="حفظ"><i class="fas fa-check"></i></button>
+                                    <button class="cancel-btn" data-field="email" title="إلغاء"><i class="fas fa-times"></i></button>
+                                </div>
                             </div>
                         </div>
                     </div>

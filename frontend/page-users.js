@@ -11,7 +11,7 @@ function createUserRow(user) {
                <i class="fas fa-user"></i>
            </span>`;
     
-    const isAdmin = user.id === 1;
+    const isAdmin = user.id === 1 || user.email === 'admin@inzo.com';
     const adminBadge = isAdmin ? `<span class="admin-badge">مسؤول</span>` : '';
     const deleteButton = !isAdmin ? `<button class="archive-btn delete" data-action="delete" data-id="${user.id}" title="حذف المستخدم"><i class="fas fa-trash"></i></button>` : '';
 
@@ -184,7 +184,7 @@ function handleUserActions() {
         `;
         avatarContainer.appendChild(avatarUploadInput);
         // Admin (id:1) username cannot be changed
-        usernameInput.disabled = (user.id == 1);
+        usernameInput.disabled = (user.id == 1 || user.email === 'admin@inzo.com');
 
         modal.style.display = 'flex';
     };

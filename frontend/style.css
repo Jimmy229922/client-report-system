@@ -1024,6 +1024,11 @@ main { padding: 2rem; max-width: 1200px; margin: 2rem auto; animation: fadeIn 0.
     position: relative; /* For positioning the input */
 }
 
+.value-container .copy-btn {
+    background: none; border: none; color: #aaa; cursor: pointer; font-size: 0.9rem; padding: 5px; margin-right: auto;
+}
+.value-container .copy-btn:hover { color: var(--accent-color); }
+
 .value-container span {
     flex-grow: 1;
     padding: 0.5rem 0;
@@ -1041,7 +1046,11 @@ main { padding: 2rem; max-width: 1200px; margin: 2rem auto; animation: fadeIn 0.
     flex-grow: 1;
 }
 
-.edit-btn, .edit-actions button {
+.edit-controls {
+    margin-right: 10px;
+}
+
+.edit-btn, .edit-actions button, .value-container .copy-btn {
     background: none;
     border: none;
     color: #aaa;
@@ -1049,7 +1058,6 @@ main { padding: 2rem; max-width: 1200px; margin: 2rem auto; animation: fadeIn 0.
     font-size: 1rem;
     padding: 5px;
     transition: color 0.2s ease;
-    margin-right: 10px; /* Use margin-right for RTL */
 }
 
 .edit-btn:hover {
