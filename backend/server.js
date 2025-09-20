@@ -197,13 +197,16 @@ app.post('/api/send-report', verifyToken, upload.array('images', 3), async (req,
             return res.status(400).json({ success: false, message: 'نص التقرير مفقود.' });
         }
 
-        const telegramMessage = `${reportText}\n\nبواسطة: ${username}`;
+        // Add username to the first line of the report
+        const lines = reportText.split('\n');
+        lines[0] = `${lines[0]} (بواسطة: ${username})`;
+        const telegramMessage = lines.join('\n');
         const TELEGRAM_CAPTION_LIMIT = 1024;
 
         // التحقق من وجود صور
         if (images && images.length > 0) {
             // إذا كان النص أطول من الحد المسموح به للتعليق على الصور
-            if (reportText.length > TELEGRAM_CAPTION_LIMIT) {
+            if (telegramMessage.length > TELEGRAM_CAPTION_LIMIT) {
                 console.log('النص طويل، سيتم إرسال الصور والنص بشكل منفصل.');
                 // 1. أرسل الصور أولاً بدون تعليق
                 const mediaGroup = images.map(image => ({
