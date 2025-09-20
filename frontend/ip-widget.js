@@ -45,25 +45,31 @@ export function initIpWidget() {
         }
     };
 
-    const performLookup = (ip) => {
+    const performLookup = async (ip) => {
         if (!/^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$/.test(ip)) {
             resultDiv.innerHTML = '';
             return;
         }
 
-        // Use the globally available ipToCountry function from the library
-        const countryCode = window.ipToCountry.lookup(ip);
+        // Show loading state immediately
+        resultDiv.innerHTML = '<div class="spinner" style="width: 25px; height: 25px; border-width: 3px;"></div>';
         let countryName = 'غير معروف';
 
-        if (countryCode) {
-            const regionNames = new Intl.DisplayNames(['ar'], { type: 'region' });
-            countryName = regionNames.of(countryCode) || countryCode;
-            resultDiv.innerHTML = `
-                <img src="https://flagcdn.com/w40/${countryCode.toLowerCase()}.png" alt="${countryCode}" style="margin-bottom: 0.5rem;">
-                ${countryName}
-            `;
-        } else {
-            resultDiv.innerHTML = 'غير معروف';
+        try {
+            const response = await fetch(`https://ipwhois.app/json/${ip}`);
+            const data = await response.json();
+            if (data.success) {
+                countryName = data.country;
+                resultDiv.innerHTML = `
+                    <img src="${data.country_flag}" alt="${data.country_code}" style="margin-bottom: 0.5rem; width: 40px; height: auto;">
+                    ${countryName}
+                `;
+            } else {
+                throw new Error(data.message || 'Invalid IP address');
+            }
+        } catch (error) {
+            console.error('Widget IP lookup failed:', error.message);
+            resultDiv.innerHTML = 'فشل البحث';
         }
 
         // Add to history if it's a new IP

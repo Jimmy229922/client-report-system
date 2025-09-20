@@ -425,6 +425,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const ipInput = document.getElementById('ip-input');
             if (ipInput && !ipInput.dataset.listenerAttached) {
                 ipInput.addEventListener('input', debounce(() => handleIpLookup(ipInput), 300));
+                ipInput.addEventListener('blur', () => handleIpLookup(ipInput));
                 ipInput.dataset.listenerAttached = 'true';
             }
         });
