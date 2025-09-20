@@ -42,57 +42,61 @@ function renderStatCards(stats) {
     const statsGrid = document.getElementById('stats-grid');
     if (!statsGrid) return;
 
+    // Separate the total card from the rest
     statsGrid.innerHTML = `
-        <a href="#archive" class="stat-card total-reports">
-            <div class="stat-card-icon"><i class="fas fa-file-alt"></i></div>
-            <div class="stat-card-info">
-                <h3>Total Reports <small>إجمالي التقارير</small></h3>
-                <p>${stats.total || 0}</p>
-            </div>
-        </a>
-        <a href="#reports/suspicious" class="stat-card suspicious">
-            <div class="stat-card-icon"><i class="fas fa-user-secret"></i></div>
-            <div class="stat-card-info">
-                <h3>Suspicious <small>تقارير مشبوهة</small></h3>
-                <p>${stats.suspicious || 0}</p>
-            </div>
-        </a>
-        <a href="#reports/deposit" class="stat-card deposit">
-            <div class="stat-card-icon"><i class="fas fa-money-bill-wave"></i></div>
-            <div class="stat-card-info">
-                <h3>Deposit <small>إيداعات</small></h3>
-                <p>${stats.deposit || 0}</p>
-            </div>
-        </a>
-        <a href="#reports/new-position" class="stat-card new-position">
-            <div class="stat-card-icon"><i class="fas fa-chart-line"></i></div>
-            <div class="stat-card-info">
-                <h3>New Position <small>صفقات جديدة</small></h3>
-                <p>${stats.new_positions || 0}</p>
-            </div>
-        </a>
-        <a href="#reports/credit-out" class="stat-card credit-out">
-            <div class="stat-card-icon"><i class="fas fa-credit-card"></i></div>
-            <div class="stat-card-info">
-                <h3>Credit Out <small>سحب رصيد</small></h3>
-                <p>${stats.credit_out || 0}</p>
-            </div>
-        </a>
-        <a href="#reports/account-transfer" class="stat-card account-transfer">
-            <div class="stat-card-icon"><i class="fas fa-exchange-alt"></i></div>
-            <div class="stat-card-info">
-                <h3>Account Transfer <small>تحويل حسابات</small></h3>
-                <p>${stats.account_transfer || 0}</p>
-            </div>
-        </a>
-        <a href="#reports/payouts" class="stat-card payouts">
-            <div class="stat-card-icon"><i class="fas fa-hand-holding-usd"></i></div>
-            <div class="stat-card-info">
-                <h3>PAYOUTS <small>دفعات</small></h3>
-                <p>${stats.payouts || 0}</p>
-            </div>
-        </a>
-    `;
+        <div class="total-reports-container">
+            <a href="#archive" class="stat-card total-reports">
+                <div class="stat-card-icon"><i class="fas fa-file-alt"></i></div>
+                <div class="stat-card-info">
+                    <h3>Total Reports <small>إجمالي التقارير</small></h3>
+                    <p>${stats.total || 0}</p>
+                </div>
+            </a>
+        </div>
+        <div class="sub-stats-grid">
+            <a href="#reports/suspicious" class="stat-card suspicious">
+                <div class="stat-card-icon"><i class="fas fa-user-secret"></i></div>
+                <div class="stat-card-info">
+                    <h3>Suspicious <small>تقارير مشبوهة</small></h3>
+                    <p>${stats.suspicious || 0}</p>
+                </div>
+            </a>
+            <a href="#reports/deposit" class="stat-card deposit">
+                <div class="stat-card-icon"><i class="fas fa-money-bill-wave"></i></div>
+                <div class="stat-card-info">
+                    <h3>Deposit <small>إيداعات</small></h3>
+                    <p>${stats.deposit || 0}</p>
+                </div>
+            </a>
+            <a href="#reports/new-position" class="stat-card new-position">
+                <div class="stat-card-icon"><i class="fas fa-chart-line"></i></div>
+                <div class="stat-card-info">
+                    <h3>New Position <small>صفقات جديدة</small></h3>
+                    <p>${stats.new_positions || 0}</p>
+                </div>
+            </a>
+            <a href="#reports/credit-out" class="stat-card credit-out">
+                <div class="stat-card-icon"><i class="fas fa-credit-card"></i></div>
+                <div class="stat-card-info">
+                    <h3>Credit Out <small>سحب رصيد</small></h3>
+                    <p>${stats.credit_out || 0}</p>
+                </div>
+            </a>
+            <a href="#reports/account-transfer" class="stat-card account-transfer">
+                <div class="stat-card-icon"><i class="fas fa-exchange-alt"></i></div>
+                <div class="stat-card-info">
+                    <h3>Account Transfer <small>تحويل حسابات</small></h3>
+                    <p>${stats.account_transfer || 0}</p>
+                </div>
+            </a>
+            <a href="#reports/payouts" class="stat-card payouts">
+                <div class="stat-card-icon"><i class="fas fa-hand-holding-usd"></i></div>
+                <div class="stat-card-info">
+                    <h3>PAYOUTS <small>دفعات</small></h3>
+                    <p>${stats.payouts || 0}</p>
+                </div>
+            </a>
+        </div>`;
 }
 
 function renderWeeklyChart(weeklyData) {

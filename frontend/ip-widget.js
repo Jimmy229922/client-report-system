@@ -29,7 +29,7 @@ export function initIpWidget() {
 
     const resetWidget = () => {
         ipInput.value = '';
-        resultDiv.innerHTML = ''; // Make the result area blank by default
+        resultDiv.innerHTML = '<span class="widget-placeholder">انسخ IP أو أدخله يدوياً</span>';
     };
 
     const performLookup = (ip) => {
@@ -125,5 +125,4 @@ export function initIpWidget() {
 
     // Initial setup
     resetWidget();
-    checkClipboard(); // Perform an initial check on startup
 }
