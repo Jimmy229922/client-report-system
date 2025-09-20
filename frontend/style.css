@@ -750,6 +750,19 @@ main { padding: 2rem; max-width: 1200px; margin: 2rem auto; animation: fadeIn 0.
     font-size: 1rem;
 }
 
+/* --- App Footer --- */
+#app-footer {
+    text-align: center;
+    padding: 1.5rem;
+    margin-top: 2rem;
+    color: #aaa;
+    font-size: 0.9rem;
+}
+
+#app-version {
+    font-family: 'Courier New', Courier, monospace;
+    font-weight: bold;
+}
 .search-container i {
     position: absolute;
     left: 1rem;
@@ -932,10 +945,23 @@ main { padding: 2rem; max-width: 1200px; margin: 2rem auto; animation: fadeIn 0.
 
 .system-health-container {
     display: flex;
-    align-items: center;
-    gap: 1rem;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
     font-size: 1.1rem;
     font-weight: bold;
+}
+
+.health-status {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.health-last-checked {
+    font-size: 0.8rem;
+    color: #aaa;
+    font-weight: normal;
 }
 
 /* --- Login Screen Styles --- */

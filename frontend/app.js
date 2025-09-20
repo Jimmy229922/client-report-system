@@ -160,11 +160,23 @@ async function handleAppUpdate() {
     }
 }
 
+async function loadAppVersion() {
+    try {
+        const response = await fetch('/api/version');
+        const data = await response.json();
+        const versionSpan = document.getElementById('app-version');
+        if (versionSpan && data.version) {
+            versionSpan.textContent = `v${data.version}`;
+        }
+    } catch (error) {
+        console.error('Failed to load app version:', error);
+    }
+}
+
 export function initApp() {
     handleTheme();
     handleImagePreviewModal();
     initIpWidget();
-    setupUIForUser(); // Setup UI based on user role
 
     const updateBtn = document.getElementById('update-app-btn');
     if (updateBtn) {
@@ -180,5 +192,8 @@ export function initApp() {
     });
 
     window.addEventListener('hashchange', navigate);
+    
+    setupUIForUser(); // Setup UI based on user role
+    loadAppVersion(); // Load and display the app version
     navigate(); // Load initial page
 }

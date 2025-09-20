@@ -421,9 +421,9 @@ app.get('/api/stats', verifyToken, async (req, res) => {
 
 // Endpoint for weekly stats
 app.get('/api/stats/weekly', verifyToken, async (req, res) => {
-    const { data, error } = await supabase.rpc('get_weekly_stats');
+    const { data, error } = await supabase.rpc('get_daily_stats');
     if (error) {
-        return res.status(500).json({ "error": error.message });
+        return res.status(500).json({ "error": `Database function error: ${error.message}` });
     }
     res.json({ message: "success", data });
 });
@@ -465,6 +465,13 @@ app.get('/api/stats/top-contributor', verifyToken, async (req, res) => {
 app.get('/api/health', (req, res) => {
     res.status(200).json({ status: 'ok' });
 });
+
+// Endpoint to get the application version from package.json
+app.get('/api/version', (req, res) => {
+    const packageJson = require('../package.json');
+    res.json({ version: packageJson.version });
+});
+
 
 // --- User Management Endpoints ---
 

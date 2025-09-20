@@ -130,15 +130,23 @@ function renderSystemHealth(isHealthy) {
     const container = document.getElementById('system-health-container');
     if (!container) return;
 
+    const timeString = new Date().toLocaleTimeString('ar-EG');
+
     if (isHealthy) {
         container.innerHTML = `
-            <i class="fas fa-check-circle" style="color: var(--success-color);"></i>
-            <span>النظام يعمل بشكل طبيعي</span>
+            <div class="health-status">
+                <i class="fas fa-check-circle" style="color: var(--success-color);"></i>
+                <span>النظام يعمل بشكل طبيعي</span>
+            </div>
+            <div class="health-last-checked">آخر فحص: ${timeString}</div>
         `;
     } else {
         container.innerHTML = `
-            <i class="fas fa-exclamation-triangle" style="color: var(--danger-color);"></i>
-            <span>لا يمكن الوصول للسيرفر</span>
+            <div class="health-status">
+                <i class="fas fa-exclamation-triangle" style="color: var(--danger-color);"></i>
+                <span>لا يمكن الوصول للسيرفر</span>
+            </div>
+            <div class="health-last-checked">آخر محاولة: ${timeString}</div>
         `;
     }
 }
@@ -222,16 +230,17 @@ function renderWeeklyChart(weeklyData) {
         weeklyChart.destroy();
     }
 
-    // Prepare data for the last 7 days, ensuring correct order
-    const last7Days = [...Array(7)].map((_, i) => {
+    // Prepare data for the last 24 hours
+    const last24Hours = [...Array(24)].map((_, i) => {
         const d = new Date();
-        d.setDate(d.getDate() - i);
-        return d.toISOString().split('T')[0];
+        d.setHours(d.getHours() - i);
+        return date_trunc('hour', d); // Helper function to zero out minutes/seconds
     }).reverse();
 
-    const chartLabels = last7Days.map(dateStr => new Date(dateStr).toLocaleDateString('ar-EG', { weekday: 'short', day: 'numeric' }));
-    const chartData = last7Days.map(dateStr => {
-        const found = weeklyData.find(d => d.date === dateStr);
+    const chartLabels = last24Hours.map(date => date.toLocaleTimeString('ar-EG', { hour: 'numeric', hour12: true }));
+    const chartData = last24Hours.map(date => {
+        const dateStr = date.toISOString();
+        const found = weeklyData.find(d => date_trunc('hour', new Date(d.hour_timestamp)).toISOString() === dateStr);
         return found ? found.count : 0;
     });
 
@@ -299,6 +308,13 @@ function renderWeeklyChart(weeklyData) {
     });
 }
 
+// Helper function to truncate date to the hour
+function date_trunc(unit, d) {
+    const newDate = new Date(d);
+    newDate.setMinutes(0, 0, 0);
+    return newDate;
+}
+
 export function renderHomePage() {
     const mainContent = document.getElementById('main-content');
     mainContent.innerHTML = `
@@ -317,7 +333,7 @@ export function renderHomePage() {
                     </div>
                 </div>
                 <div class="chart-card">
-                    <h3><i class="fas fa-chart-bar"></i> النشاط الأسبوعي</h3>
+                    <h3><i class="fas fa-chart-bar"></i> النشاط اليومي (آخر 24 ساعة)</h3>
                     <div class="chart-container">
                         <canvas id="weekly-chart"></canvas>
                     </div>
