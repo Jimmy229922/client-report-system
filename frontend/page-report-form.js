@@ -319,7 +319,10 @@ export function initCreateReportPage() {
         uploadedFiles.forEach(file => formData.append('images', file));
 
         try {
-            await fetchWithAuth('/api/send-report', { method: 'POST', body: formData });
+            const response = await fetchWithAuth('/api/send-report', { method: 'POST', body: formData });
+            const result = await response.json();
+            if (!response.ok) throw new Error(result.message || 'فشل إرسال التقرير.');
+
             showToast('تم إرسال التقرير بنجاح!');
             setFormDirty(false);
             document.querySelectorAll('.img-preview-container').forEach(c => URL.revokeObjectURL(c.dataset.blobUrl));

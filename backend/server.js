@@ -538,7 +538,12 @@ app.delete('/api/users/:id', verifyToken, verifyAdmin, async (req, res) => {
 
     const { error, count } = await supabase.from('users').delete({ count: 'exact' }).eq('id', idToDelete);
 
-    if (error) { return res.status(500).json({ error: error.message }); }
+    if (error) {
+        if (error.code === '23503') { // Foreign key violation
+            return res.status(409).json({ message: "لا يمكن حذف هذا المستخدم لأنه يمتلك تقارير مرتبطة به. لحذف المستخدم، يجب أولاً حذف تقاريره أو تغيير قاعدة البيانات للسماح بذلك." });
+        }
+        return res.status(500).json({ error: error.message });
+    }
     if (count === 0) { return res.status(404).json({ message: "المستخدم غير موجود." }); }
     res.json({ message: "تم حذف المستخدم بنجاح." });
 });
