@@ -58,3 +58,22 @@ export function handleTheme() {
         document.dispatchEvent(new CustomEvent('themeChanged'));
     });
 }
+
+export function timeAgo(dateString) {
+    const date = new Date(dateString);
+    const now = new Date();
+    const seconds = Math.round((now - date) / 1000);
+    const minutes = Math.round(seconds / 60);
+    const hours = Math.round(minutes / 60);
+    const days = Math.round(hours / 24);
+
+    if (isNaN(seconds)) {
+        return '';
+    }
+
+    if (seconds < 60) return `قبل ${seconds} ثوان`;
+    if (minutes < 60) return `قبل ${minutes} دقائق`;
+    if (hours < 24) return `قبل ${hours} ساعات`;
+    
+    return date.toLocaleDateString('ar-EG', { year: 'numeric', month: 'long', day: 'numeric' });
+}

@@ -29,6 +29,10 @@ async function fetchAndRenderStats() {
         if (statsGrid) {
             statsGrid.innerHTML = '<p>فشل تحميل الإحصائيات.</p>';
         }
+        const recentReportsContainer = document.getElementById('recent-reports-container');
+        if (recentReportsContainer) {
+            recentReportsContainer.innerHTML = '<p>فشل تحميل أحدث التقارير.</p>';
+        }
     }
 }
 
