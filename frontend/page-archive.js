@@ -16,8 +16,7 @@ async function fetchAndRenderArchive(searchTerm = '') {
     if (!archiveGrid) return;
     archiveGrid.innerHTML = `<div class="spinner"></div>`;
     try {
-        const response = await fetchWithAuth(`/api/reports?search=${encodeURIComponent(searchTerm)}`);
-        const result = await response.json();
+        const result = await fetchWithAuth(`/api/reports?search=${encodeURIComponent(searchTerm)}`);
 
         if (result.data && result.data.length > 0) {
             const reportsByType = result.data.reduce((acc, report) => {
@@ -113,13 +112,9 @@ async function handleDelete(button) {
     const reportId = button.dataset.id;
     if (confirm('هل أنت متأكد من حذف هذا التقرير؟ لا يمكن التراجع عن هذا الإجراء.')) {
         try {
-            const deleteResponse = await fetchWithAuth(`/api/reports/${reportId}`, { method: 'DELETE' });
-            if (deleteResponse.ok) {
-                document.getElementById(`report-card-${reportId}`).remove();
-                showToast('تم حذف التقرير بنجاح.');
-            } else {
-                throw new Error('فشل حذف التقرير.');
-            }
+            await fetchWithAuth(`/api/reports/${reportId}`, { method: 'DELETE' });
+            document.getElementById(`report-card-${reportId}`).remove();
+            showToast('تم حذف التقرير بنجاح.');
         } catch (err) {
             showToast(err.message, true);
         }

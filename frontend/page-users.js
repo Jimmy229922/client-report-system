@@ -7,9 +7,7 @@ async function fetchAndRenderUsers() {
     tableBody.innerHTML = '<tr><td colspan="3" style="text-align:center;"><div class="spinner"></div></td></tr>';
 
     try {
-        const response = await fetchWithAuth('/api/users');
-        if (!response.ok) throw new Error('فشل في جلب قائمة المستخدمين.');
-        const result = await response.json();
+        const result = await fetchWithAuth('/api/users');
 
         if (result.data && result.data.length > 0) {
             tableBody.innerHTML = result.data.map(user => {
@@ -50,13 +48,11 @@ function handleAddUser() {
         const password = passwordInput.value;
 
         try {
-            const response = await fetchWithAuth('/api/users', {
+            await fetchWithAuth('/api/users', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ username, email, password })
             });
-            const result = await response.json();
-            if (!response.ok) throw new Error(result.message || 'فشل في إضافة المستخدم.');
 
             showToast('تمت إضافة المستخدم بنجاح.');
             form.reset();
@@ -119,9 +115,7 @@ function handleUserActions() {
         } else if (action === 'delete') {
             if (confirm('هل أنت متأكد من حذف هذا المستخدم؟ لا يمكن التراجع عن هذا الإجراء.')) {
                 try {
-                    const response = await fetchWithAuth(`/api/users/${userId}`, { method: 'DELETE' });
-                    const result = await response.json();
-                    if (!response.ok) throw new Error(result.message || 'فشل في حذف المستخدم.');
+                    await fetchWithAuth(`/api/users/${userId}`, { method: 'DELETE' });
                     showToast('تم حذف المستخدم بنجاح.');
                     row.remove();
                 } catch (error) {
@@ -146,13 +140,11 @@ function handleUserActions() {
         }
 
         try {
-            const response = await fetchWithAuth(`/api/users/${userId}`, {
+            await fetchWithAuth(`/api/users/${userId}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
             });
-            const result = await response.json();
-            if (!response.ok) throw new Error(result.message || 'فشل تحديث بيانات المستخدم.');
 
             showToast('تم تحديث بيانات المستخدم بنجاح.');
             closeEditModal();

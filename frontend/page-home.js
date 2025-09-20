@@ -5,13 +5,10 @@ let weeklyChart = null; // To hold the chart instance
 async function fetchAndRenderHomePageData() {
     try {
         // Fetch general stats and weekly activity in parallel
-        const [statsResponse, weeklyStatsResponse] = await Promise.all([
+        const [statsResult, weeklyStatsResult] = await Promise.all([
             fetchWithAuth('/api/stats'),
             fetchWithAuth('/api/stats/weekly')
         ]);
-
-        const statsResult = await statsResponse.json();
-        const weeklyStatsResult = await weeklyStatsResponse.json();
 
         if (statsResult.data) {
             renderStatCards(statsResult.data);

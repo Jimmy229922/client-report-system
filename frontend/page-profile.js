@@ -15,12 +15,10 @@ function initProfilePage() {
         showToast('جاري رفع الصورة...');
 
         try {
-            const response = await fetchWithAuth('/api/profile/avatar', {
+            const result = await fetchWithAuth('/api/profile/avatar', {
                 method: 'POST',
                 body: formData,
             });
-            const result = await response.json();
-            if (!response.ok) throw new Error(result.message || 'فشل رفع الصورة.');
 
             showToast('تم تحديث الصورة بنجاح!');
             

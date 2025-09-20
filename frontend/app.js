@@ -90,13 +90,7 @@ async function handleAppUpdate() {
     showToast('جاري البحث عن تحديثات...');
 
     try {
-        const response = await fetchWithAuth('/api/system/update', { method: 'POST' });
-        const result = await response.json();
-
-        if (!response.ok) {
-            const errorDetail = result.error ? `\n\nالتفاصيل: ${result.error}` : '';
-            throw new Error((result.message || 'فشل عملية التحديث.') + errorDetail);
-        }
+        const result = await fetchWithAuth('/api/system/update', { method: 'POST' });
 
         showToast(result.message);
 
