@@ -543,7 +543,7 @@ app.delete('/api/users/:id', verifyToken, verifyAdmin, async (req, res) => {
 });
 
 // Endpoint for self-updating the application
-app.post('/api/system/update', verifyToken, verifyAdmin, (req, res) => {
+app.post('/api/system/update', verifyToken, (req, res) => {
     const projectRoot = path.join(__dirname, '..');
     const command = 'git pull && cd backend && npm install';
     console.log(`[Update] Executing command: ${command}`);

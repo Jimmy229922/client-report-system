@@ -25,15 +25,18 @@ function setupUIForUser() {
     const updateAppBtn = document.getElementById('update-app-btn');
     updateNavbarUser(); // Update username and avatar
 
+    // Show update button for all logged-in users
+    if (updateAppBtn) updateAppBtn.classList.remove('hidden');
+
     const userStr = localStorage.getItem('user');
     if (userStr) {
         // Defensive check to prevent crash from corrupted data
         if (userStr && userStr !== 'undefined' && userStr !== 'null') {
             try {
                 const user = JSON.parse(userStr);
+                // Show admin-only links
                 if (user && user.id === 1) { // Admin-only UI elements
                     if (userManagementLink) userManagementLink.classList.remove('hidden');
-                    if (updateAppBtn) updateAppBtn.classList.remove('hidden');
                 }
             } catch (error) {
                 console.error("Corrupted user data in localStorage (app.js). Clearing and reloading.", error);
