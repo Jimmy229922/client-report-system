@@ -542,6 +542,54 @@ app.delete('/api/users/:id', verifyToken, verifyAdmin, async (req, res) => {
     res.json({ message: "تم حذف المستخدم بنجاح." });
 });
 
+// Update a specific user's avatar (Admin only)
+app.put('/api/users/:id/avatar', verifyToken, verifyAdmin, upload.single('avatar'), async (req, res) => {
+    const { id: userId } = req.params;
+    const file = req.file;
+
+    if (!file) {
+        return res.status(400).json({ message: 'لم يتم رفع أي صورة.' });
+    }
+
+    try {
+        // 1. Get user data to find old avatar
+        const { data: user, error: fetchError } = await supabase
+            .from('users')
+            .select('avatar_url')
+            .eq('id', userId)
+            .single();
+
+        if (fetchError) {
+            if (fetchError.code === 'PGRST116') return res.status(404).json({ message: 'المستخدم غير موجود.' });
+            throw fetchError;
+        }
+
+        // 2. If an old avatar exists, delete it
+        if (user.avatar_url) {
+            const oldAvatarPath = user.avatar_url.split('/avatars/')[1];
+            if (oldAvatarPath) {
+                const { error: removeError } = await supabase.storage.from('avatars').remove([oldAvatarPath]);
+                if (removeError) console.error('Failed to remove old avatar:', removeError.message);
+            }
+        }
+
+        // 3. Upload the new avatar
+        const fileExt = path.extname(file.originalname);
+        const fileName = `user_${userId}/${Date.now()}${fileExt}`;
+
+        const { error: uploadError } = await supabase.storage.from('avatars').upload(fileName, file.buffer, { contentType: file.mimetype, upsert: true });
+        if (uploadError) throw uploadError;
+
+        // 4. Get the public URL and update the user's record
+        const { data: publicUrlData } = supabase.storage.from('avatars').getPublicUrl(fileName);
+        await supabase.from('users').update({ avatar_url: publicUrlData.publicUrl }).eq('id', userId);
+
+        res.json({ message: 'تم تحديث الصورة الشخصية للمستخدم بنجاح.' });
+    } catch (error) {
+        console.error('Admin avatar upload error:', error);
+        res.status(500).json({ message: 'حدث خطأ أثناء رفع الصورة.', error: error.message });
+    }
+});
 // Endpoint for self-updating the application
 app.post('/api/system/update', verifyToken, (req, res) => {
     const projectRoot = path.join(__dirname, '..');

@@ -1,6 +1,8 @@
 import { fetchWithAuth } from './api.js';
 import { showToast } from './ui.js';
 
+let allUsers = []; // Store the fetched users
+
 async function fetchAndRenderUsers(searchTerm = '') {
     const tableBody = document.getElementById('users-table-body');
     if (!tableBody) return;
@@ -8,9 +10,10 @@ async function fetchAndRenderUsers(searchTerm = '') {
 
     try {
         const result = await fetchWithAuth(`/api/users?search=${encodeURIComponent(searchTerm)}`);
+        allUsers = result.data || []; // Store users
 
-        if (result.data && result.data.length > 0) {
-            tableBody.innerHTML = result.data.map(user => {
+        if (allUsers.length > 0) {
+            tableBody.innerHTML = allUsers.map(user => {
                 const avatarHtml = user.avatar_url
                     ? `<img src="${user.avatar_url}" class="navbar-avatar" style="margin-left: 10px;">`
                     : `<span class="profile-avatar-placeholder" style="width: 32px; height: 32px; font-size: 1rem; margin-left: 10px;">
@@ -117,6 +120,12 @@ function handleUserActions() {
     const emailInput = document.getElementById('edit-email');
     const passwordInput = document.getElementById('edit-password');
 
+    const avatarContainer = document.getElementById('edit-user-avatar-container');
+    const avatarUploadInput = document.createElement('input');
+    avatarUploadInput.type = 'file';
+    avatarUploadInput.id = 'edit-avatar-upload-input';
+    avatarUploadInput.accept = 'image/png, image/jpeg, image/webp';
+    avatarUploadInput.className = 'hidden';
     // Function to open the modal for editing
     const openEditModal = (user) => {
         userIdInput.value = user.id;
@@ -124,6 +133,17 @@ function handleUserActions() {
         emailInput.value = user.email;
         passwordInput.value = ''; // Clear password field
         
+        // Render avatar
+        avatarContainer.innerHTML = `
+            ${user.avatar_url 
+                ? `<img src="${user.avatar_url}" alt="الصورة الشخصية" class="profile-avatar">`
+                : `<div class="profile-avatar-placeholder"><i class="fas fa-user"></i></div>`
+            }
+            <label for="edit-avatar-upload-input" class="avatar-edit-overlay">
+                <i class="fas fa-camera"></i>
+            </label>
+        `;
+        avatarContainer.appendChild(avatarUploadInput);
         // Admin (id:1) username cannot be changed
         usernameInput.disabled = (user.id == 1);
 
@@ -153,9 +173,12 @@ function handleUserActions() {
         const row = button.closest('tr');
 
         if (action === 'edit') {
-            const username = row.querySelector('[data-field="username"]').textContent;
-            const email = row.querySelector('[data-field="email"]').textContent;
-            openEditModal({ id: userId, username, email });
+            const user = allUsers.find(u => u.id == userId);
+            if (user) {
+                openEditModal(user);
+            } else {
+                showToast('لم يتم العثور على المستخدم.', true);
+            }
         } else if (action === 'delete') {
             if (confirm('هل أنت متأكد من حذف هذا المستخدم؟ لا يمكن التراجع عن هذا الإجراء.')) {
                 try {
@@ -173,6 +196,30 @@ function handleUserActions() {
             }).catch(err => {
                 showToast('فشل نسخ البريد الإلكتروني.', true);
             });
+        }
+    });
+
+    // Handle avatar upload within the modal
+    avatarUploadInput.addEventListener('change', async () => {
+        const file = avatarUploadInput.files[0];
+        const userId = userIdInput.value;
+        if (!file || !userId) return;
+
+        const formData = new FormData();
+        formData.append('avatar', file);
+
+        showToast('جاري رفع الصورة...');
+
+        try {
+            await fetchWithAuth(`/api/users/${userId}/avatar`, {
+                method: 'PUT',
+                body: formData,
+            });
+            showToast('تم تحديث الصورة بنجاح!');
+            closeEditModal();
+            fetchAndRenderUsers(); // Refresh the list
+        } catch (error) {
+            showToast(error.message, true);
         }
     });
 
