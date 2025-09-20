@@ -89,7 +89,7 @@ function renderTopContributor(contributor) {
     const container = document.getElementById('top-contributor-container');
     if (!container) return;
 
-    if (!contributor || !contributor.username) {
+    if (!contributor || !contributor.username || contributor.report_count === 0) {
         container.innerHTML = '<p>لا يوجد مساهمين بعد.</p>';
         return;
     }
