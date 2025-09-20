@@ -867,6 +867,71 @@ main { padding: 2rem; max-width: 1200px; margin: 2rem auto; animation: fadeIn 0.
     margin: 0;
 }
 
+/* --- Top Contributor Card Styles --- */
+.top-contributor-card {
+    margin-top: 2rem;
+}
+
+.top-contributor-card h3 {
+    margin: 0 0 1rem 0;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--border-color);
+    font-size: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.top-contributor-container {
+    background-color: var(--card-bg);
+    padding: 1.5rem;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.top-contributor-avatar, .top-contributor-avatar-placeholder {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+.top-contributor-avatar-placeholder {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: var(--input-bg);
+    font-size: 1.5rem;
+}
+
+.top-contributor-name { font-weight: bold; font-size: 1.1rem; }
+.top-contributor-count { font-size: 0.9rem; color: #aaa; }
+
+/* --- System Health Card Styles --- */
+.system-health-card {
+    margin-top: 2rem;
+}
+
+.system-health-card h3 {
+    margin: 0 0 1rem 0;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--border-color);
+    font-size: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.system-health-container {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    font-size: 1.1rem;
+    font-weight: bold;
+}
+
 /* --- Login Screen Styles --- */
 
 

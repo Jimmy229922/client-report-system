@@ -432,14 +432,30 @@ app.get('/api/stats/weekly', verifyToken, async (req, res) => {
 app.get('/api/reports/recent', verifyToken, async (req, res) => {
     const { data, error } = await supabase
         .from('reports')
-        .select('id, report_text, timestamp, users(username)')
+        .select('id, report_text, timestamp, users(username)')      
         .order('timestamp', { ascending: false })
         .limit(5);
-    if (error) return res.status(500).json({ error: error.message });
-    res.json({ message: "success", data });
+    if (error) {
+        return res.status(500).json({ error: error.message });
+    }
+    // Ensure data is an array, even if null is returned
+    res.json({ message: "success", data: data || [] });
+});
+
+// Endpoint for top contributor
+app.get('/api/stats/top-contributor', verifyToken, async (req, res) => {
+    // .single() will error if no rows are found. We can use .limit(1) and check the result.
+    const { data, error } = await supabase.rpc('get_top_contributor').limit(1);
+    if (error) {
+        return res.status(500).json({ error: error.message });
+    }
+    // If data is not null and has an entry, return it, otherwise return an empty object.
+    res.json({ message: "success", data: (data && data.length > 0) ? data[0] : {} });
 });
 
 // Health check endpoint for the update process
+
+
 app.get('/api/health', (req, res) => {
     res.status(200).json({ status: 'ok' });
 });

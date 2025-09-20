@@ -9,7 +9,9 @@ export async function fetchAndRenderHomePageData() {
         const results = await Promise.allSettled([
             fetchWithAuth('/api/stats'),
             fetchWithAuth('/api/stats/weekly'),
-            fetchWithAuth('/api/reports/recent')
+            fetchWithAuth('/api/reports/recent'),
+            fetchWithAuth('/api/stats/top-contributor'),
+            fetchWithAuth('/api/health') // Add health check
         ]);
 
         const statsResult = results[0];
@@ -46,6 +48,16 @@ export async function fetchAndRenderHomePageData() {
             }
         }
 
+        const topContributorResult = results[3];
+        if (topContributorResult.status === 'fulfilled' && topContributorResult.value.data) {
+            renderTopContributor(topContributorResult.value.data);
+        } else {
+            console.error('Failed to fetch top contributor:', topContributorResult.reason);
+            const topContributorContainer = document.getElementById('top-contributor-container');
+            if (topContributorContainer) {
+                topContributorContainer.innerHTML = '<p>فشل تحميل المساهم الأعلى.</p>';
+            }
+        }
     } catch (error) { // This catch is now for truly unexpected errors
         console.error('An unexpected error occurred on the home page:', error);
     }
@@ -71,6 +83,45 @@ function renderRecentReports(reports) {
             </div>
         </div>
     `).join('');
+}
+
+function renderTopContributor(contributor) {
+    const container = document.getElementById('top-contributor-container');
+    if (!container) return;
+
+    if (!contributor || !contributor.username) {
+        container.innerHTML = '<p>لا يوجد مساهمين بعد.</p>';
+        return;
+    }
+
+    const avatarHtml = contributor.avatar_url
+        ? `<img src="${contributor.avatar_url}" alt="${contributor.username}" class="top-contributor-avatar">`
+        : `<div class="top-contributor-avatar-placeholder"><i class="fas fa-user"></i></div>`;
+
+    container.innerHTML = `
+        ${avatarHtml}
+        <div class="top-contributor-info">
+            <span class="top-contributor-name">${contributor.username}</span>
+            <span class="top-contributor-count">${contributor.report_count} تقارير</span>
+        </div>
+    `;
+}
+
+function renderSystemHealth(isHealthy) {
+    const container = document.getElementById('system-health-container');
+    if (!container) return;
+
+    if (isHealthy) {
+        container.innerHTML = `
+            <i class="fas fa-check-circle" style="color: var(--success-color);"></i>
+            <span>النظام يعمل بشكل طبيعي</span>
+        `;
+    } else {
+        container.innerHTML = `
+            <i class="fas fa-exclamation-triangle" style="color: var(--danger-color);"></i>
+            <span>لا يمكن الوصول للسيرفر</span>
+        `;
+    }
 }
 
 function renderStatCards(stats) {
@@ -257,6 +308,14 @@ export function renderHomePage() {
                 <h2><i class="fas fa-history"></i> أحدث التقارير</h2>
                 <div id="recent-reports-container" class="recent-reports-container">
                     <div class="spinner"></div>
+                </div>
+                <div class="top-contributor-card">
+                    <h3><i class="fas fa-trophy"></i> المساهم الأعلى</h3>
+                    <div id="top-contributor-container" class="top-contributor-container"></div>
+                </div>
+                <div class="system-health-card">
+                    <h3><i class="fas fa-heart-pulse"></i> حالة النظام</h3>
+                    <div id="system-health-container" class="system-health-container"></div>
                 </div>
             </div>
         </div>
