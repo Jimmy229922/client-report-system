@@ -88,7 +88,6 @@ export function initIpWidget() {
     const startMonitoring = () => {
         if (isMonitoring) return;
         isMonitoring = true;
-        showWidget(); // Show the widget immediately when monitoring starts
         showToast('تم تفعيل مراقبة الحافظة.');
         window.requestAnimationFrame(clipboardLoop); // Start the loop
     };
