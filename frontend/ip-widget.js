@@ -29,7 +29,7 @@ export function initIpWidget() {
 
     const resetWidget = () => {
         ipInput.value = '';
-        resultDiv.innerHTML = '<span class="widget-placeholder">انسخ IP أو أدخله يدوياً</span>';
+        resultDiv.innerHTML = ''; // Make the result area blank by default
     };
 
     const performLookup = (ip) => {
@@ -101,9 +101,9 @@ export function initIpWidget() {
 
     toggleBtn.addEventListener('click', () => {
         if (isMonitoring) {
-            startMonitoring();
-        } else {
             stopMonitoring();
+        } else {
+            startMonitoring();
         }
         toggleBtn.classList.toggle('active', isMonitoring);
         toggleBtn.title = isMonitoring ? 'إيقاف مراقبة الحافظة' : 'تفعيل مراقبة الحافظة';
@@ -125,4 +125,5 @@ export function initIpWidget() {
 
     // Initial setup
     resetWidget();
+    checkClipboard(); // Perform an initial check on startup
 }
