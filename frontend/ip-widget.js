@@ -34,7 +34,7 @@ export function initIpWidget() {
         if (history.length > 0) {
             historyContainer.classList.remove('hidden');
             historyList.innerHTML = history.map(item => `
-                <li>
+                <li data-ip="${item.ip}" title="إعادة البحث عن ${item.ip}">
                     <span class="history-ip">${item.ip}</span>
                     <span class="history-country">${item.country}</span>
                 </li>
@@ -99,6 +99,16 @@ export function initIpWidget() {
 
     ipInput.addEventListener('input', () => {
         performLookup(ipInput.value.trim());
+    });
+
+    // --- Clickable History Logic ---
+    historyList.addEventListener('click', (e) => {
+        const listItem = e.target.closest('li');
+        if (!listItem) return;
+
+        const ip = listItem.dataset.ip;
+        ipInput.value = ip;
+        performLookup(ip);
     });
 
     // --- Draggable Widget Logic ---
