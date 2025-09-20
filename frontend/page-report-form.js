@@ -162,7 +162,7 @@ function getReportText(reportType, form) {
     if (reportType === 'PAYOUTS') {
         const walletAddress = form.querySelector('#wallet-address').value;
         const emails = form.querySelector('#emails').value;
-        return `تقرير PAYOUTS (بواسطة: INZO LLC)\n\n`
+        return `تقرير PAYOUTS\n\n`
             + `عنوان المحفظة: ${walletAddress || 'غير محدد'}\n\n`
             + `الإيميلات:\n${emails || 'لا يوجد'}\n\n`
             + `اكثر من عميل يسحب علي نفس عنوان المحفظة`
@@ -182,7 +182,7 @@ function getReportText(reportType, form) {
             floatingProfits = floatingProfits.startsWith('-') ? `-$${floatingProfits.substring(1)}` : `$${floatingProfits}`;
         }
 
-        return `تقرير Deposit Report (بواسطة: INZO LLC)\n\n`
+        return `تقرير Deposit Report\n\n`
             + `الدولة: ${common.country}\n`
             + `الـ IP: ${common.ip}\n`
             + `الإيميل: ${common.email}\n`
@@ -211,7 +211,7 @@ function getReportText(reportType, form) {
     };
     const { title, hash } = reportTypeMap[reportType] || { title: reportType, hash: '' };
 
-    return `تقرير ${title} (بواسطة: INZO LLC)\n`
+    return `تقرير ${title}\n`
         + `الـ IP: ${common.ip}\n`
         + `الدولة: ${common.country}\n`
         + `الإيميل: ${common.email}\n`
