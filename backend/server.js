@@ -201,10 +201,16 @@ app.post('/api/send-report', verifyToken, upload.array('images', 3), async (req,
         // Remove the #account_transfer hashtag from the text before sending to Telegram
         const textForTelegram = reportText.replace(/#account_transfer\s*/g, '').trim();
 
+        // Extract hashtags and mentions
+        const hashtagAndMentionsMatch = textForTelegram.match(/(#\w+\s*(@\w+\s*)*)/);
+        const mainText = hashtagAndMentionsMatch ? textForTelegram.replace(hashtagAndMentionsMatch[0], '').trim() : textForTelegram;
+        const footer = hashtagAndMentionsMatch ? hashtagAndMentionsMatch[0].trim() : '';
+
         // Conditionally add the author based on user ID. Only add if not the admin (ID 1).
-        const telegramMessage = userId === 1
-            ? textForTelegram
-            : `${textForTelegram}\n\nبواسطة: ${username}`;
+        const authorLine = userId === 1 ? '' : `\n\nبواسطة: ${username}`;
+        
+        // Construct the final message
+        const telegramMessage = `${mainText}${authorLine}${footer ? `\n\n${footer}` : ''}`.trim();
         const TELEGRAM_CAPTION_LIMIT = 1024;
 
         // التحقق من وجود صور

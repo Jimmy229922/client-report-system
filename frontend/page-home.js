@@ -39,49 +39,49 @@ function renderStatCards(stats) {
     if (!statsGrid) return;
 
     statsGrid.innerHTML = `
-        <a href="#home" class="stat-card total-reports">
+        <a href="#archive" class="stat-card total-reports">
             <div class="stat-card-icon"><i class="fas fa-file-alt"></i></div>
             <div class="stat-card-info">
                 <h3>Total Reports <small>إجمالي التقارير</small></h3>
                 <p>${stats.total || 0}</p>
             </div>
         </a>
-        <a href="#reports/suspicious" class="stat-card">
+        <a href="#reports/suspicious" class="stat-card suspicious">
             <div class="stat-card-icon"><i class="fas fa-user-secret"></i></div>
             <div class="stat-card-info">
                 <h3>Suspicious <small>تقارير مشبوهة</small></h3>
                 <p>${stats.suspicious || 0}</p>
             </div>
         </a>
-        <a href="#reports/deposit" class="stat-card">
+        <a href="#reports/deposit" class="stat-card deposit">
             <div class="stat-card-icon"><i class="fas fa-money-bill-wave"></i></div>
             <div class="stat-card-info">
                 <h3>Deposit <small>إيداعات</small></h3>
                 <p>${stats.deposit || 0}</p>
             </div>
         </a>
-        <a href="#reports/new-position" class="stat-card">
+        <a href="#reports/new-position" class="stat-card new-position">
             <div class="stat-card-icon"><i class="fas fa-chart-line"></i></div>
             <div class="stat-card-info">
                 <h3>New Position <small>صفقات جديدة</small></h3>
                 <p>${stats.new_positions || 0}</p>
             </div>
         </a>
-        <a href="#reports/credit-out" class="stat-card">
+        <a href="#reports/credit-out" class="stat-card credit-out">
             <div class="stat-card-icon"><i class="fas fa-credit-card"></i></div>
             <div class="stat-card-info">
                 <h3>Credit Out <small>سحب رصيد</small></h3>
                 <p>${stats.credit_out || 0}</p>
             </div>
         </a>
-        <a href="#reports/account-transfer" class="stat-card">
+        <a href="#reports/account-transfer" class="stat-card account-transfer">
             <div class="stat-card-icon"><i class="fas fa-exchange-alt"></i></div>
             <div class="stat-card-info">
                 <h3>Account Transfer <small>تحويل حسابات</small></h3>
                 <p>${stats.account_transfer || 0}</p>
             </div>
         </a>
-        <a href="#reports/payouts" class="stat-card">
+        <a href="#reports/payouts" class="stat-card payouts">
             <div class="stat-card-icon"><i class="fas fa-hand-holding-usd"></i></div>
             <div class="stat-card-info">
                 <h3>PAYOUTS <small>دفعات</small></h3>
@@ -169,10 +169,10 @@ export function renderHomePage() {
             <p>نظرة عامة سريعة على نشاط النظام والإحصائيات الرئيسية.</p>
         </div>
         <div class="home-grid">
-            <div id="stats-grid" class="stats-grid full-width">
+            <div id="stats-grid" class="stats-grid">
                 <div class="spinner"></div>
             </div>
-            <div class="chart-card full-width">
+            <div class="chart-card">
                 <h3><i class="fas fa-chart-bar"></i> النشاط الأسبوعي</h3>
                 <div class="chart-container">
                     <canvas id="weekly-chart"></canvas>
