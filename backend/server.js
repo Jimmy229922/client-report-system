@@ -70,14 +70,15 @@ const verifyToken = (req, res, next) => {
         // if everything good, save to request for use in other routes
         req.userId = decoded.id;
         req.username = decoded.username;
+        req.userEmail = decoded.email;
         next();
     });
 };
 
 const verifyAdmin = (req, res, next) => {
     // This middleware assumes verifyToken has run before it.
-    // The user with ID 1 is the default admin.
-    if (req.userId !== 1) { 
+    // The user with ID 1 or email 'admin@inzo.com' is the admin.
+    if (req.userId !== 1 && req.userEmail !== 'admin@inzo.com') {
         return res.status(403).json({ message: "صلاحية الوصول مرفوضة. هذه العملية للمسؤول فقط." });
     }
     next();

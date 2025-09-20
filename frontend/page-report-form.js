@@ -340,12 +340,16 @@ export function initCreateReportPage() {
 
     copyBtn.addEventListener('click', () => {
         navigator.clipboard.writeText(getReportText(pageTitle, form)).then(() => {
+            const originalText = copyBtn.innerText;
             copyBtn.innerText = 'تم النسخ!';
             copyBtn.classList.add('copied');
             setTimeout(() => {
-                copyBtn.innerText = 'نسخ بيانات التقرير';
+                copyBtn.innerText = originalText;
                 copyBtn.classList.remove('copied');
             }, 2000);
-        }).catch(() => alert('فشل النسخ.'));
+        }).catch(err => {
+            showToast('فشل نسخ النص.', true);
+            console.error('Copy failed:', err);
+        });
     });
 }
