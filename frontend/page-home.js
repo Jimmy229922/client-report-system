@@ -4,30 +4,37 @@ let weeklyChart = null; // To hold the chart instance
 
 async function fetchAndRenderHomePageData() {
     try {
-        // Fetch general stats and weekly activity in parallel
-        const [statsResult, weeklyStatsResult] = await Promise.all([
+        // Use Promise.allSettled to allow one to fail without breaking the other
+        const results = await Promise.allSettled([
             fetchWithAuth('/api/stats'),
             fetchWithAuth('/api/stats/weekly')
         ]);
 
-        if (statsResult.data) {
-            renderStatCards(statsResult.data);
+        const statsResult = results[0];
+        const weeklyStatsResult = results[1];
+
+        if (statsResult.status === 'fulfilled' && statsResult.value.data) {
+            renderStatCards(statsResult.value.data);
+        } else {
+            console.error('Failed to fetch stats:', statsResult.reason);
+            const statsGrid = document.getElementById('stats-grid');
+            if (statsGrid) {
+                statsGrid.innerHTML = '<p>فشل تحميل الإحصائيات.</p>';
+            }
         }
 
-        if (weeklyStatsResult.data) {
-            renderWeeklyChart(weeklyStatsResult.data);
+        if (weeklyStatsResult.status === 'fulfilled' && weeklyStatsResult.value.data) {
+            renderWeeklyChart(weeklyStatsResult.value.data);
+        } else {
+            console.error('Failed to fetch weekly stats:', weeklyStatsResult.reason);
+            const chartCard = document.querySelector('.chart-card');
+            if (chartCard) {
+                chartCard.innerHTML = '<h3>النشاط الأسبوعي</h3><p>فشل تحميل بيانات الرسم البياني.</p>';
+            }
         }
 
-    } catch (error) {
-        console.error('Failed to fetch home page data:', error);
-        const statsGrid = document.getElementById('stats-grid');
-        if (statsGrid) {
-            statsGrid.innerHTML = '<p>فشل تحميل الإحصائيات.</p>';
-        }
-        const chartCard = document.querySelector('.chart-card');
-        if(chartCard) {
-            chartCard.innerHTML = '<h3>النشاط الأسبوعي</h3><p>فشل تحميل بيانات الرسم البياني.</p>';
-        }
+    } catch (error) { // This catch is now for truly unexpected errors
+        console.error('An unexpected error occurred on the home page:', error);
     }
 }
 
