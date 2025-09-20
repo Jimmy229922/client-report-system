@@ -89,6 +89,38 @@ export function handleTheme() {
     });
 }
 
+export function showConfirmModal(title, text) {
+    return new Promise((resolve) => {
+        const modal = document.getElementById('confirm-modal');
+        const titleEl = document.getElementById('confirm-modal-title');
+        const textEl = document.getElementById('confirm-modal-text');
+        const okBtn = document.getElementById('confirm-modal-ok-btn');
+        const cancelBtn = document.getElementById('confirm-modal-cancel-btn');
+        const closeBtn = document.getElementById('confirm-modal-close-btn');
+
+        titleEl.textContent = title;
+        textEl.textContent = text;
+
+        const closeModal = (result) => {
+            modal.classList.remove('show');
+            okBtn.onclick = null;
+            cancelBtn.onclick = null;
+            closeBtn.onclick = null;
+            modal.onclick = null;
+            resolve(result);
+        };
+
+        okBtn.onclick = () => closeModal(true);
+        cancelBtn.onclick = () => closeModal(false);
+        closeBtn.onclick = () => closeModal(false);
+        modal.onclick = (e) => {
+            if (e.target === modal) closeModal(false);
+        };
+
+        modal.classList.add('show');
+    });
+}
+
 export function timeAgo(dateString) {
     const date = new Date(dateString);
     const now = new Date();

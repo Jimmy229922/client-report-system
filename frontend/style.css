@@ -411,6 +411,63 @@ main { padding: 2rem; max-width: 1200px; margin: 2rem auto; animation: fadeIn 0.
     cursor: move;
 }
 
+.modal-body p {
+    font-size: 1.1rem;
+    line-height: 1.6;
+    margin: 0;
+    text-align: center;
+}
+
+.close-btn {
+    background: none; border: none; color: #aaa; font-size: 2rem; font-weight: bold;
+    cursor: pointer; transition: color 0.2s ease; line-height: 1;
+}
+.close-btn:hover { color: var(--text-color); }
+
+/* --- Custom Confirm Modal --- */
+#confirm-modal-dialog {
+    max-width: 400px;
+}
+
+.modal-actions {
+    display: flex;
+    gap: 1rem;
+    margin-top: 1.5rem;
+    justify-content: flex-end;
+}
+.modal-actions button {
+    width: auto;
+    padding: 0.5rem 1.5rem;
+}
+
+.app-version-badge {
+    font-family: 'Courier New', Courier, monospace;
+    font-weight: bold;
+    font-size: 0.9rem;
+    color: #aaa;
+    margin-right: auto; /* Pushes it to the left in an RTL context */
+}
+
+.system-health-container {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 1.1rem;
+    font-weight: bold;
+}
+
+.health-status-wrapper {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.health-status {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
 .error-details {
     font-size: 0.8rem;
     color: #aaa;
@@ -505,13 +562,8 @@ main { padding: 2rem; max-width: 1200px; margin: 2rem auto; animation: fadeIn 0.
 
 /* --- Fullscreen Image Preview Modal --- */
 #image-preview-modal {
-    overflow: hidden; /* Prevent scrolling on the modal itself */
     background-color: rgba(0,0,0,0.9); /* Darker background for focus */
-    /* Use flexbox to center the image */
-    display: none; /* Hidden by default, JS will change to 'flex' */
     flex-direction: column;
-    justify-content: center;
-    align-items: center;
 }
 
 #image-preview-modal .modal-content {
@@ -536,6 +588,63 @@ main { padding: 2rem; max-width: 1200px; margin: 2rem auto; animation: fadeIn 0.
 #image-preview-modal .modal-content, #image-preview-modal #image-caption {
     animation-name: zoom;
     animation-duration: 0.6s;
+}
+
+/* --- Generic Modal Styles --- */
+.modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(12, 12, 29, 0.7);
+    backdrop-filter: blur(5px);
+    -webkit-backdrop-filter: blur(5px);
+    z-index: 5000;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s ease, visibility 0.3s ease;
+}
+
+.modal.show {
+    opacity: 1;
+    visibility: visible;
+}
+
+.modal.show .modal-dialog {
+    animation: modal-fade-in 0.3s ease-out;
+}
+
+@keyframes modal-fade-in {
+    from {
+        opacity: 0;
+        transform: scale(0.95) translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+}
+
+.modal-body p {
+    font-size: 1.1rem;
+    line-height: 1.6;
+    margin: 0;
+    text-align: center;
+}
+
+.close-btn {
+    background: none; border: none; color: #aaa; font-size: 2rem; font-weight: bold;
+    cursor: pointer; transition: color 0.2s ease; line-height: 1;
+}
+.close-btn:hover { color: var(--text-color); }
+
+/* --- Custom Confirm Modal --- */
+#confirm-modal-dialog {
+    max-width: 400px;
 }
 
 @keyframes zoom {
@@ -764,7 +873,6 @@ main { padding: 2rem; max-width: 1200px; margin: 2rem auto; animation: fadeIn 0.
     font-weight: bold;
 }
 
-/* --- Custom Confirm Modal --- */
 .modal-actions {
     display: flex;
     gap: 1rem;
@@ -819,18 +927,6 @@ main { padding: 2rem; max-width: 1200px; margin: 2rem auto; animation: fadeIn 0.
     margin: 0;
     padding-bottom: 0.5rem;
     border-bottom: 1px solid var(--border-color);
-}
-
-/* --- Chart Container Styles --- */
-.chart-container {
-    flex: 1; /* Take up available space */
-    min-width: 300px;
-    position: relative;
-    height: 40vh; /* Set a height for the chart */
-    background-color: var(--card-bg);
-    padding: 1rem;
-    border-radius: 8px;
-    border: 1px solid var(--border-color);
 }
 
 .chart-placeholder {
@@ -953,27 +1049,6 @@ main { padding: 2rem; max-width: 1200px; margin: 2rem auto; animation: fadeIn 0.
     display: flex;
     align-items: center;
     gap: 0.75rem;
-}
-
-.system-health-container {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 0.5rem;
-    font-size: 1.1rem;
-    font-weight: bold;
-}
-
-.health-status {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-}
-
-.health-last-checked {
-    font-size: 0.8rem;
-    color: #aaa;
-    font-weight: normal;
 }
 
 /* --- Login Screen Styles --- */

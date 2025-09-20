@@ -1,4 +1,4 @@
-import { handleTheme, updateNavbarUser, showToast } from './ui.js';
+import { handleTheme, updateNavbarUser, showToast, showConfirmModal } from './ui.js';
 import { navigate } from './router.js';
 import { initIpWidget } from './ip-widget.js';
 
@@ -10,13 +10,13 @@ function handleImagePreviewModal() {
     document.addEventListener('click', (e) => {
         if (e.target && e.target.classList.contains('img-preview')) {
             modalImage.src = e.target.src;
-            modal.style.display = 'flex';
+            modal.classList.add('show');
         }
     });
 
-    closeBtn.addEventListener('click', () => modal.style.display = 'none');
+    closeBtn.addEventListener('click', () => modal.classList.remove('show'));
     modal.addEventListener('click', (e) => {
-        if (e.target === modal) modal.style.display = 'none';
+        if (e.target === modal) modal.classList.remove('show');
     });
 }
 
@@ -46,38 +46,6 @@ function setupUIForUser() {
             }
         }
     }
-}
-
-function showConfirmModal(title, text) {
-    return new Promise((resolve) => {
-        const modal = document.getElementById('confirm-modal');
-        const titleEl = document.getElementById('confirm-modal-title');
-        const textEl = document.getElementById('confirm-modal-text');
-        const okBtn = document.getElementById('confirm-modal-ok-btn');
-        const cancelBtn = document.getElementById('confirm-modal-cancel-btn');
-        const closeBtn = document.getElementById('confirm-modal-close-btn');
-
-        titleEl.textContent = title;
-        textEl.textContent = text;
-
-        const closeModal = (result) => {
-            modal.style.display = 'none';
-            okBtn.onclick = null;
-            cancelBtn.onclick = null;
-            closeBtn.onclick = null;
-            modal.onclick = null;
-            resolve(result);
-        };
-
-        okBtn.onclick = () => closeModal(true);
-        cancelBtn.onclick = () => closeModal(false);
-        closeBtn.onclick = () => closeModal(false);
-        modal.onclick = (e) => {
-            if (e.target === modal) closeModal(false);
-        };
-
-        modal.style.display = 'flex';
-    });
 }
 
 function showUpdateOverlay(initialMessage = 'جاري البحث عن تحديثات...') {
@@ -158,7 +126,8 @@ function checkServerStatus(attempts = 0) {
 }
 
 async function handleAppUpdate() {
-    if (!confirm('هل أنت متأكد من أنك تريد البحث عن تحديثات وتثبيتها؟ سيتم إعادة تشغيل السيرفر.')) {
+    const confirmed = await showConfirmModal('تأكيد تحديث النظام', 'هل أنت متأكد من أنك تريد البحث عن تحديثات وتثبيتها؟ سيتم إعادة تشغيل السيرفر.');
+    if (!confirmed) {
         return;
     }
 
@@ -191,23 +160,6 @@ async function handleAppUpdate() {
     }
 }
 
-async function loadAppVersion() {
-    try {
-        const response = await fetch('/api/version');
-        if (response.ok && response.headers.get('Content-Type')?.includes('application/json')) {
-            const data = await response.json();
-            const versionSpan = document.getElementById('app-version');
-            if (versionSpan && data.version) {
-                versionSpan.textContent = `v${data.version}`;
-            }
-        } else {
-            console.warn(`Failed to load app version. Status: ${response.status}`);
-        }
-    } catch (error) {
-        console.error('Failed to load app version:', error);
-    }
-}
-
 export function initApp() {
     handleTheme();
     handleImagePreviewModal();
@@ -230,6 +182,5 @@ export function initApp() {
     window.addEventListener('hashchange', navigate);
     
     setupUIForUser(); // Setup UI based on user role
-    loadAppVersion(); // Load and display the app version
     navigate(); // Load initial page
 }

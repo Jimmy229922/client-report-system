@@ -51,7 +51,7 @@ export function initIpWidget() {
             return;
         }
 
-        // Show loading state immediately
+        // Show loading state
         resultDiv.innerHTML = '<div class="spinner" style="width: 25px; height: 25px; border-width: 3px;"></div>';
         let countryName = 'غير معروف';
 

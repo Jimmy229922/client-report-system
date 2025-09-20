@@ -268,7 +268,7 @@ app.post('/api/send-report', verifyToken, upload.array('images', 3), async (req,
         }
 
         // Always add the author to the report title.
-        const authorSuffix = username ? ` (بواسطة: ${username})` : '';
+        const authorSuffix = req.username ? ` (بواسطة: ${req.username})` : '';
         const reportTitle = mainText.split('\n')[0];
         const reportBody = mainText.substring(reportTitle.length).trim();
         
@@ -464,12 +464,6 @@ app.get('/api/stats/top-contributor', verifyToken, async (req, res) => {
 
 app.get('/api/health', (req, res) => {
     res.status(200).json({ status: 'ok' });
-});
-
-// Endpoint to get the application version from package.json
-app.get('/api/version', (req, res) => {
-    const packageJson = require('../package.json');
-    res.json({ version: packageJson.version });
 });
 
 
@@ -703,6 +697,12 @@ app.post('/api/system/update', verifyToken, (req, res) => {
             process.exit();
         }, 1000); // 1 second delay
     });
+});
+
+// Endpoint to get the application version from package.json
+app.get('/api/version', (req, res) => {
+    const packageJson = require('../package.json');
+    res.json({ version: packageJson.version });
 });
 
 // 7. Fallback for Frontend Routing

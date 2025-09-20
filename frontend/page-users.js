@@ -186,12 +186,12 @@ function handleUserActions() {
         // Admin (id:1) username cannot be changed
         usernameInput.disabled = (user.id == 1 || user.email === 'admin@inzo.com');
 
-        modal.style.display = 'flex';
+        modal.classList.add('show');
     };
 
     // Function to close the modal
     const closeEditModal = () => {
-        modal.style.display = 'none';
+        modal.classList.remove('show');
         form.reset();
     };
 

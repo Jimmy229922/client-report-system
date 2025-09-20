@@ -1,5 +1,5 @@
 import { fetchWithAuth } from './api.js';
-import { timeAgo } from './ui.js';
+import { timeAgo, showToast } from './ui.js';
 
 let weeklyChart = null; // To hold the chart instance
 let healthCheckInterval = null;
@@ -11,8 +11,7 @@ export async function fetchAndRenderHomePageData() {
             fetchWithAuth('/api/stats'),
             fetchWithAuth('/api/stats/weekly'),
             fetchWithAuth('/api/reports/recent'),
-            fetchWithAuth('/api/stats/top-contributor'),
-            fetchWithAuth('/api/health') // Add health check
+            fetchWithAuth('/api/stats/top-contributor')
         ]);
 
         const statsResult = results[0];
@@ -82,6 +81,24 @@ function updateSystemHealth() {
         });
 }
 
+function updateSystemHealth() {
+    const container = document.getElementById('system-health-container');
+    if (!container) {
+        // If the container isn't on the page, stop checking
+        if (healthCheckInterval) clearInterval(healthCheckInterval);
+        return;
+    };
+
+    fetchWithAuth('/api/health')
+        .then(result => {
+            if (result.status === 'ok') renderSystemHealth(true);
+            else renderSystemHealth(false);
+        })
+        .catch(() => {
+            renderSystemHealth(false);
+        });
+}
+
 function renderRecentReports(reports) {
     const container = document.getElementById('recent-reports-container');
     if (!container) return;
@@ -131,24 +148,20 @@ function renderSystemHealth(isHealthy) {
     if (!container) return;
 
     const timeString = new Date().toLocaleTimeString('ar-EG');
+    const statusDiv = document.getElementById('system-health-status');
 
     if (isHealthy) {
-        container.innerHTML = `
-            <div class="health-status">
-                <i class="fas fa-check-circle" style="color: var(--success-color);"></i>
-                <span>النظام يعمل بشكل طبيعي</span>
-            </div>
-            <div class="health-last-checked">آخر فحص: ${timeString}</div>
+        statusDiv.innerHTML = `
+            <i class="fas fa-check-circle" style="color: var(--success-color);"></i>
+            <span>النظام يعمل بشكل طبيعي</span>
         `;
     } else {
-        container.innerHTML = `
-            <div class="health-status">
-                <i class="fas fa-exclamation-triangle" style="color: var(--danger-color);"></i>
-                <span>لا يمكن الوصول للسيرفر</span>
-            </div>
-            <div class="health-last-checked">آخر محاولة: ${timeString}</div>
+        statusDiv.innerHTML = `
+            <i class="fas fa-exclamation-triangle" style="color: var(--danger-color);"></i>
+            <span>لا يمكن الوصول للسيرفر</span>
         `;
     }
+    statusDiv.innerHTML += `<div class="health-last-checked">آخر فحص: ${timeString}</div>`;
 }
 
 function renderStatCards(stats) {
@@ -321,6 +334,34 @@ function renderWeeklyChart(weeklyData) {
             weeklyChart.update();
         }
     });
+    document.addEventListener('reportSent', () => {
+        if (weeklyChart) {
+            // Find the current hour's label
+            const currentHourLabel = new Date().toLocaleTimeString('ar-EG', { hour: 'numeric', hour12: true });
+            const currentHourIndex = weeklyChart.data.labels.indexOf(currentHourLabel);
+
+            if (currentHourIndex > -1) {
+                // Increment the count for the current hour
+                weeklyChart.data.datasets[0].data[currentHourIndex]++;
+            }
+            
+            weeklyChart.update();
+        }
+    });
+    document.addEventListener('reportSent', () => {
+        if (weeklyChart) {
+            // Find the current hour's label
+            const currentHourLabel = new Date().toLocaleTimeString('ar-EG', { hour: 'numeric', hour12: true });
+            const currentHourIndex = weeklyChart.data.labels.indexOf(currentHourLabel);
+
+            if (currentHourIndex > -1) {
+                // Increment the count for the current hour
+                weeklyChart.data.datasets[0].data[currentHourIndex]++;
+            }
+            
+            weeklyChart.update();
+        }
+    });
 }
 
 // Helper function to truncate date to the hour
@@ -365,12 +406,16 @@ export function renderHomePage() {
                 </div>
                 <div class="system-health-card">
                     <h3><i class="fas fa-heart-pulse"></i> حالة النظام</h3>
-                    <div id="system-health-container" class="system-health-container"></div>
+                    <div id="system-health-container" class="system-health-container">
+                        <div id="system-health-status" class="health-status-wrapper"></div>
+                        <span id="app-version-health" class="app-version-badge"></span>
+                    </div>
                 </div>
             </div>
         </div>
     `;
     fetchAndRenderHomePageData();
+    loadAndDisplayVersion();
 
     // Clear any existing interval before setting a new one
     if (healthCheckInterval) clearInterval(healthCheckInterval);
@@ -378,6 +423,24 @@ export function renderHomePage() {
 
     // Listen for the custom event to refresh data in real-time
     document.addEventListener('reportSent', fetchAndRenderHomePageData);
+}
+
+async function loadAndDisplayVersion() {
+    const versionSpan = document.getElementById('app-version-health');
+    if (!versionSpan) return;
+    try {
+        const response = await fetch('/api/version');
+        if (response.ok && response.headers.get('Content-Type')?.includes('application/json')) {
+            const data = await response.json();
+            if (data.version) {
+                versionSpan.textContent = `v${data.version}`;
+            }
+        } else {
+            console.warn(`Failed to load app version. Status: ${response.status}`);
+        }
+    } catch (error) {
+        console.error('Failed to load app version:', error);
+    }
 }
 
 export function cleanupHomePage() {
