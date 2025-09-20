@@ -258,7 +258,7 @@ app.post('/api/send-report', verifyToken, upload.array('images', 3), async (req,
         // Robustly find and separate the footer (hashtags and mentions)
         const footerRegex = /(\n\s*#\w+|\n\s*@\w+)+$/;
         const footerMatch = reportText.match(footerRegex);
-        // Trim and collapse multiple newlines to a single one to ensure clean formatting.
+        // Trim and collapse multiple newlines to a single one to ensure clean formatting
         let footer = footerMatch ? footerMatch[0].trim().replace(/\n\s*\n/g, '\n') : '';
         const mainText = footerMatch ? reportText.substring(0, footerMatch.index).trim() : reportText;
 
@@ -273,7 +273,7 @@ app.post('/api/send-report', verifyToken, upload.array('images', 3), async (req,
         const reportBody = mainText.substring(reportTitle.length).trim();
         
         // Construct the final message
-        const telegramMessage = `${reportTitle}${authorSuffix}\n\n${reportBody}${footer ? `\n\n${footer}` : ''}`.trim();
+        const telegramMessage = `${reportTitle}${authorSuffix}\n\n${reportBody}${footer ? `\n\n${footer.trim()}` : ''}`.trim();
         const TELEGRAM_CAPTION_LIMIT = 1024;
 
         // التحقق من وجود صور

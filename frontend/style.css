@@ -665,7 +665,7 @@ main { padding: 2rem; max-width: 1200px; margin: 2rem auto; animation: fadeIn 0.
     flex: 1; /* Take up available space */
     min-width: 300px;
     position: relative;
-    height: 40vh; /* Set a height for the chart */
+    height: 450px; /* A fixed height for consistency */
 }
 
 /* --- Home Page Layout --- */
