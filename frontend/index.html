@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl" data-theme="dark"> <!-- Default to Arabic -->
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>نظام تقارير العملاء</title>
+    <link rel="stylesheet" href="style.css">
+    <!-- مكتبة الأيقونات Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <!-- مكتبة الرسوم البيانية Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+
+    <!-- شاشة التحميل -->
+    <div id="loader">
+        <div class="spinner"></div>
+    </div>
+
+    <!-- خلفية الفضاء المتحركة -->
+    <div id="galaxy-background">
+        <div id="stars"></div>
+        <div id="stars2"></div>
+        <div id="stars3"></div>
+        <div class="shooting-star"></div>
+        <div class="shooting-star"></div>
+        <div class="shooting-star"></div>
+    </div>
+
+    <div id="login-container">
+        <div class="login-box">
+            <h1>تسجيل الدخول</h1>
+            <form id="login-form">
+                <div class="form-group">
+                    <label for="email">البريد الإلكتروني</label>
+                    <input type="email" id="email" name="email" required autocomplete="email">
+                </div>
+                <div class="form-group">
+                    <label for="password">كلمة المرور</label>
+                    <input type="password" id="password" name="password" required>
+                </div>
+                <button type="submit" class="submit-btn">دخول</button>
+                <p id="login-error" class="login-error"></p>
+            </form>
+        </div>
+    </div>
+
+    <div id="app-container" class="hidden">
+        <!-- الشريط العلوي (Navbar) -->
+        <nav id="navbar">
+            <a href="#home" class="nav-brand">تقارير شركة انزو</a>
+            <ul class="nav-links">
+                <li><a href="#home" class="nav-link active">الرئيسية</a></li>
+                <li class="dropdown">
+                    <a href="javascript:void(0)" class="nav-link">إنشاء تقرير <i class="fas fa-chevron-down"></i></a>
+                    <div class="dropdown-content">
+                        <a href="#reports/suspicious">Suspicious Report</a>
+                        <a href="#reports/deposit">Deposit Report</a>
+                        <a href="#reports/new-position">New Position Report</a>
+                        <a href="#reports/credit-out">Credit Out Report</a>
+                        <a href="#reports/account-transfer">تحويل الحسابات</a>
+                        <a href="#reports/payouts">PAYOUTS</a>
+                    </div>
+                </li>
+                <li><a href="#archive" class="nav-link">الأرشيف</a></li>
+                <li id="user-management-link" class="hidden"><a href="#users" class="nav-link">إدارة المستخدمين</a></li>
+            </ul>
+            <div class="nav-actions">
+                <button id="theme-toggle-btn" aria-label="تبديل الوضع"><i class="fas fa-sun"></i></button>
+                <button id="quick-ip-check-btn" class="icon-btn" aria-label="فحص سريع للـ IP"><i class="fas fa-magnifying-glass-location"></i></button>
+                <div class="dropdown">
+                    <a href="javascript:void(0)" class="nav-link" id="user-profile-btn">
+                        <i class="fas fa-user-circle"></i> <span id="navbar-username"></span> <i class="fas fa-chevron-down"></i>
+                    </a>
+                    <div class="dropdown-content">
+                        <a href="#profile">الملف الشخصي</a>
+                        <a href="javascript:void(0)" id="update-app-btn" class="hidden">تحديث النظام</a>
+                        <a href="javascript:void(0)" id="logout-btn">تسجيل الخروج</a>
+                    </div>
+                </div>
+            </div>
+        </nav>
+
+        <!-- المحتوى الرئيسي الديناميكي للصفحات -->
+        <main id="main-content">
+            <!-- سيتم تحميل محتوى الصفحات هنا -->
+        </main>
+    </div>
+
+    <!-- حاوية الإشعار -->
+    <div id="toast-notification"></div>
+
+    <!-- Modal for Image Preview -->
+    <div id="image-preview-modal" class="modal">
+        <span class="close-btn" id="image-modal-close-btn">&times;</span>
+        <img class="modal-content" id="modal-image-content">
+        <div id="image-caption"></div>
+    </div>
+
+    <!-- Generic Modal for User Edit -->
+    <div id="user-edit-modal" class="modal" style="display: none;">
+        <div class="modal-dialog form-container">
+            <div class="modal-header">
+                <h2 id="user-edit-modal-title" class="page-title" style="margin-bottom: 0; font-size: 1.8rem;">تعديل بيانات المستخدم</h2>
+                <button class="close-btn" id="user-edit-modal-close-btn">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="user-edit-form">
+                    <input type="hidden" id="edit-user-id">
+                    <div class="form-group">
+                        <label for="edit-username">اسم المستخدم</label>
+                        <input type="text" id="edit-username" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="edit-email">البريد الإلكتروني</label>
+                        <input type="email" id="edit-email" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="edit-password">كلمة مرور جديدة (اختياري)</label>
+                        <input type="password" id="edit-password" placeholder="اتركه فارغاً لعدم التغيير" minlength="6">
+                    </div>
+                    <button type="submit" class="submit-btn">حفظ التغييرات</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script src="main.js" type="module"></script>
+    <script src="ip-widget.js"></script>
+</body>
+</html>
