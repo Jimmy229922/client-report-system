@@ -173,6 +173,55 @@ async function handleAppUpdate() {
     }
 }
 
+let healthCheckInterval = null;
+
+function updateSystemHealth() {
+    const container = document.getElementById('system-health-container');
+    if (!container) {
+        if (healthCheckInterval) clearInterval(healthCheckInterval);
+        return;
+    };
+
+    fetchWithAuth('/api/health')
+        .then(result => {
+            renderSystemHealth(true);
+        })
+        .catch((error) => {
+            renderSystemHealth(false);
+        });
+}
+
+function renderSystemHealth(isOverallHealthy) {
+    const container = document.getElementById('system-health-container');
+    if (!container) return;
+
+    const timeString = new Date().toLocaleTimeString('ar-EG');
+    const overallStatusText = isOverallHealthy ? 'النظام يعمل بشكل طبيعي' : 'توجد مشكلة في الاتصال';
+    const overallStatusClass = isOverallHealthy ? 'healthy' : 'unhealthy';
+
+    container.innerHTML = `
+        <div class="health-main-status ${overallStatusClass}">
+            <div class="status-light"></div>
+            <span>${overallStatusText}</span>
+        </div>
+        <div class="health-last-checked">
+            <i class="fas fa-history"></i> آخر فحص: ${timeString}
+        </div>
+    `;
+}
+
+async function loadAndDisplayVersion() {
+    const versionSpan = document.getElementById('app-version-health');
+    if (!versionSpan) return;
+    try {
+        const { version } = await fetchWithAuth('/api/version');
+        versionSpan.textContent = `v${version || '?.?.?'}`;
+    } catch (error) {
+        console.error('Failed to load app version:', error);
+        versionSpan.textContent = 'v?.?.?';
+    }
+}
+
 async function fetchAndRenderNotifications() {
     const list = document.getElementById('notifications-list');
     const badge = document.getElementById('notification-badge');
@@ -486,4 +535,10 @@ export function initApp() {
     fetchAndRenderNotifications();
     initRealtimeNotifications(); // Start listening for real-time events
     checkVersionAndShowChangelog();
+
+    // Initialize global components like system health bar
+    loadAndDisplayVersion();
+    updateSystemHealth(); // Initial check
+    if (healthCheckInterval) clearInterval(healthCheckInterval);
+    healthCheckInterval = setInterval(updateSystemHealth, 30000); // Check every 30 seconds
 }

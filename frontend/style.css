@@ -1079,6 +1079,24 @@ main { padding: 2rem; max-width: 1200px; margin: 2rem auto; animation: fadeIn 0.
     color: var(--text-color);
 }
 
+
+
+.contributor-profile-avatar, .contributor-profile-avatar-placeholder {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 4px solid var(--border-color);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2.5rem;
+    background-color: var(--bg-color);
+}
+
+
+
+
 #confirm-modal-text {
     font-size: 1rem;
     color: #aaa;
@@ -1280,26 +1298,12 @@ a.recent-report-item:hover {
     z-index: 1;
 }
 
-.top-contributor-avatar, .top-contributor-avatar-placeholder {
-    width: 50px;
-    height: 50px;
-    border-radius: 50%;
-    object-fit: cover;
+
+.recent-reports-container,
+.system-health-container {
+    position: relative; /* To stay above the pseudo-element */
+    z-index: 1;
 }
-
-.top-contributor-avatar-placeholder {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background-color: var(--input-bg);
-    font-size: 1.5rem;
-}
-
-.top-contributor-name { font-weight: bold; font-size: 1.1rem; }
-.top-contributor-count { font-size: 0.9rem; color: #aaa; }
-
-
-/* --- Login Screen Styles --- */
 
 
 .hidden {
@@ -1699,6 +1703,63 @@ a.recent-report-item:hover {
 
 #tour-next-btn:hover { opacity: 0.8; }
 
+
+
+/* =============================================== */
+/* === New System Health Bar Styles === */
+/* =============================================== */
+
+.system-health-bar {
+    background: var(--card-bg);
+    background: none;
+    border: none;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    height: 50px;
+}
+
+.health-bar-content {
+    display: flex;
+    align-items: center;
+    gap: 2rem;
+}
+
+#system-health-container {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.health-main-status {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    font-size: 1.1rem;
+    font-weight: 600;
+}
+
+.health-main-status.healthy { color: var(--success-color); }
+.health-main-status.unhealthy { color: var(--danger-color); }
+
+.health-last-checked {
+    font-size: 0.8rem;
+    color: #aaa;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.health-bar-version .app-version-badge {
+    font-family: 'Courier New', Courier, monospace;
+    font-weight: bold;
+    font-size: 1rem;
+    color: #aaa;
+}
+
+/* --- New Top Contributors Styles --- */
+.top-contributors-grid {
+    display: flex;}
 
 /* =============================================== */
 /* === Dashboard Header Styles === */

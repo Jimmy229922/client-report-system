@@ -2,6 +2,7 @@ import { fetchWithAuth } from './api.js';
 import { timeAgo, showToast } from './ui.js';
 
 let weeklyChart = null; // To hold the chart instance
+let distributionChart = null; // To hold the distribution chart instance
 let healthCheckInterval = null;
 
 export async function fetchAndRenderHomePageData() {
@@ -19,6 +20,7 @@ export async function fetchAndRenderHomePageData() {
 
         if (statsResult.status === 'fulfilled' && statsResult.value.data) {
             renderStatCards(statsResult.value.data);
+            renderDistributionChart(statsResult.value.data);
         } else {
             console.error('Failed to fetch stats:', statsResult.reason);
             const statsGrid = document.getElementById('stats-grid');
@@ -73,11 +75,11 @@ function updateSystemHealth() {
 
     fetchWithAuth('/api/health')
         .then(result => {
-            renderSystemHealth(true, result.services || { api: 'online', database: 'unknown' });
+            renderSystemHealth(true);
         })
         .catch((error) => {
-            const services = error.data?.services || { api: 'offline', database: 'unknown' };
-            renderSystemHealth(false, services);
+            // The error object from fetchWithAuth might contain more details if needed in the future
+            renderSystemHealth(false);
         });
 }
 
@@ -179,38 +181,18 @@ function renderTopContributor(contributorData) {
     container.innerHTML = '<p style="text-align: center; width: 100%;">لا يوجد مساهمين بعد.</p>';
 }
 
-function renderSystemHealth(isOverallHealthy, services = {}) {
+function renderSystemHealth(isOverallHealthy) {
     const container = document.getElementById('system-health-container');
     if (!container) return;
 
     const timeString = new Date().toLocaleTimeString('ar-EG');
-
-    const renderServiceStatus = (serviceName, status) => {
-        const isOnline = status === 'online';
-        const icon = isOnline ? 'fa-check-circle' : 'fa-times-circle';
-        const colorClass = isOnline ? 'healthy' : 'unhealthy';
-        const text = isOnline ? 'متصل' : 'غير متصل';
-        return `
-            <div class="health-service-item">
-                <span>${serviceName}</span>
-                <span class="health-service-status ${colorClass}">
-                    <i class="fas ${icon}"></i> ${text}
-                </span>
-            </div>
-        `;
-    };
-
-    const overallStatusText = isOverallHealthy ? 'جميع الأنظمة تعمل' : 'توجد مشكلة في النظام';
+    const overallStatusText = isOverallHealthy ? 'النظام يعمل بشكل طبيعي' : 'توجد مشكلة في الاتصال';
     const overallStatusClass = isOverallHealthy ? 'healthy' : 'unhealthy';
 
     container.innerHTML = `
         <div class="health-main-status ${overallStatusClass}">
             <div class="status-light"></div>
             <span>${overallStatusText}</span>
-        </div>
-        <div class="health-services-list">
-            ${renderServiceStatus('خدمة API', services.api || 'offline')}
-            ${renderServiceStatus('قاعدة البيانات', services.database || 'offline')}
         </div>
         <div class="health-last-checked">
             <i class="fas fa-history"></i> آخر فحص: ${timeString}
@@ -389,6 +371,77 @@ function renderWeeklyChart(weeklyData) {
     });
 }
 
+function renderDistributionChart(stats) {
+    const container = document.getElementById('distribution-chart-container');
+    if (!container) return;
+    const ctx = document.getElementById('distribution-chart');
+    if (!ctx) return;
+
+    if (distributionChart) {
+        distributionChart.destroy();
+    }
+
+    const reportTypes = {
+        suspicious: 'مشبوهة',
+        deposit: 'إيداعات',
+        new_positions: 'صفقات جديدة',
+        credit_out: 'سحب رصيد',
+        account_transfer: 'تحويل حسابات',
+        payouts: 'دفعات'
+    };
+
+    const chartData = Object.keys(reportTypes)
+        .map(key => ({
+            label: reportTypes[key],
+            count: stats[key] || 0
+        }))
+        .filter(item => item.count > 0); // Only show types with reports
+
+    if (chartData.length === 0) {
+        container.innerHTML = '<p class="chart-placeholder">لا توجد بيانات لعرضها.</p>';
+        return;
+    }
+
+    const labels = chartData.map(d => d.label);
+    const data = chartData.map(d => d.count);
+    
+    const backgroundColors = [
+        '#f44336', '#4CAF50', '#2196F3', '#ff9800', '#9C27B0', '#00BCD4'
+    ];
+
+    distributionChart = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'توزيع التقارير',
+                data: data,
+                backgroundColor: backgroundColors.slice(0, chartData.length),
+                borderColor: 'var(--card-bg)',
+                borderWidth: 3,
+                hoverOffset: 4
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'right',
+                    labels: {
+                        color: '#aaa',
+                        font: {
+                            size: 14,
+                            family: 'inherit'
+                        },
+                        padding: 20
+                    }
+                }
+            }
+        }
+    });
+}
+
 export function renderHomePage() {
     const mainContent = document.getElementById('main-content');
     mainContent.innerHTML = `
@@ -407,6 +460,12 @@ export function renderHomePage() {
                         <canvas id="weekly-chart"></canvas>
                     </div>
                 </div>
+                <div class="chart-card">
+                    <h3><i class="fas fa-chart-pie"></i> توزيع التقارير</h3>
+                    <div class="chart-container" id="distribution-chart-container">
+                        <canvas id="distribution-chart"></canvas>
+                    </div>
+                </div>
             </div>
             <div class="home-sidebar-column">
                 <div class="sidebar-card">
@@ -419,20 +478,10 @@ export function renderHomePage() {
                     <h3 id="top-contributor-title"><i class="fas fa-trophy"></i> المساهم الأعلى</h3>
                     <div id="top-contributor-container" class="top-contributor-container"></div>
                 </div>
-                <div class="sidebar-card">
-                    <h3><i class="fas fa-heart-pulse"></i> حالة النظام</h3>
-                    <div id="system-health-container" class="system-health-container">
-                        <!-- Content will be rendered by renderSystemHealth -->
-                    </div>
-                    <div class="system-health-footer">
-                        <span id="app-version-health" class="app-version-badge"></span>
-                    </div>
-                </div>
             </div>
         </div>
     `;
     fetchAndRenderHomePageData();
-    loadAndDisplayVersion();
 
     // Clear any existing interval before setting a new one
     if (healthCheckInterval) clearInterval(healthCheckInterval);
@@ -440,26 +489,6 @@ export function renderHomePage() {
 
     // Listen for the custom event to refresh data in real-time
     document.addEventListener('reportSent', fetchAndRenderHomePageData);
-}
-
-async function loadAndDisplayVersion() {
-    const versionSpan = document.getElementById('app-version-health');
-    if (!versionSpan) return;
-    try {
-        const response = await fetch('/api/version');
-        if (response.ok && response.headers.get('Content-Type')?.includes('application/json')) {
-            const data = await response.json();
-            if (data.version) {
-                versionSpan.textContent = `v${data.version}`;
-            }
-        } else {
-            console.warn(`Failed to load app version. Status: ${response.status}`);
-            versionSpan.textContent = 'v?.?.?';
-        }
-    } catch (error) {
-        console.error('Failed to load app version:', error);
-        versionSpan.textContent = 'v?.?.?';
-    }
 }
 
 export function cleanupHomePage() {
