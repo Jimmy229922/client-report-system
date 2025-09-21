@@ -1166,6 +1166,11 @@ app.get('/api/version', (req, res) => {
     }
 });
 
+// Endpoint to get the full changelog
+app.get('/api/changelog', (req, res) => {
+    res.json(changelog);
+});
+
 // Centralized Error Handler
 // This should be placed after all your API routes but before the frontend fallback.
 // It catches errors from middleware (like Multer) and unhandled exceptions in routes.

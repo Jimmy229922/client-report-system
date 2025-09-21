@@ -431,28 +431,39 @@ function showChangelogModal(changelog) {
 
     titleEl.innerHTML = `ما الجديد في الإصدار <span class="app-version-badge" style="color: var(--accent-color)">v${changelog.version}</span>`;
     
-    const changeTypeMap = {
-        new: { icon: 'fa-plus-circle', text: 'إضافة جديدة', class: 'new' },
-        improvement: { icon: 'fa-arrow-alt-circle-up', text: 'تحسين', class: 'improvement' },
-        fix: { icon: 'fa-wrench', text: 'إصلاح', class: 'fix' }
-    };
+    // Check if the data is an array (full changelog) or a single object (latest)
+    const versionsToShow = Array.isArray(changelog) ? changelog : [changelog];
 
-    bodyEl.innerHTML = `
-        <ul>
-            ${changelog.changes.map(change => {
-                const typeInfo = changeTypeMap[change.type] || { icon: 'fa-info-circle', text: 'تغيير', class: '' };
-                return `
-                    <li>
-                        <i class="fas ${typeInfo.icon} changelog-item-icon ${typeInfo.class}"></i>
-                        <div>
-                            <strong>${typeInfo.text}:</strong>
-                            <p>${change.description}</p>
-                        </div>
-                    </li>
-                `;
-            }).join('')}
-        </ul>
-    `;
+    bodyEl.innerHTML = versionsToShow.map(versionEntry => {
+        const changeTypeMap = {
+            new: { icon: 'fa-plus-circle', text: 'إضافة جديدة', class: 'new' },
+            improvement: { icon: 'fa-arrow-alt-circle-up', text: 'تحسين', class: 'improvement' },
+            fix: { icon: 'fa-wrench', text: 'إصلاح', class: 'fix' }
+        };
+
+        const changesHtml = versionEntry.changes.map(change => {
+            const typeInfo = changeTypeMap[change.type] || { icon: 'fa-info-circle', text: 'تغيير', class: '' };
+            return `
+                <li>
+                    <i class="fas ${typeInfo.icon} changelog-item-icon ${typeInfo.class}"></i>
+                    <div>
+                        <strong>${typeInfo.text}:</strong>
+                        <p>${change.description}</p>
+                    </div>
+                </li>
+            `;
+        }).join('');
+
+        return `
+            <div class="changelog-version-group">
+                <h4>
+                    الإصدار v${versionEntry.version}
+                    <span class="changelog-date">${new Date(versionEntry.date).toLocaleDateString('ar-EG')}</span>
+                </h4>
+                <ul>${changesHtml}</ul>
+            </div>
+        `;
+    }).join('');
 
     const closeModal = () => modal.classList.remove('show');
 
@@ -474,7 +485,7 @@ export function initApp() {
     if (showChangelogBtn) {
         showChangelogBtn.addEventListener('click', async () => {
             try {
-                const changelogRes = await fetch('/api/changelog/latest');
+                const changelogRes = await fetch('/api/changelog'); // Fetch the full changelog
                 if (!changelogRes.ok) throw new Error('تعذر تحميل سجل التغييرات.');
                 const changelogData = await changelogRes.json();
                 showChangelogModal(changelogData);
