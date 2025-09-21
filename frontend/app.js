@@ -166,8 +166,8 @@ async function handleAppUpdate() {
     } catch (error) {
         statusEl.textContent = 'حدث خطأ أثناء التحديث!';
         statusEl.style.color = 'var(--danger-color)';
-        // The 'log' property is added to the error object in the backend for failed exec
-        logEl.textContent = error.log || error.message || 'خطأ غير معروف.';
+        // The 'log' property is now inside error.data thanks to the improved fetchWithAuth
+        logEl.textContent = (error.data && error.data.log) ? error.data.log : (error.message || 'خطأ غير معروف.');
         closeBtn.classList.remove('hidden');
         console.error('Update failed:', error);
     }

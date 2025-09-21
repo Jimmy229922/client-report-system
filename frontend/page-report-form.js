@@ -191,7 +191,7 @@ function getReportText(reportType, form) {
         }
         
         body = `الدولة: ${common.country}\n`
-             + `الـ IP: ${common.ip}\n`
+             + `IP: ${common.ip}\n`
              + `الإيميل: ${common.email}\n`
              + `رقم الحساب: ${common.accountNumber}\n`
              + `نسبة الهامش: ${marginPercentage || 'N/A'}\n`
@@ -208,7 +208,7 @@ function getReportText(reportType, form) {
             transferSource = 'لم يتم الاختيار';
         }
 
-        body = `الـ IP: ${common.ip}\n`
+        body = `IP: ${common.ip}\n`
              + `الدولة: ${common.country}\n`
              + `الإيميل: ${common.email}\n`
              + `رقم الحساب: ${common.accountNumber}\n`

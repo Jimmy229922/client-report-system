@@ -29,7 +29,9 @@ export async function fetchWithAuth(url, options = {}) {
             // Try to parse the error response as JSON. If it fails, it's not a standard API error.
             try {
                 const errorData = await response.json();
-                throw new Error(errorData.message || errorData.error || `HTTP Error: ${response.status}`);
+                const error = new Error(errorData.message || errorData.error || `HTTP Error: ${response.status}`);
+                error.data = errorData; // Attach the full payload for more detailed error handling
+                throw error;
             } catch (jsonError) {
                 // This happens if the server returns HTML (e.g., a 500 error page) instead of JSON.
                 console.error("Failed to parse server error response as JSON:", jsonError);
