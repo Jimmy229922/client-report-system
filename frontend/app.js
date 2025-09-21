@@ -331,8 +331,8 @@ async function checkVersionAndShowChangelog() {
 
         const lastSeenVersion = localStorage.getItem('appVersion');
 
-        // Show changelog if the version is new and it's not the very first visit
-        if (currentVersion && currentVersion !== lastSeenVersion && lastSeenVersion !== null) {
+        // Show changelog if the version is new. This will also show on the very first visit.
+        if (currentVersion && currentVersion !== lastSeenVersion) {
             const changelogRes = await fetch('/api/changelog/latest');
             if (!changelogRes.ok) return;
             const changelogData = await changelogRes.json();
@@ -341,11 +341,9 @@ async function checkVersionAndShowChangelog() {
             if (changelogData.version === currentVersion) {
                 showChangelogModal(changelogData);
             }
-        }
-        
-        // Always update the version in storage if it's different or not set
-        if (currentVersion && currentVersion !== lastSeenVersion) {
-             localStorage.setItem('appVersion', currentVersion);
+            
+            // After the check, always update the version in storage.
+            localStorage.setItem('appVersion', currentVersion);
         }
 
     } catch (error) {
@@ -402,6 +400,21 @@ export function initApp() {
     handleTheme();
     handleImagePreviewModal();
     initIpWidget();
+
+    const showChangelogBtn = document.getElementById('show-changelog-btn');
+    if (showChangelogBtn) {
+        showChangelogBtn.addEventListener('click', async () => {
+            try {
+                const changelogRes = await fetch('/api/changelog/latest');
+                if (!changelogRes.ok) throw new Error('تعذر تحميل سجل التغييرات.');
+                const changelogData = await changelogRes.json();
+                showChangelogModal(changelogData);
+            } catch (error) {
+                showToast(error.message, true);
+                console.error('Failed to manually show changelog:', error);
+            }
+        });
+    }
 
     const updateBtn = document.getElementById('update-app-btn');
     if (updateBtn) {

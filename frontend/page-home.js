@@ -179,38 +179,18 @@ function renderTopContributor(contributorData) {
     container.innerHTML = '<p style="text-align: center; width: 100%;">لا يوجد مساهمين بعد.</p>';
 }
 
-function renderSystemHealth(isOverallHealthy, services = {}) {
+function renderSystemHealth(isOverallHealthy) {
     const container = document.getElementById('system-health-container');
     if (!container) return;
 
     const timeString = new Date().toLocaleTimeString('ar-EG');
-
-    const renderServiceStatus = (serviceName, status) => {
-        const isOnline = status === 'online';
-        const icon = isOnline ? 'fa-check-circle' : 'fa-times-circle';
-        const colorClass = isOnline ? 'healthy' : 'unhealthy';
-        const text = isOnline ? 'متصل' : 'غير متصل';
-        return `
-            <div class="health-service-item">
-                <span>${serviceName}</span>
-                <span class="health-service-status ${colorClass}">
-                    <i class="fas ${icon}"></i> ${text}
-                </span>
-            </div>
-        `;
-    };
-
-    const overallStatusText = isOverallHealthy ? 'جميع الأنظمة تعمل' : 'توجد مشكلة في النظام';
+    const overallStatusText = isOverallHealthy ? 'النظام يعمل بشكل طبيعي' : 'توجد مشكلة في الاتصال';
     const overallStatusClass = isOverallHealthy ? 'healthy' : 'unhealthy';
 
     container.innerHTML = `
         <div class="health-main-status ${overallStatusClass}">
             <div class="status-light"></div>
             <span>${overallStatusText}</span>
-        </div>
-        <div class="health-services-list">
-            ${renderServiceStatus('خدمة API', services.api || 'offline')}
-            ${renderServiceStatus('قاعدة البيانات', services.database || 'offline')}
         </div>
         <div class="health-last-checked">
             <i class="fas fa-history"></i> آخر فحص: ${timeString}
