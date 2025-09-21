@@ -1,6 +1,33 @@
 import { fetchWithAuth } from './api.js';
 import { showToast, updateNavbarUser } from './ui.js';
 
+function updatePasswordStrength(password, meterElement, textElement) {
+    const strength = {
+        0: { text: "ضعيفة جداً", color: "var(--danger-color)" },
+        1: { text: "ضعيفة", color: "#ff9800" },
+        2: { text: "متوسطة", color: "#FFCE56" },
+        3: { text: "قوية", color: "#4CAF50" },
+        4: { text: "قوية جداً", color: "var(--success-color)" }
+    };
+
+    let score = 0;
+    if (password.length > 0) {
+        if (password.length >= 8) score++;
+        if (/[a-z]/.test(password) && /[A-Z]/.test(password)) score++;
+        if (/[0-9]/.test(password)) score++;
+        if (/[^A-Za-z0-9]/.test(password)) score++;
+        if (password.length < 6) score = 0;
+    }
+
+    const bars = meterElement.querySelectorAll('.strength-bar');
+    bars.forEach((bar, index) => {
+        bar.style.backgroundColor = (index < score) ? strength[score].color : 'var(--border-color)';
+    });
+
+    textElement.textContent = (password.length > 0) ? strength[score].text : '';
+    textElement.style.color = (password.length > 0) ? strength[score].color : '';
+}
+
 function initProfilePage() {
     const avatarInput = document.getElementById('avatar-upload-input');
     if (!avatarInput) return;
@@ -146,6 +173,16 @@ function initProfilePage() {
                 submitBtn.textContent = 'حفظ كلمة المرور';
             }
         });
+
+        // Add strength meter logic
+        const newPasswordInput = document.getElementById('new-password');
+        const passwordMeter = changePasswordForm.querySelector('.password-strength-meter');
+        const passwordText = changePasswordForm.querySelector('.strength-text');
+        if (newPasswordInput && passwordMeter && passwordText) {
+            newPasswordInput.addEventListener('input', () => {
+                updatePasswordStrength(newPasswordInput.value, passwordMeter, passwordText);
+            });
+        }
     }
 }
 
@@ -211,26 +248,26 @@ export function renderProfilePage() {
                     </div>
                 </div>
             </div>
-            ${isAdmin ? `
-                <div class="form-container" style="max-width: 100%; margin: 0; grid-column: 1 / -1;">
-                    <h2 style="margin-top: 0; margin-bottom: 1.5rem; font-size: 1.5rem;">تغيير كلمة المرور</h2>
-                    <form id="change-password-form">
-                        <div class="form-group">
-                            <label for="current-password">كلمة المرور الحالية</label>
-                            <input type="password" id="current-password" required autocomplete="current-password">
-                        </div>
-                        <div class="form-group">
-                            <label for="new-password">كلمة المرور الجديدة</label>
-                            <input type="password" id="new-password" required autocomplete="new-password" minlength="6">
-                        </div>
-                        <div class="form-group">
-                            <label for="confirm-password">تأكيد كلمة المرور الجديدة</label>
-                            <input type="password" id="confirm-password" required autocomplete="new-password">
-                        </div>
-                        <button type="submit" class="submit-btn">حفظ كلمة المرور</button>
-                    </form>
-                </div>
-            ` : ''}
+            <div class="form-container" style="max-width: 100%; margin: 0; grid-column: 1 / -1;">
+                <h2 style="margin-top: 0; margin-bottom: 1.5rem; font-size: 1.5rem;">تغيير كلمة المرور</h2>
+                <form id="change-password-form">
+                    <div class="form-group">
+                        <label for="current-password">كلمة المرور الحالية</label>
+                        <input type="password" id="current-password" required autocomplete="current-password">
+                    </div>
+                    <div class="form-group">
+                        <label for="new-password">كلمة المرور الجديدة</label>
+                        <input type="password" id="new-password" required autocomplete="new-password" minlength="6">
+                        <div class="password-strength-meter"><div class="strength-bar"></div><div class="strength-bar"></div><div class="strength-bar"></div><div class="strength-bar"></div></div>
+                        <small class="strength-text"></small>
+                    </div>
+                    <div class="form-group">
+                        <label for="confirm-password">تأكيد كلمة المرور الجديدة</label>
+                        <input type="password" id="confirm-password" required autocomplete="new-password">
+                    </div>
+                    <button type="submit" class="submit-btn">حفظ كلمة المرور</button>
+                </form>
+            </div>
         </div>
     `;
     initProfilePage();

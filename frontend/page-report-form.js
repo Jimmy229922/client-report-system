@@ -158,20 +158,20 @@ function getCommonReportData(form) {
     };
 }
 
-function getReportText(reportType, form) {
+function getReportPayload(reportType, form) {
     const common = getCommonReportData(form);
     const mentions = '\n@Mudarballoul\n@batoulhassan';
 
     const reportTypeMap = {
-        'Suspicious Report': { title: 'suspicious', hash: '#suspicious' },
-        'Deposit Report': { title: 'Deposit Report', hash: '#deposit_percentages' },
-        'New Position Report': { title: 'new-positions', hash: '#new-positions' },
-        'Credit Out Report': { title: 'credit-out', hash: '#credit-out' },
-        'تحويل الحسابات': { title: 'تحويل الحسابات', hash: '#account_transfer' },
-        'PAYOUTS': { title: 'PAYOUTS', hash: '#payouts' },
+        'Suspicious Report': { title: 'suspicious', hash: '#suspicious', type: 'suspicious' },
+        'Deposit Report': { title: 'Deposit Report', hash: '#deposit_percentages', type: 'deposit_percentages' },
+        'New Position Report': { title: 'new-positions', hash: '#new-positions', type: 'new-positions' },
+        'Credit Out Report': { title: 'credit-out', hash: '#credit-out', type: 'credit-out' },
+        'تحويل الحسابات': { title: 'تحويل الحسابات', hash: '#account_transfer', type: 'account_transfer' },
+        'PAYOUTS': { title: 'PAYOUTS', hash: '#payouts', type: 'payouts' },
     };
 
-    const { title, hash } = reportTypeMap[reportType] || { title: reportType, hash: '' };
+    const { title, hash, type } = reportTypeMap[reportType] || { title: reportType, hash: '', type: 'other' };
     let body = '';
     const footer = `\n\n${hash}${mentions}`;
 
@@ -225,7 +225,10 @@ function getReportText(reportType, form) {
              + `الملاحظات: ${common.notes}`;
     }
 
-    return `تقرير ${title}\n\n${body}${footer}`;
+    return {
+        reportText: `تقرير ${title}\n\n${body}${footer}`,
+        reportType: type
+    };
 }
 
 export function initCreateReportPage() {
@@ -334,8 +337,10 @@ export function initCreateReportPage() {
         submitBtn.disabled = true;
 
         const formData = new FormData();
-        formData.append('reportText', getReportText(pageTitle, form));
+        const { reportText, reportType } = getReportPayload(pageTitle, form);
+        formData.append('reportText', reportText);
         uploadedFiles.forEach(file => formData.append('images', file));
+        formData.append('reportType', reportType);
 
         try {
             await fetchWithAuth('/api/send-report', { method: 'POST', body: formData });
@@ -363,7 +368,8 @@ export function initCreateReportPage() {
     });
 
     copyBtn.addEventListener('click', () => {
-        navigator.clipboard.writeText(getReportText(pageTitle, form)).then(() => {
+        const { reportText } = getReportPayload(pageTitle, form);
+        navigator.clipboard.writeText(reportText).then(() => {
             const originalText = copyBtn.innerText;
             copyBtn.innerText = 'تم النسخ!';
             copyBtn.classList.add('copied');

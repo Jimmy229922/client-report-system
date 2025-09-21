@@ -8,18 +8,48 @@ function handleImagePreviewModal() {
     const modal = document.getElementById('image-preview-modal');
     const modalImage = document.getElementById('modal-image-content');
     const closeBtn = document.getElementById('image-modal-close-btn');
+    const prevBtn = document.getElementById('modal-prev-btn');
+    const nextBtn = document.getElementById('modal-next-btn');
+
+    let currentImageIndex = 0;
+    let currentImageGallery = [];
+
+    const showImage = (index) => {
+        if (index < 0 || index >= currentImageGallery.length) return;
+        currentImageIndex = index;
+        modalImage.src = currentImageGallery[index];
+        prevBtn.style.display = (index > 0) ? 'block' : 'none';
+        nextBtn.style.display = (index < currentImageGallery.length - 1) ? 'block' : 'none';
+    };
 
     document.addEventListener('click', (e) => {
         if (e.target && e.target.classList.contains('img-preview')) {
-            modalImage.src = e.target.src;
-            modal.classList.add('show');
+            // Find the parent container that holds all related images
+            const parentContainer = e.target.closest('.archive-image-thumbnails, #image-previews');
+            
+            if (parentContainer) {
+                const allImages = parentContainer.querySelectorAll('.img-preview');
+                currentImageGallery = Array.from(allImages).map(img => img.src);
+                const clickedIndex = currentImageGallery.indexOf(e.target.src);
+                
+                showImage(clickedIndex);
+                modal.classList.add('show');
+            } else { // Fallback for single images without a common container
+                currentImageGallery = [e.target.src];
+                showImage(0);
+                modal.classList.add('show');
+            }
         }
     });
 
-    closeBtn.addEventListener('click', () => modal.classList.remove('show'));
+    const closeModal = () => modal.classList.remove('show');
+
+    closeBtn.addEventListener('click', closeModal);
     modal.addEventListener('click', (e) => {
         if (e.target === modal) modal.classList.remove('show');
     });
+    prevBtn.addEventListener('click', () => showImage(currentImageIndex - 1));
+    nextBtn.addEventListener('click', () => showImage(currentImageIndex + 1));
 }
 
 function setupUIForUser() {
@@ -519,20 +549,14 @@ export function initApp() {
             }
         );
         if (confirmed) {
-            showLoader(); // Show full-screen loader
-
             // For a clean logout, we clear all stored data except for the user's theme preference.
             const theme = localStorage.getItem('theme');
             localStorage.clear();
             if (theme) {
                 localStorage.setItem('theme', theme);
             }
-
-            // Redirect to the login page after a short delay to allow the user to see the toast message.
-            setTimeout(() => {
-                // Use replace() to prevent the logged-in page from being in the browser history.
-                window.location.replace('/');
-            }, 1000);
+            // Use replace() to prevent the logged-in page from being in the browser history.
+            window.location.replace('/');
         }
     });
 
@@ -546,7 +570,10 @@ export function initApp() {
     fetchAndRenderNotifications();
     initRealtimeNotifications(); // Start listening for real-time events
     checkVersionAndShowChangelog();
-    showToast('تم تسجيل الدخول بنجاح!');
+    if (sessionStorage.getItem('justLoggedIn') === 'true') {
+        showToast('تم تسجيل الدخول بنجاح!');
+        sessionStorage.removeItem('justLoggedIn');
+    }
 
     // Initialize global components like system health bar
     loadAndDisplayVersion();

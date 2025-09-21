@@ -206,7 +206,13 @@ body {
 }
 
 /* --- المحتوى الرئيسي والبطاقات --- */
-main { padding: 2rem; max-width: 1200px; margin: 2rem auto; animation: fadeIn 0.5s ease-in-out; }
+main { 
+    padding: 2rem; 
+    max-width: 1200px; 
+    margin: 2rem auto; 
+    animation: fadeIn 0.5s ease-in-out; 
+    padding-bottom: 80px; /* Add space for the fixed footer (50px height + 30px buffer) */
+}
 @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
 .page-title { font-size: 2.5rem; margin-bottom: 2rem; text-align: center; }
 .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem; }
@@ -757,6 +763,36 @@ main { padding: 2rem; max-width: 1200px; margin: 2rem auto; animation: fadeIn 0.
     flex-direction: column;
 }
 
+.modal-nav-btn {
+    cursor: pointer;
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    width: auto;
+    padding: 16px;
+    color: white;
+    font-weight: bold;
+    font-size: 20px;
+    transition: 0.3s ease;
+    border-radius: 0 3px 3px 0;
+    user-select: none;
+    background-color: rgba(0,0,0,0.3);
+    border: none;
+}
+
+.modal-nav-btn.prev {
+    left: 0;
+    border-radius: 3px 0 0 3px;
+}
+
+.modal-nav-btn.next {
+    right: 0;
+}
+
+.modal-nav-btn:hover {
+    background-color: rgba(0,0,0,0.8);
+}
+
 #image-preview-modal .modal-content {
     margin: auto;
     display: block;
@@ -883,69 +919,94 @@ main { padding: 2rem; max-width: 1200px; margin: 2rem auto; animation: fadeIn 0.
 }
 
 /* --- Archive Page Styles --- */
-.archive-grid {
+.accordion-group {
+    background-color: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    margin-bottom: 1rem;
+    overflow: hidden;
+}
+
+.accordion-header {
+    background-color: var(--input-bg);
+    padding: 1rem 1.5rem;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: background-color 0.2s;
+}
+
+.accordion-header:hover {
+    background-color: var(--border-color);
+}
+
+.accordion-header h3 {
+    margin: 0;
+    font-size: 1.5rem;
+    color: var(--accent-color);
+}
+
+.accordion-header i {
+    transition: transform 0.3s ease;
+}
+
+.accordion-header.active i {
+    transform: rotate(180deg);
+}
+
+.accordion-content {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.5s ease-out;
+    padding: 0 1.5rem;
+}
+
+.accordion-header.active + .accordion-content {
+    padding: 1.5rem;
+}
+
+.archive-section-grid {
     display: grid;
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
     gap: 1.5rem;
 }
 
 .archive-card {
     background-color: var(--card-bg);
     border: 1px solid var(--border-color);
-    border-radius: 8px;
+    border-radius: 12px;
     display: flex;
     flex-direction: column;
     transition: box-shadow 0.2s ease;
+    overflow: hidden;
 }
 
 .archive-card:hover {
-    box-shadow: 0 0 15px rgba(77, 91, 249, 0.2);
+    transform: translateY(-3px);
+    box-shadow: 0 5px 20px rgba(77, 91, 249, 0.15);
 }
 
 .archive-card-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    border-bottom: 1px solid var(--border-color);
     padding: 1rem 1.5rem;
-    font-size: 0.9rem;
-    color: #aaa;
+    background-color: var(--input-bg);
+    border-bottom: 1px solid var(--border-color);
 }
 
 .archive-card-header strong {
+    font-size: 1.1rem;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
     flex-grow: 1;
 }
 
-.header-meta {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-    flex-shrink: 0; /* Prevent this part from shrinking */
-}
-
-.report-author {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    font-size: 0.8em;
-    color: var(--accent-color);
-}
-
 .archive-card-actions {
     display: flex;
-    gap: 1rem;
-}
-
-.archive-card-body {
-    padding: 1.5rem;
-    white-space: pre-wrap; /* Preserve line breaks from the report */
-    font-family: 'Courier New', Courier, monospace;
-    font-size: 0.95rem;
-    line-height: 1.7;
-    color: var(--text-color);
+    gap: 0.5rem;
 }
 
 .archive-btn {
@@ -955,14 +1016,80 @@ main { padding: 2rem; max-width: 1200px; margin: 2rem auto; animation: fadeIn 0.
     cursor: pointer;
     font-size: 1rem;
     transition: color 0.2s;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .archive-btn:hover {
+    background-color: var(--border-color);
     color: var(--accent-color);
 }
 
 .archive-btn.delete:hover {
     color: var(--danger-color);
+    background-color: rgba(220, 53, 69, 0.2);
+}
+
+.archive-btn.show-images {
+    width: auto;
+    height: auto;
+    padding: 0.4rem 0.8rem;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    border: 1px solid var(--border-color);
+    background-color: var(--input-bg);
+    display: inline-flex; /* لمحاذاة الأيقونة والنص */
+    gap: 0.5rem;
+    align-items: center;
+}
+.archive-btn.show-images:hover {
+    background-color: var(--border-color);
+}
+
+.archive-image-thumbnails {
+    display: flex;
+    gap: 0.5rem;
+    overflow-x: auto;
+    padding: 0.75rem 1.5rem;
+    background-color: var(--input-bg);
+    border-top: 1px solid var(--border-color);
+}
+
+.archive-thumbnail {
+    width: 60px;
+    height: 60px;
+    border-radius: 6px;
+    object-fit: cover;
+    border: 1px solid var(--border-color);
+    cursor: pointer;
+    transition: transform 0.2s ease;
+}
+
+.archive-thumbnail:hover {
+    transform: scale(1.1);
+}
+
+.report-author {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.85rem;
+    color: var(--accent-color);
+}
+
+.archive-card-body {
+    padding: 1.5rem;
+    white-space: pre-wrap; /* Preserve line breaks from the report */
+    font-family: inherit; /* Use the default app font */
+    font-size: 1rem; /* Slightly larger for readability */
+    line-height: 1.8; /* Increased for better spacing */
+    color: var(--text-color); /* Brighter color */
+    flex-grow: 1;
 }
 
 .archive-card-footer {
@@ -971,22 +1098,21 @@ main { padding: 2rem; max-width: 1200px; margin: 2rem auto; animation: fadeIn 0.
     align-items: center;
     padding: 1rem 1.5rem;
     border-top: 1px solid var(--border-color);
-    background-color: var(--input-bg);
-    border-bottom-left-radius: 8px;
-    border-bottom-right-radius: 8px;
 }
 
-.archive-image-thumbnails {
+.footer-meta-left {
     display: flex;
-    gap: 0.5rem;
+    align-items: center;
+    min-width: 0; /* Prevent flexbox from growing this container unnecessarily */
+    gap: 1rem;
 }
 
-.archive-thumbnail {
-    width: 40px;
-    height: 40px;
-    border-radius: 4px;
-    object-fit: cover;
-    border: 1px solid var(--border-color);
+.report-date {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.85rem;
+    color: #aaa;
 }
 
 /* --- Accordion Styles for Archive --- */

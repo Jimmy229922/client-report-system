@@ -305,7 +305,7 @@ app.post('/api/profile/avatar', verifyToken, upload.single('avatar'), async (req
 app.post('/api/send-report', verifyToken, upload.array('images', 3), async (req, res) => {
     try {
         // استخراج البيانات النصية واسم المستخدم من الطلب
-        const { reportText } = req.body;
+        const { reportText, reportType } = req.body;
         const username = req.username; // From verifyToken middleware
         const userId = req.userId;
         // استخراج ملفات الصور
@@ -367,14 +367,78 @@ app.post('/api/send-report', verifyToken, upload.array('images', 3), async (req,
             await bot.telegram.sendMessage(config.CHAT_ID, telegramMessage);
         }
 
-        // بعد الإرسال الناجح، قم بحفظ التقرير في قاعدة البيانات
-        const imageCount = images ? images.length : 0;
-        const { error: insertError } = await supabase
+        // 1. Insert report text to get an ID
+        const { data: newReport, error: insertError } = await supabase
             .from('reports')
-            .insert({ report_text: reportText, image_count: imageCount, user_id: req.userId });
+            .insert({ report_text: reportText, user_id: req.userId, type: reportType })
+            .select('id')
+            .single();
 
         if (insertError) {
-            console.error('Error saving report to database:', insertError.message);
+            console.error('Error saving report text to database:', insertError.message);
+            // Don't proceed if we can't even save the text
+            return res.status(500).json({ success: false, message: 'فشل حفظ نص التقرير.' });
+        }
+
+        const reportId = newReport.id;
+        console.log('[DB Save] Report ID created:', reportId);
+        let imageUrls = [];
+
+        // 2. If images exist, upload them
+        if (images && images.length > 0) {
+            const uploadPromises = images.map((file, index) => {
+                const fileExt = path.extname(file.originalname);
+                const fileName = `reports/${reportId}/image_${index}${fileExt}`;
+                console.log(`[DB Save] Preparing to upload: ${fileName}`);
+                return supabase.storage.from('reports-images').upload(fileName, file.buffer, {
+                    contentType: file.mimetype,
+                    upsert: true
+                });
+            });
+
+            const uploadResults = await Promise.all(uploadPromises);
+
+            console.log('[DB Save] Raw upload results from Promise.all:', JSON.stringify(uploadResults, null, 2));
+
+            // 3. Get public URLs for successfully uploaded images
+            const successfulUploads = uploadResults.filter(result => {
+                if (result.error) {
+                    console.error('[DB Save] An image upload failed:', result.error.message);
+                    return false;
+                }
+                if (!result.data || !result.data.path) {
+                    console.error('[DB Save] A successful upload result is missing data.path:', result);
+                    return false;
+                }
+                return true;
+            });
+
+            console.log('[DB Save] Filtered successful uploads:', JSON.stringify(successfulUploads, null, 2));
+
+            imageUrls = successfulUploads.map(result => {
+                const { data: publicUrlData, error: urlError } = supabase.storage.from('reports-images').getPublicUrl(result.data.path);
+                if (urlError) {
+                    console.error(`[DB Save] Failed to get public URL for path ${result.data.path}:`, urlError);
+                    return null; // Return null for failed URL generations
+                }
+                console.log(`[DB Save] Generated public URL for ${result.data.path}:`, publicUrlData.publicUrl);
+                return publicUrlData.publicUrl;
+            }).filter(url => url !== null); // Filter out any nulls from failed URL generations
+            
+            console.log('[DB Save] Final public URLs to be saved:', imageUrls);
+        }
+
+        // 4. Update the report with image URLs and count
+        console.log(`[DB Save] Attempting to update report ${reportId} with ${imageUrls.length} image(s).`);
+        const { error: updateError } = await supabase
+            .from('reports')
+            .update({ image_urls: imageUrls, image_count: imageUrls.length })
+            .eq('id', reportId);
+
+        if (updateError) {
+            console.error('[DB Save] CRITICAL: Failed to update report with image URLs.', updateError);
+        } else {
+            console.log(`[DB Save] Successfully updated report ${reportId}.`);
         }
 
         // إرسال رد ناجح إلى الواجهة الأمامية
@@ -401,10 +465,10 @@ app.get('/api/reports', verifyToken, async (req, res) => { // verifyToken provid
 
     if (isAdmin) {
         // Admin sees all reports and the username of the creator
-        query = supabase.from('reports').select('*, users(username)');
+        query = supabase.from('reports').select('*, image_urls, type, users(username)');
     } else {
         // Regular user sees only their own reports
-        query = supabase.from('reports').select('*').eq('user_id', req.userId);
+        query = supabase.from('reports').select('*, image_urls, type').eq('user_id', req.userId);
     }
 
     if (search) {
@@ -435,7 +499,7 @@ app.delete('/api/reports/:id', verifyToken, async (req, res) => { // verifyToken
     const isAdmin = req.userId === 1;
 
     // First, get the report to check its owner
-    const { data: report, error: fetchError } = await supabase.from('reports').select('user_id').eq('id', reportId).single();
+    const { data: report, error: fetchError } = await supabase.from('reports').select('user_id, image_urls').eq('id', reportId).single();
 
     if (fetchError) {
         return res.status(404).json({ "error": "التقرير غير موجود." });
@@ -444,6 +508,20 @@ app.delete('/api/reports/:id', verifyToken, async (req, res) => { // verifyToken
     // Check for permission
     if (!isAdmin && report.user_id !== userId) {
         return res.status(403).json({ "error": "ليس لديك صلاحية لحذف هذا التقرير." });
+    }
+
+    // If images exist, delete them from storage
+    if (report.image_urls && report.image_urls.length > 0) {
+        const imagePaths = report.image_urls.map(url => {
+            // Extract path from URL: https://.../storage/v1/object/public/reports-images/reports/123/image_0.jpg
+            // The path is 'reports/123/image_0.jpg'
+            return url.substring(url.indexOf('/reports-images/') + '/reports-images/'.length);
+        });
+        const { error: storageError } = await supabase.storage.from('reports-images').remove(imagePaths);
+        if (storageError) {
+            console.error(`Failed to delete images for report ${reportId}:`, storageError.message);
+            // Don't block the report deletion, just log the error.
+        }
     }
 
     // Proceed with deletion
@@ -460,35 +538,21 @@ app.get('/api/stats', verifyToken, async (req, res) => {
     const isAdmin = userId === 1;
     console.log(`[API /api/stats] Request from user ID: ${userId}, Is Admin: ${isAdmin}`);
 
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    const filterId = isAdmin ? null : userId;
 
-    // Helper function to apply user filter if not admin
-    const userFilter = (query) => {
-        return isAdmin ? query : query.eq('user_id', userId);
-    };
+    // Use a single RPC call for much better performance
+    const { data, error } = await supabase.rpc('get_report_stats', {
+        user_filter_id: filterId
+    });
 
-    const queries = [
-        userFilter(supabase.from('reports').select('*', { count: 'exact', head: true })),
-        userFilter(supabase.from('reports').select('*', { count: 'exact', head: true }).gte('timestamp', today.toISOString())),
-        userFilter(supabase.from('reports').select('*', { count: 'exact', head: true }).ilike('report_text', '%#suspicious%')),
-        userFilter(supabase.from('reports').select('*', { count: 'exact', head: true }).ilike('report_text', '%#deposit%')),
-        userFilter(supabase.from('reports').select('*', { count: 'exact', head: true }).ilike('report_text', '%#new-position%')),
-        userFilter(supabase.from('reports').select('*', { count: 'exact', head: true }).ilike('report_text', '%#credit-out%')),
-        userFilter(supabase.from('reports').select('*', { count: 'exact', head: true }).ilike('report_text', '%تقرير تحويل الحسابات%')),
-        userFilter(supabase.from('reports').select('*', { count: 'exact', head: true }).ilike('report_text', '%#payouts%'))
-    ];
-
-    const results = await Promise.all(queries);
-    const [total, reports_today, suspicious, deposit, new_positions, credit_out, account_transfer, payouts] = results.map(r => r.count);
-
-    const errors = results.filter(r => r.error);
-    if (errors.length > 0) {
-        console.error("Stats error:", errors[0].error);
-        return res.status(500).json({ error: errors[0].error.message });
+    if (error) {
+        console.error("Stats RPC error:", error);
+        return res.status(500).json({ error: `Database function error: ${error.message}` });
     }
 
-    res.json({ message: "success", data: { total, reports_today, suspicious, deposit, new_positions, credit_out, account_transfer, payouts } });
+    // The RPC function returns a single row with all counts.
+    // If there are no reports, it might return an empty array, so we default to an empty object.
+    res.json({ message: "success", data: data[0] || {} });
 });
 
 // Endpoint for weekly stats

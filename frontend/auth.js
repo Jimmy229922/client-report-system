@@ -31,6 +31,7 @@ export function handleLogin() {
             if (data.auth) {
                 localStorage.setItem('token', data.token);
                 localStorage.setItem('user', JSON.stringify(data.user)); // Store user info
+                sessionStorage.setItem('justLoggedIn', 'true'); // Flag for showing welcome toast
                 location.reload(); // Reload the page to re-run the auth check in main.js
             }
         } catch (error) {
