@@ -519,7 +519,7 @@ export function initApp() {
             }
         );
         if (confirmed) {
-            showToast('جاري تسجيل الخروج...');
+            showLoader(); // Show full-screen loader
 
             // For a clean logout, we clear all stored data except for the user's theme preference.
             const theme = localStorage.getItem('theme');
@@ -546,6 +546,7 @@ export function initApp() {
     fetchAndRenderNotifications();
     initRealtimeNotifications(); // Start listening for real-time events
     checkVersionAndShowChangelog();
+    showToast('تم تسجيل الدخول بنجاح!');
 
     // Initialize global components like system health bar
     loadAndDisplayVersion();
