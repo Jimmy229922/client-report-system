@@ -325,30 +325,59 @@ main {
     font-size: 1rem;
 }
 
+.notification-btn-wrapper {
+    position: relative;
+}
+
 .status-indicator {
-    width: 10px;
-    height: 10px;
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    width: 11px;
+    height: 11px;
     border-radius: 50%;
+    border: 2px solid var(--navbar-bg);
     transition: background-color 0.5s ease, box-shadow 0.5s ease;
-    margin-right: auto; /* Push to the left in RTL */
-    margin-left: 10px; /* Space from title */
 }
 
 .status-indicator.connected {
     background-color: var(--success-color);
-    box-shadow: 0 0 8px var(--success-color);
+    box-shadow: 0 0 6px var(--success-color);
 }
 
 .status-indicator.disconnected {
     background-color: var(--danger-color);
-    box-shadow: 0 0 8px var(--danger-color);
+    box-shadow: 0 0 6px var(--danger-color);
     animation: pulse-disconnected 2s infinite;
 }
 
 @keyframes pulse-disconnected {
-    0% { box-shadow: 0 0 8px var(--danger-color); }
-    50% { box-shadow: 0 0 0px var(--danger-color); }
-    100% { box-shadow: 0 0 8px var(--danger-color); }
+    0% { box-shadow: 0 0 6px var(--danger-color); }
+    50% { box-shadow: 0 0 0px transparent; }
+    100% { box-shadow: 0 0 6px var(--danger-color); }
+}
+
+.progress-bar-container {
+    width: 100%;
+    background-color: var(--border-color);
+    border-radius: 5px;
+    margin: 1.5rem 0;
+    overflow: hidden;
+}
+.progress-bar {
+    width: 0%;
+    height: 10px;
+    background-color: var(--accent-color);
+    transition: width 0.5s ease-out;
+    border-radius: 5px;
+}
+.progress-text {
+    text-align: center;
+    font-weight: bold;
+    margin-top: -1rem;
+    margin-bottom: 1rem;
+    color: var(--accent-color);
+    min-height: 1em;
 }
 
 #refresh-notifications-btn {

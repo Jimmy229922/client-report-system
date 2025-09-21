@@ -96,23 +96,49 @@ function showUpdateOverlay(initialMessage = 'جاري البحث عن تحديث
     overlay.innerHTML = `
         <div class="update-modal">
             <h3 id="update-status">${initialMessage}</h3>
+            <div class="progress-bar-container hidden">
+                <div id="update-progress-bar" class="progress-bar"></div>
+            </div>
+            <p id="update-progress-text" class="progress-text"></p>
             <div class="update-log-container">
                 <pre id="update-log" class="update-log"></pre>
             </div>
             <div id="update-footer" class="update-footer hidden">
                 <div class="spinner"></div>
-                <p>جاري إعادة تشغيل السيرفر... الرجاء الانتظار.</p>
+                <p>جاري إعادة تشغيل الخادم... الرجاء الانتظار.</p>
             </div>
             <button id="close-update-overlay-btn" class="submit-btn hidden" style="margin-top: 1.5rem; width: auto; padding: 0.5rem 1rem;">إغلاق</button>
         </div>
     `;
     overlay.classList.remove('hidden');
     setTimeout(() => overlay.style.opacity = 1, 10); // Fade in
-
+ 
     document.getElementById('close-update-overlay-btn').addEventListener('click', () => {
         overlay.style.opacity = 0;
         setTimeout(() => overlay.classList.add('hidden'), 300);
     });
+}
+
+function animateProgressBar(duration, onComplete) {
+    const progressBar = document.getElementById('update-progress-bar');
+    const progressText = document.getElementById('update-progress-text');
+    const container = progressBar.parentElement;
+    container.classList.remove('hidden');
+
+    let start = null;
+    const step = (timestamp) => {
+        if (!start) start = timestamp;
+        const progress = Math.min((timestamp - start) / duration, 1);
+        const percentage = Math.floor(progress * 100);
+        progressBar.style.width = `${percentage}%`;
+        progressText.textContent = `${percentage}%`;
+        if (progress < 1) {
+            window.requestAnimationFrame(step);
+        } else {
+            if (onComplete) onComplete();
+        }
+    };
+    window.requestAnimationFrame(step);
 }
 
 function checkServerStatus(attempts = 0) {
@@ -136,6 +162,13 @@ function checkServerStatus(attempts = 0) {
         return;
     }
 
+    // Update progress bar for server check
+    const progressBar = document.getElementById('update-progress-bar');
+    const progressText = document.getElementById('update-progress-text');
+    const percentage = Math.floor((attempts / maxAttempts) * 100);
+    if (progressBar) progressBar.style.width = `${percentage}%`;
+    if (progressText) progressText.textContent = `فحص الاتصال... ${percentage}%`;
+
     setTimeout(async () => {
         try {
             // Use a cache-busting query parameter
@@ -146,11 +179,13 @@ function checkServerStatus(attempts = 0) {
                     statusEl.textContent = 'تم إعادة تشغيل السيرفر بنجاح!';
                     statusEl.style.color = 'var(--success-color)';
                 }
+                if (progressBar) progressBar.style.width = '100%';
+                if (progressText) progressText.textContent = 'اكتمل 100%';
                 const footerEl = document.getElementById('update-footer');
                 if (footerEl) footerEl.classList.add('hidden');
-
+ 
                 showToast('تم إعادة تشغيل السيرفر بنجاح! سيتم تحديث الصفحة.');
-                setTimeout(() => location.reload(), 1500);
+                setTimeout(() => location.reload(), 2000);
             } else { checkServerStatus(attempts + 1); }
         } catch (error) { checkServerStatus(attempts + 1); }
     }, 1000);
@@ -174,11 +209,18 @@ async function handleAppUpdate() {
     const logEl = document.getElementById('update-log');
     const footerEl = document.getElementById('update-footer');
     const closeBtn = document.getElementById('close-update-overlay-btn');
-
+ 
     try {
+        animateProgressBar(15000); // Simulate a 15-second update process
         const result = await fetchWithAuth('/api/system/update', { method: 'POST' });
-
+ 
         statusEl.textContent = result.message;
+        
+        // Ensure progress bar is at 100% when command finishes
+        const progressBar = document.getElementById('update-progress-bar');
+        const progressText = document.getElementById('update-progress-text');
+        if (progressBar) progressBar.style.width = '100%';
+        if (progressText) progressText.textContent = 'اكتمل 100%';
         
         if (result.log && result.log.trim() !== '') {
             logEl.textContent = result.log;
@@ -188,6 +230,8 @@ async function handleAppUpdate() {
 
         if (result.needsRestart) {
             footerEl.classList.remove('hidden');
+            statusEl.textContent = 'تم سحب التحديثات. جاري إعادة تشغيل الخادم...';
+            if (progressText) progressText.textContent = '';
             checkServerStatus();
         } else {
             // No restart needed, show close button
@@ -263,7 +307,6 @@ async function fetchAndRenderNotifications() {
         list.innerHTML = `
             <div class="notification-header">
                 <h4>الإشعارات</h4>
-                <div id="notification-status-indicator" class="status-indicator disconnected" title="انقطع الاتصال اللحظي، جاري إعادة المحاولة..."></div>
                 <button id="refresh-notifications-btn" class="icon-btn" title="تحديث"><i class="fas fa-sync-alt"></i></button>
             </div>
             <div id="notification-items-container"></div>
@@ -544,6 +587,22 @@ function showChangelogModal(changelog) {
 
 export function initApp() {
     handleTheme();
+
+    // --- Move Notification Status Indicator to Navbar ---
+    const notificationsBtn = document.getElementById('notifications-btn');
+    if (notificationsBtn && !document.getElementById('notification-status-indicator')) {
+        const indicator = document.createElement('div');
+        indicator.id = 'notification-status-indicator';
+        indicator.className = 'status-indicator disconnected';
+        indicator.title = 'انقطع الاتصال اللحظي، جاري إعادة المحاولة...';
+        
+        const wrapper = document.createElement('div');
+        wrapper.className = 'notification-btn-wrapper';
+        notificationsBtn.parentNode.insertBefore(wrapper, notificationsBtn);
+        wrapper.appendChild(notificationsBtn);
+        wrapper.appendChild(indicator);
+    }
+
     handleImagePreviewModal();
     initIpWidget();
 
