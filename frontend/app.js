@@ -145,10 +145,15 @@ async function handleAppUpdate() {
     const closeBtn = document.getElementById('close-update-overlay-btn');
 
     try {
-        const result = await (await fetch('/api/system/update', { method: 'POST' })).json();
+        const result = await fetchWithAuth('/api/system/update', { method: 'POST' });
 
         statusEl.textContent = result.message;
-        logEl.textContent = result.log || 'لا يوجد سجلات لعرضها.';
+        
+        if (result.log && result.log.trim() !== '') {
+            logEl.textContent = result.log;
+        } else {
+            logEl.textContent = 'لم يتم إرجاع أي سجلات من السيرفر. قد يكون التحديث قد تم بصمت أو أن النظام محدث بالفعل.';
+        }
 
         if (result.needsRestart) {
             footerEl.classList.remove('hidden');
