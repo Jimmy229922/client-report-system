@@ -1087,7 +1087,7 @@ app.put('/api/users/:id/avatar', verifyToken, verifyAdmin, upload.single('avatar
 // Endpoint for self-updating the application
 app.post('/api/system/update', verifyToken, (req, res) => {
     const projectRoot = path.join(__dirname, '..');
-    const command = 'git reset --hard HEAD && git pull && cd backend && npm install';
+    const command = 'git pull && cd backend && npm install';
     console.log(`[Update] Executing command: ${command}`);
 
     exec(command, { cwd: projectRoot }, async (err, stdout, stderr) => {

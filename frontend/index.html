@@ -124,18 +124,15 @@
 
     <!-- Generic Confirmation Modal -->
     <div id="confirm-modal" class="modal">
-        <div class="modal-dialog" style="max-width: 400px; text-align: center;">
-            <div class="modal-header" style="justify-content: center; border-bottom: none; padding-bottom: 0;">
-                <h3 id="confirm-modal-title" style="margin-bottom: 0; font-size: 1.5rem;"></h3>
-                <!-- Close button removed for a cleaner, centered design -->
+        <div id="confirm-modal-dialog" class="modal-dialog">
+            <div class="modal-body">
+                <div id="confirm-modal-icon"></div>
+                <h3 id="confirm-modal-title"></h3>
+                <p id="confirm-modal-text"></p>
             </div>
-            <div class="modal-body" style="padding-top: 1rem;">
-                <div id="confirm-modal-icon" style="font-size: 3rem; margin-bottom: 1rem;"></div>
-                <p id="confirm-modal-text" style="font-size: 1.1rem; color: var(--text-color-secondary);"></p>
-            </div>
-            <div class="modal-footer" style="border-top: none; justify-content: center; gap: 1rem;">
-                <button id="confirm-modal-cancel-btn" class="cancel-btn">إلغاء</button>
-                <button id="confirm-modal-ok-btn" class="submit-btn"></button>
+            <div class="modal-footer">
+                <button id="confirm-modal-cancel-btn"></button>
+                <button id="confirm-modal-ok-btn"></button>
             </div>
         </div>
     </div>
@@ -214,6 +211,22 @@
                 </div>
                 <button type="submit" class="submit-btn">حفظ التعليمة</button>
             </form>
+        </div>
+    </div>
+
+    <!-- Changelog Modal -->
+    <div id="changelog-modal" class="modal">
+        <div class="modal-dialog" style="max-width: 600px;">
+            <div class="modal-header">
+                <h2 id="changelog-title" class="page-title" style="margin-bottom: 0;">ما الجديد في الإصدار؟</h2>
+                <button class="close-btn" id="changelog-modal-close-btn">&times;</button>
+            </div>
+            <div id="changelog-body" class="modal-body" style="max-height: 60vh; overflow-y: auto; padding-top: 0;">
+                <!-- Changelog content will be injected here -->
+            </div>
+            <div class="modal-footer" style="justify-content: flex-end; border-top: 1px solid var(--border-color);">
+                <button id="changelog-modal-ok-btn" class="submit-btn" style="width: auto; padding: 0.5rem 1.5rem;">فهمت</button>
+            </div>
         </div>
     </div>
 

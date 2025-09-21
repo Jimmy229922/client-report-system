@@ -166,8 +166,8 @@ async function handleAppUpdate() {
     } catch (error) {
         statusEl.textContent = 'حدث خطأ أثناء التحديث!';
         statusEl.style.color = 'var(--danger-color)';
-        // The 'log' property is now inside error.data thanks to the improved fetchWithAuth
-        logEl.textContent = (error.data && error.data.log) ? error.data.log : (error.message || 'خطأ غير معروف.');
+        // The 'log' property is added to the error object in the backend for failed exec
+        logEl.textContent = error.log || error.message || 'خطأ غير معروف.';
         closeBtn.classList.remove('hidden');
         console.error('Update failed:', error);
     }
@@ -331,8 +331,8 @@ async function checkVersionAndShowChangelog() {
 
         const lastSeenVersion = localStorage.getItem('appVersion');
 
-        // Show changelog if the version is new. This will also show on the very first visit.
-        if (currentVersion && currentVersion !== lastSeenVersion) {
+        // Show changelog if the version is new and it's not the very first visit
+        if (currentVersion && currentVersion !== lastSeenVersion && lastSeenVersion !== null) {
             const changelogRes = await fetch('/api/changelog/latest');
             if (!changelogRes.ok) return;
             const changelogData = await changelogRes.json();
@@ -341,9 +341,11 @@ async function checkVersionAndShowChangelog() {
             if (changelogData.version === currentVersion) {
                 showChangelogModal(changelogData);
             }
-            
-            // After the check, always update the version in storage.
-            localStorage.setItem('appVersion', currentVersion);
+        }
+        
+        // Always update the version in storage if it's different or not set
+        if (currentVersion && currentVersion !== lastSeenVersion) {
+             localStorage.setItem('appVersion', currentVersion);
         }
 
     } catch (error) {

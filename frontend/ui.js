@@ -95,6 +95,7 @@ export function showConfirmModal(title, text, options = {}) {
         iconColor = 'var(--accent-color)', // Default color
         confirmClass = 'submit-btn',
         confirmText = 'موافق',
+        cancelClass = 'cancel-btn',
         cancelText = 'إلغاء'
     } = options;
 
@@ -120,6 +121,7 @@ export function showConfirmModal(title, text, options = {}) {
 
         okBtn.className = confirmClass;
         okBtn.textContent = confirmText;
+        cancelBtn.className = cancelClass;
         cancelBtn.textContent = cancelText;
 
         const closeModal = (result) => {
