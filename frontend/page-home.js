@@ -73,11 +73,11 @@ function updateSystemHealth() {
 
     fetchWithAuth('/api/health')
         .then(result => {
-            if (result.status === 'ok') renderSystemHealth(true);
-            else renderSystemHealth(false);
+            renderSystemHealth(true, result.services || { api: 'online', database: 'unknown' });
         })
-        .catch(() => {
-            renderSystemHealth(false);
+        .catch((error) => {
+            const services = error.data?.services || { api: 'offline', database: 'unknown' };
+            renderSystemHealth(false, services);
         });
 }
 
@@ -179,18 +179,38 @@ function renderTopContributor(contributorData) {
     container.innerHTML = '<p style="text-align: center; width: 100%;">لا يوجد مساهمين بعد.</p>';
 }
 
-function renderSystemHealth(isOverallHealthy) {
+function renderSystemHealth(isOverallHealthy, services = {}) {
     const container = document.getElementById('system-health-container');
     if (!container) return;
 
     const timeString = new Date().toLocaleTimeString('ar-EG');
-    const overallStatusText = isOverallHealthy ? 'النظام يعمل بشكل طبيعي' : 'توجد مشكلة في الاتصال';
+
+    const renderServiceStatus = (serviceName, status) => {
+        const isOnline = status === 'online';
+        const icon = isOnline ? 'fa-check-circle' : 'fa-times-circle';
+        const colorClass = isOnline ? 'healthy' : 'unhealthy';
+        const text = isOnline ? 'متصل' : 'غير متصل';
+        return `
+            <div class="health-service-item">
+                <span>${serviceName}</span>
+                <span class="health-service-status ${colorClass}">
+                    <i class="fas ${icon}"></i> ${text}
+                </span>
+            </div>
+        `;
+    };
+
+    const overallStatusText = isOverallHealthy ? 'جميع الأنظمة تعمل' : 'توجد مشكلة في النظام';
     const overallStatusClass = isOverallHealthy ? 'healthy' : 'unhealthy';
 
     container.innerHTML = `
         <div class="health-main-status ${overallStatusClass}">
             <div class="status-light"></div>
             <span>${overallStatusText}</span>
+        </div>
+        <div class="health-services-list">
+            ${renderServiceStatus('خدمة API', services.api || 'offline')}
+            ${renderServiceStatus('قاعدة البيانات', services.database || 'offline')}
         </div>
         <div class="health-last-checked">
             <i class="fas fa-history"></i> آخر فحص: ${timeString}
@@ -404,11 +424,15 @@ export function renderHomePage() {
                     <div id="system-health-container" class="system-health-container">
                         <!-- Content will be rendered by renderSystemHealth -->
                     </div>
+                    <div class="system-health-footer">
+                        <span id="app-version-health" class="app-version-badge"></span>
+                    </div>
                 </div>
             </div>
         </div>
     `;
     fetchAndRenderHomePageData();
+    loadAndDisplayVersion();
 
     // Clear any existing interval before setting a new one
     if (healthCheckInterval) clearInterval(healthCheckInterval);
