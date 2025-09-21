@@ -110,6 +110,10 @@ function getFormFields(reportType) {
                     <label for="bonus-banned">محظور</label>
                 </div>
             </div>
+            <div class="form-group">
+                <label for="additional-notes">ملاحظات إضافية (اختياري)</label>
+                <textarea id="additional-notes" name="additional-notes" rows="3" placeholder="اكتب ملاحظاتك الإضافية هنا..."></textarea>
+            </div>
             ${imageUploadField}
             ${formActions}
         `;
@@ -184,6 +188,7 @@ function getReportText(reportType, form) {
         const profitStatus = floatingProfits.includes('-') ? 'سالب' : 'موجب';
         const ipMatchStatus = form.querySelector('input[name="ip-match-status"]:checked').value;
         const bonusStatus = form.querySelector('input[name="bonus-status"]:checked').value;
+        const additionalNotes = form.querySelector('#additional-notes')?.value.trim();
 
         if (marginPercentage && !marginPercentage.endsWith('%')) marginPercentage += '%';
         if (floatingProfits && !floatingProfits.startsWith('$') && !floatingProfits.startsWith('-$')) {
@@ -198,6 +203,10 @@ function getReportText(reportType, form) {
              + `الأرباح للصفقات العائمة: ${floatingProfits || 'NA'}\n\n`
              + `الأرباح للصفقات العائمة (${profitStatus})\n`
              + `الـ IP الأخير (${ipMatchStatus}) لبلد التسجيل، العميل ${bonusStatus}`;
+
+        if (additionalNotes) {
+            body += `\nملاحظات إضافية: ${additionalNotes}`;
+        }
     
     } else { // General and Account Transfer
         const transferSourceSelect = form.querySelector('#transfer-source-select');
