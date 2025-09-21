@@ -581,10 +581,16 @@ app.get('/api/stats/top-contributor', verifyToken, async (req, res) => {
 });
 
 // Health check endpoint for the update process
-
-
-app.get('/api/health', (req, res) => {
-    res.status(200).json({ status: 'ok' });
+app.get('/api/health', async (req, res) => {
+    try {
+        // A simple query to check DB connection
+        const { error } = await supabase.from('users').select('id', { count: 'exact', head: true });
+        if (error) throw error;
+        res.status(200).json({ status: 'ok', services: { api: 'online', database: 'online' } });
+    } catch (dbError) {
+        console.error("[Health Check] Database connection error:", dbError.message);
+        res.status(503).json({ status: 'error', services: { api: 'online', database: 'offline' }, error: dbError.message });
+    }
 });
 
 // Endpoint to get the latest changelog entry

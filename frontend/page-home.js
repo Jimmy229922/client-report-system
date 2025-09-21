@@ -130,10 +130,12 @@ function renderTopContributor(contributorData) {
             : `<div class="top-contributor-avatar-placeholder"><i class="fas fa-user"></i></div>`;
 
         container.innerHTML = `
-            ${avatarHtml}
-            <div class="top-contributor-info">
-                <span class="top-contributor-name">${contributorData.username}</span>
-                <span class="top-contributor-count">${contributorData.report_count} تقارير</span>
+            <div class="self-stats-container">
+                ${avatarHtml}
+                <div class="top-contributor-info">
+                    <span class="top-contributor-name">${contributorData.username}</span>
+                    <span class="top-contributor-count">${contributorData.report_count} تقارير</span>
+                </div>
             </div>
         `;
         return;
@@ -147,25 +149,27 @@ function renderTopContributor(contributorData) {
             return;
         }
 
-        const rankIcons = [
-            '<i class="fas fa-medal rank-gold"></i>',
-            '<i class="fas fa-medal rank-silver"></i>',
-            '<i class="fas fa-medal rank-bronze"></i>'
-        ];
+        const rankTexts = ['المركز الأول', 'المركز الثاني', 'المركز الثالث'];
+        const rankColors = ['#FFD700', '#C0C0C0', '#CD7F32']; // Gold, Silver, Bronze
 
         container.innerHTML = `
-            <ul class="top-contributors-list">
+            <div class="top-contributors-grid">
                 ${contributorData.map((user, index) => `
-                    <li class="top-contributor-list-item">
-                        <div class="contributor-rank">${rankIcons[index] || `<span>${index + 1}</span>`}</div>
-                        ${user.avatar_url ? `<img src="${user.avatar_url}" alt="${user.username}" class="top-contributor-avatar small">` : `<div class="top-contributor-avatar-placeholder small"><i class="fas fa-user"></i></div>`}
-                        <div class="top-contributor-info">
-                            <span class="top-contributor-name">${user.username}</span>
-                            <span class="top-contributor-count">${user.report_count} تقارير</span>
+                    <div class="contributor-profile-card rank-${index + 1}">
+                        <div class="contributor-profile-rank" style="color: ${rankColors[index]};">
+                            <i class="fas fa-medal"></i>
+                            <span>${rankTexts[index]}</span>
                         </div>
-                    </li>
+                        <div class="contributor-profile-avatar-wrapper">
+                            ${user.avatar_url ? `<img src="${user.avatar_url}" alt="${user.username}" class="contributor-profile-avatar">` : `<div class="contributor-profile-avatar-placeholder"><i class="fas fa-user"></i></div>`}
+                        </div>
+                        <div class="contributor-profile-info">
+                            <strong class="contributor-profile-name">${user.username}</strong>
+                            <span class="contributor-profile-count">${user.report_count} تقارير</span>
+                        </div>
+                    </div>
                 `).join('')}
-            </ul>
+            </div>
         `;
         return;
     }
@@ -175,25 +179,43 @@ function renderTopContributor(contributorData) {
     container.innerHTML = '<p style="text-align: center; width: 100%;">لا يوجد مساهمين بعد.</p>';
 }
 
-function renderSystemHealth(isHealthy) {
+function renderSystemHealth(isOverallHealthy, services = {}) {
     const container = document.getElementById('system-health-container');
     if (!container) return;
 
     const timeString = new Date().toLocaleTimeString('ar-EG');
-    const statusDiv = document.getElementById('system-health-status');
 
-    if (isHealthy) {
-        statusDiv.innerHTML = `
-            <i class="fas fa-check-circle" style="color: var(--success-color);"></i>
-            <span>النظام يعمل بشكل طبيعي</span>
+    const renderServiceStatus = (serviceName, status) => {
+        const isOnline = status === 'online';
+        const icon = isOnline ? 'fa-check-circle' : 'fa-times-circle';
+        const colorClass = isOnline ? 'healthy' : 'unhealthy';
+        const text = isOnline ? 'متصل' : 'غير متصل';
+        return `
+            <div class="health-service-item">
+                <span>${serviceName}</span>
+                <span class="health-service-status ${colorClass}">
+                    <i class="fas ${icon}"></i> ${text}
+                </span>
+            </div>
         `;
-    } else {
-        statusDiv.innerHTML = `
-            <i class="fas fa-exclamation-triangle" style="color: var(--danger-color);"></i>
-            <span>لا يمكن الوصول للسيرفر</span>
-        `;
-    }
-    statusDiv.innerHTML += `<div class="health-last-checked">آخر فحص: ${timeString}</div>`;
+    };
+
+    const overallStatusText = isOverallHealthy ? 'جميع الأنظمة تعمل' : 'توجد مشكلة في النظام';
+    const overallStatusClass = isOverallHealthy ? 'healthy' : 'unhealthy';
+
+    container.innerHTML = `
+        <div class="health-main-status ${overallStatusClass}">
+            <div class="status-light"></div>
+            <span>${overallStatusText}</span>
+        </div>
+        <div class="health-services-list">
+            ${renderServiceStatus('خدمة API', services.api || 'offline')}
+            ${renderServiceStatus('قاعدة البيانات', services.database || 'offline')}
+        </div>
+        <div class="health-last-checked">
+            <i class="fas fa-history"></i> آخر فحص: ${timeString}
+        </div>
+    `;
 }
 
 function renderStatCards(stats) {
@@ -400,7 +422,9 @@ export function renderHomePage() {
                 <div class="sidebar-card">
                     <h3><i class="fas fa-heart-pulse"></i> حالة النظام</h3>
                     <div id="system-health-container" class="system-health-container">
-                        <div id="system-health-status" class="health-status-wrapper"></div>
+                        <!-- Content will be rendered by renderSystemHealth -->
+                    </div>
+                    <div class="system-health-footer">
                         <span id="app-version-health" class="app-version-badge"></span>
                     </div>
                 </div>
