@@ -1,78 +1,123 @@
 import { fetchWithAuth } from './api.js';
-import { showToast } from './ui.js';
+import { showToast, showConfirmModal, updateNavbarUser } from './ui.js';
 
 let allUsers = []; // Store the fetched users
 let currentSort = { column: 'id', direction: 'asc' };
 
-function createUserRow(user) {
-    const avatarHtml = user.avatar_url
-        ? `<img src="${user.avatar_url}" class="navbar-avatar" style="margin-left: 10px;">`
-        : `<span class="profile-avatar-placeholder" style="width: 32px; height: 32px; font-size: 1rem; margin-left: 10px;">
-               <i class="fas fa-user"></i>
-           </span>`;
-    
-    const isAdmin = user.id === 1 || user.email === 'admin@inzo.com';
-    const adminBadge = isAdmin ? `<span class="admin-badge">مسؤول</span>` : '';
-    const deleteButton = !isAdmin ? `<button class="archive-btn delete" data-action="delete" data-id="${user.id}" title="حذف المستخدم"><i class="fas fa-trash"></i></button>` : '';
+function createUserCard(user) {
+    const avatarHtml = user.avatar_url ?
+        `<img src="${user.avatar_url}" alt="${user.username}" class="user-card-avatar">` :
+        `<div class="user-card-avatar-placeholder"><i class="fas fa-user"></i></div>`;
+
+    const isAdmin = user.id === 1;
+
+    const roleBadge = `<span class="badge role-${user.role}">${user.role === 'admin' ? 'مسؤول' : 'محرر'}</span>`;
+
+    const statusIndicator = user.is_active ?
+        `<span class="badge status-active"><i class="fas fa-circle"></i> نشط</span>` :
+        `<span class="badge status-inactive"><i class="fas fa-circle"></i> معطل</span>`;
 
     return `
-    <tr id="user-row-${user.id}" class="${isAdmin ? 'admin-row' : ''}">
-        <td data-field="username" style="display: flex; align-items: center;">${avatarHtml} ${user.username} ${adminBadge}</td>
-        <td data-field="email" class="email-cell">
-            <span>${user.email}</span>
-            <button class="archive-btn copy-email" data-email="${user.email}" title="نسخ البريد الإلكتروني"><i class="fas fa-copy"></i></button>
-        </td>
-        <td data-field="created_at">${new Date(user.created_at).toLocaleDateString('ar-EG')}</td>
-        <td class="user-actions">
-            <button class="archive-btn" data-action="edit" data-id="${user.id}" title="تعديل المستخدم"><i class="fas fa-edit"></i></button>
-            ${deleteButton}
-        </td>
-    </tr>
+    <div class="user-card ${!user.is_active ? 'inactive' : ''}" id="user-card-${user.id}">
+        <div class="user-card-main">
+            ${avatarHtml}
+            <div class="user-card-details">
+                <strong class="user-name">${user.username}</strong>
+                <span class="user-email">${user.email}</span>
+            </div>
+        </div>
+        <div class="user-card-meta">
+            <div class="meta-item" title="الدور">${roleBadge}</div>
+            <div class="meta-item" title="الحالة">${statusIndicator}</div>
+            <div class="user-card-actions">
+                ${!isAdmin ? `
+                    <label class="switch" title="${user.is_active ? 'تعطيل' : 'تفعيل'}">
+                        <input type="checkbox" class="status-toggle" data-id="${user.id}" ${user.is_active ? 'checked' : ''}>
+                        <span class="slider round"></span>
+                    </label>
+                ` : ''}
+                <button class="action-btn" data-action="edit" data-id="${user.id}" title="تعديل"><i class="fas fa-pen"></i></button>
+                ${!isAdmin ? 
+                    `<button class="action-btn danger" data-action="delete" data-id="${user.id}" title="حذف"><i class="fas fa-trash-alt"></i></button>` :
+                    `<button class="action-btn disabled" title="لا يمكن حذف المسؤول" disabled><i class="fas fa-trash-alt"></i></button>`
+                }
+            </div>
+        </div>
+        <div class="user-card-footer">
+            <span class="creation-date">انضم في: ${new Date(user.created_at).toLocaleDateString('ar-EG')}</span>
+        </div>
+    </div>
     `;
 }
 
-function renderUserTable() {
-    const tableBody = document.getElementById('users-table-body');
-    const tableHead = document.querySelector('#users-table thead tr');
-    if (!tableBody || !tableHead) return;
+function renderUserStats() {
+    const statsBar = document.getElementById('user-stats-bar');
+    if (!statsBar) return;
 
-    // Sort the users array
-    allUsers.sort((a, b) => {
-        const valA = a[currentSort.column];
-        const valB = b[currentSort.column];
-        const comparison = valA > valB ? 1 : (valA < valB ? -1 : 0);
-        return currentSort.direction === 'desc' ? comparison * -1 : comparison;
-    });
+    const totalUsers = allUsers.length;
+    const activeUsers = allUsers.filter(u => u.is_active).length;
+    const adminCount = allUsers.filter(u => u.role === 'admin').length;
+    const editorCount = allUsers.filter(u => u.role === 'editor').length;
+
+    statsBar.innerHTML = `
+        <div class="stat-item">
+            <i class="fas fa-users"></i>
+            <div>
+                <span>إجمالي المستخدمين</span>
+                <strong>${totalUsers}</strong>
+            </div>
+        </div>
+        <div class="stat-item">
+            <i class="fas fa-user-check"></i>
+            <div>
+                <span>مستخدمين نشطين</span>
+                <strong>${activeUsers}</strong>
+            </div>
+        </div>
+        <div class="stat-item">
+            <i class="fas fa-user-shield"></i>
+            <div>
+                <span>المسؤولين</span>
+                <strong>${adminCount}</strong>
+            </div>
+        </div>
+        <div class="stat-item">
+            <i class="fas fa-user-edit"></i>
+            <div>
+                <span>المحررين</span>
+                <strong>${editorCount}</strong>
+            </div>
+        </div>
+    `;
+}
+
+function renderUserCards() {
+    const cardsGrid = document.getElementById('user-cards-grid');
+    if (!cardsGrid) return;
+
+    // Render stats based on the current `allUsers` array
+    renderUserStats();
 
     if (allUsers.length > 0) {
-        tableBody.innerHTML = allUsers.map(user => createUserRow(user)).join('');
+        cardsGrid.innerHTML = allUsers.map(user => createUserCard(user)).join('');
     } else {
-        tableBody.innerHTML = `<tr><td colspan="${tableHead.children.length}" style="text-align:center;">لا يوجد مستخدمين.</td></tr>`;
+        cardsGrid.innerHTML = `<p class="empty-state">لا يوجد مستخدمين لعرضهم. حاول إضافة مستخدم جديد.</p>`;
     }
-
-    // Update sort indicators on headers
-    document.querySelectorAll('#users-table th[data-sort]').forEach(th => {
-        th.classList.remove('sort-asc', 'sort-desc');
-        if (th.dataset.sort === currentSort.column) {
-            th.classList.add(currentSort.direction === 'asc' ? 'sort-asc' : 'sort-desc');
-        }
-    });
 }
 
 async function fetchAndRenderUsers(searchTerm = '') {
-    const tableBody = document.getElementById('users-table-body');
-    const tableHead = document.querySelector('#users-table thead tr');
-    if (!tableBody || !tableHead) return;
-    tableBody.innerHTML = `<tr><td colspan="${tableHead.children.length}" style="text-align:center;"><div class="spinner"></div></td></tr>`;
+    const cardsGrid = document.getElementById('user-cards-grid');
+    if (!cardsGrid) return;
+    cardsGrid.innerHTML = `<div class="spinner-container"><div class="spinner"></div></div>`;
 
     try {
         const result = await fetchWithAuth(`/api/users?search=${encodeURIComponent(searchTerm)}`);
         allUsers = result.data || []; // Store users
         currentSort = { column: 'id', direction: 'asc' }; // Reset sort on new fetch/search
-        renderUserTable();
+        renderUserCards();
     } catch (error) {
         showToast(error.message, true);
-        tableBody.innerHTML = `<tr><td colspan="${tableHead.children.length}" style="text-align:center;">${error.message}</td></tr>`;
+        cardsGrid.innerHTML = `<p class="empty-state error">${error.message}</p>`;
     }
 }
 
@@ -113,257 +158,68 @@ function updatePasswordStrength(password, meterElement, textElement) {
     }
 }
 
-function handleAddUser() {
-    const form = document.getElementById('add-user-form');
-    form.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const usernameInput = document.getElementById('new-username');
-        const emailInput = document.getElementById('new-email');
-        const passwordInput = document.getElementById('new-password');
-        const username = usernameInput.value;
-        const email = emailInput.value;
-        const password = passwordInput.value;
-
-        try {
-            const result = await fetchWithAuth('/api/users', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ username, email, password })
-            });
-
-            showToast('تمت إضافة المستخدم بنجاح.');
-            form.reset();
-
-            // Optimistic UI update
-            const newUser = result.data;
-            allUsers.push(newUser);
-            const tableBody = document.getElementById('users-table-body');
-            const noUsersRow = tableBody.querySelector('td[colspan]');
-            if (noUsersRow) {
-                noUsersRow.parentElement.remove();
-            }
-            tableBody.insertAdjacentHTML('beforeend', createUserRow(newUser));
-        } catch (error) {
-            showToast(error.message, true);
-        }
-    });
-}
-
-function handleUserActions() {
-    const table = document.getElementById('users-table');
-    const modal = document.getElementById('user-edit-modal');
-    const form = document.getElementById('user-edit-form');
-    const closeBtn = document.getElementById('user-edit-modal-close-btn');
-    const userIdInput = document.getElementById('edit-user-id');
-    const usernameInput = document.getElementById('edit-username');
-    const emailInput = document.getElementById('edit-email');
-    const passwordInput = document.getElementById('edit-password');
-
-    const avatarContainer = document.getElementById('edit-user-avatar-container');
-    const avatarUploadInput = document.createElement('input');
-    avatarUploadInput.type = 'file';
-    avatarUploadInput.id = 'edit-avatar-upload-input';
-    avatarUploadInput.accept = 'image/png, image/jpeg, image/webp';
-    avatarUploadInput.className = 'hidden';
-    // Function to open the modal for editing
-    const openEditModal = (user) => {
-        userIdInput.value = user.id;
-        usernameInput.value = user.username;
-        emailInput.value = user.email;
-        passwordInput.value = ''; // Clear password field
-        
-        // Render avatar
-        avatarContainer.innerHTML = `
-            ${user.avatar_url 
-                ? `<img src="${user.avatar_url}" alt="الصورة الشخصية" class="profile-avatar">`
-                : `<div class="profile-avatar-placeholder"><i class="fas fa-user"></i></div>`
-            }
-            <label for="edit-avatar-upload-input" class="avatar-edit-overlay">
-                <i class="fas fa-camera"></i>
-            </label>
-        `;
-        avatarContainer.appendChild(avatarUploadInput);
-        // Admin (id:1) username cannot be changed
-        usernameInput.disabled = (user.id == 1 || user.email === 'admin@inzo.com');
-
-        modal.classList.add('show');
-    };
-
-    // Function to close the modal
-    const closeEditModal = () => {
-        modal.classList.remove('show');
-        form.reset();
-    };
-
-    closeBtn.onclick = closeEditModal;
-    modal.addEventListener('click', (e) => {
-        if (e.target === modal) {
-            closeEditModal();
-        }
-    });
-
-    // Handle clicks on Edit/Delete buttons in the table
-    table.addEventListener('click', async (e) => {
-        const button = e.target.closest('button');
-        if (!button) return;
-
-        const action = button.dataset.action;
-        const userId = button.dataset.id;
-        const row = button.closest('tr');
-
-        if (action === 'edit') {
-            const user = allUsers.find(u => u.id == userId);
-            if (user) {
-                openEditModal(user);
-            } else {
-                showToast('لم يتم العثور على المستخدم.', true);
-            }
-        } else if (action === 'delete') {
-            if (confirm('هل أنت متأكد من حذف هذا المستخدم؟ لا يمكن التراجع عن هذا الإجراء.')) {
-                try {
-                    await fetchWithAuth(`/api/users/${userId}`, { method: 'DELETE' });
-                    showToast('تم حذف المستخدم بنجاح.');
-                    // Remove the user from the local cache
-                    allUsers = allUsers.filter(u => u.id != userId);
-                    // Animate before removing
-                    row.classList.add('row-fade-out');
-                    setTimeout(() => {
-                        row.remove();
-                    }, 400); // Match the transition duration in CSS
-                } catch (error) {
-                    showToast(error.message, true);
-                }
-            }
-        } else if (button.classList.contains('copy-email')) {
-            const email = button.dataset.email;
-            navigator.clipboard.writeText(email).then(() => {
-                showToast('تم نسخ البريد الإلكتروني.');
-            }).catch(err => {
-                showToast('فشل نسخ البريد الإلكتروني.', true);
-            });
-        }
-    });
-
-    // Handle avatar upload within the modal
-    avatarUploadInput.addEventListener('change', async () => {
-        const file = avatarUploadInput.files[0];
-        const userId = userIdInput.value;
-        if (!file || !userId) return;
-
-        const formData = new FormData();
-        formData.append('avatar', file);
-
-        showToast('جاري رفع الصورة...');
-
-        try {
-            await fetchWithAuth(`/api/users/${userId}/avatar`, {
-                method: 'PUT',
-                body: formData,
-            });
-            showToast('تم تحديث الصورة بنجاح!');
-            closeEditModal();
-            fetchAndRenderUsers(); // Refresh the list
-        } catch (error) {
-            showToast(error.message, true);
-        }
-    });
-
-    // Handle form submission for editing a user
-    form.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const userId = userIdInput.value;
-        const payload = {
-            username: usernameInput.value,
-            email: emailInput.value,
-        };
-        
-        // Only include password if it's not empty
-        if (passwordInput.value) {
-            payload.password = passwordInput.value;
-        }
-
-        try {
-            const result = await fetchWithAuth(`/api/users/${userId}`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            });
-
-            showToast('تم تحديث بيانات المستخدم بنجاح.');
-            closeEditModal();
-            
-            // --- Optimistic UI Update ---
-            // Update the specific row instead of reloading the whole table
-            const updatedUser = result.user;
-            const userRow = document.getElementById(`user-row-${updatedUser.id}`);
-            if (userRow) {
-                userRow.querySelector('[data-field="username"]').innerHTML = `${userRow.querySelector('img, span.profile-avatar-placeholder').outerHTML} ${updatedUser.username} ${userRow.querySelector('.admin-badge')?.outerHTML || ''}`;
-                userRow.querySelector('[data-field="email"] span').textContent = updatedUser.email;
-            }
-            // Update the user in the local cache
-            const userIndex = allUsers.findIndex(u => u.id == updatedUser.id);
-            if (userIndex > -1) {
-                allUsers[userIndex] = updatedUser;
-            }
-        } catch (error) {
-            showToast(error.message, true);
-        }
-    });
-}
+/**
+ * This flag ensures that persistent listeners (for modals, etc.) are only attached once.
+ */
+let listenersInitialized = false;
 
 export function renderUsersPage() {
+    console.log('[Debug] Rendering Users Page...');
     const mainContent = document.getElementById('main-content');
     mainContent.innerHTML = `
-        <h1 class="page-title">إدارة المستخدمين</h1>
-        <div class="user-management-layout">
-            <div class="user-list-container">
-                <div class="user-list-header">
-                    <h2>قائمة المستخدمين</h2>
-                    <button id="delete-all-users-btn" class="delete-all-btn"><i class="fas fa-users-slash"></i> حذف جميع الموظفين</button>
-                </div>
-                <div class="search-container">
-                    <i class="fas fa-search"></i>
-                    <input type="text" id="users-search" class="search-input" placeholder="ابحث عن مستخدم بالاسم أو البريد الإلكتروني...">
-                </div>
-                <table id="users-table">
-                    <thead><tr>
-                        <th data-sort="username">اسم المستخدم</th>
-                        <th data-sort="email">البريد الإلكتروني</th>
-                        <th data-sort="created_at">تاريخ الإنشاء</th>
-                        <th>الإجراءات</th>
-                    </tr></thead>
-                    <tbody id="users-table-body"></tbody>
-                </table>
+        <div class="page-header">
+            <h1 class="page-title">إدارة الموظفين</h1>
+        </div>
+
+        <div id="user-stats-bar" class="stats-bar">
+            <!-- Stats will be rendered here by JS -->
+        </div>
+
+        <div class="add-user-container">
+            <div class="add-user-header" id="add-user-header">
+                <h3><i class="fas fa-user-plus"></i> إضافة موظف جديد</h3>
+                <button id="toggle-add-user-form-btn" class="icon-btn"><i class="fas fa-chevron-down"></i></button>
             </div>
-            <div class="add-user-container form-container">
-                <h2>إضافة مستخدم جديد</h2>
-                <form id="add-user-form">
-                    <div class="form-group">
-                        <label for="new-username">اسم المستخدم (للعرض)</label>
-                        <input type="text" id="new-username" name="new-username" required>
+            <div id="add-user-form-wrapper" class="collapsible-content">
+                <form id="add-user-form" class="form-container" style="padding: 1.5rem; border-top: 1px solid var(--border-color);">
+                    <div class="form-grid">
+                        <div class="form-group"><label for="add-username">اسم المستخدم</label><input type="text" id="add-username" name="username" required></div>
+                        <div class="form-group"><label for="add-email">البريد الإلكتروني</label><input type="email" id="add-email" name="email" required></div>
+                        <div class="form-group"><label for="add-password">كلمة المرور</label><input type="password" id="add-password" name="password" required></div>
+                        <div class="form-group"><label for="add-role">الدور</label><select id="add-role" name="role" required><option value="editor" selected>محرر</option><option value="admin">مسؤول</option></select></div>
+                        <div class="form-group"><label for="add-avatar">الصورة الشخصية (اختياري)</label><input type="file" id="add-avatar" name="avatar" accept="image/*"></div>
                     </div>
-                    <div class="form-group">
-                        <label for="new-email">البريد الإلكتروني (للدخول)</label>
-                        <input type="email" id="new-email" name="new-email" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="new-password">كلمة المرور</label>
-                        <input type="password" id="new-password" name="new-password" required>
+                    <div class="password-strength-indicator">
                         <div class="password-strength-meter"><div class="strength-bar"></div><div class="strength-bar"></div><div class="strength-bar"></div><div class="strength-bar"></div></div>
-                        <small id="new-password-strength-text" class="strength-text"></small>
+                        <small id="add-password-strength-text" class="strength-text"></small>
                     </div>
-                    <button type="submit" class="submit-btn">إضافة مستخدم</button>
+                    <button type="submit" class="submit-btn" style="width: auto; padding: 0.6rem 1.5rem;">إضافة الموظف</button>
                 </form>
+            </div>
+        </div>
+
+        <div class="user-list-container">
+            <div class="list-header">
+                <h2><i class="fas fa-users"></i> قائمة الموظفين</h2>
+                <div class="list-actions">
+                    <div class="search-container">
+                        <i class="fas fa-search"></i>
+                        <input type="text" id="users-search" class="search-input" placeholder="بحث...">
+                    </div>
+                    <button id="delete-all-users-btn" class="delete-all-btn" title="حذف جميع الموظفين"><i class="fas fa-users-slash"></i></button>
+                </div>
+            </div>
+            <div id="user-cards-grid" class="user-cards-grid">
+                <!-- User cards will be rendered here -->
             </div>
         </div>
     `;
 
     fetchAndRenderUsers();
-    handleAddUser();
-    handleUserActions();
+    initializePageListeners();
 
-    // Add search logic
-    const searchInput = document.getElementById('users-search');
+    // --- Delegated Listeners for dynamic content ---
+    const searchInput = document.getElementById('users-search'); // This is inside mainContent
     let debounceTimer;
     searchInput.addEventListener('input', (e) => {
         clearTimeout(debounceTimer);
@@ -372,11 +228,23 @@ export function renderUsersPage() {
         }, 500);
     });
 
+    const cardsGrid = document.getElementById('user-cards-grid');
+    cardsGrid.addEventListener('click', handleCardClick);
+    cardsGrid.addEventListener('change', handleStatusToggle);
+
     // Add Delete All Users logic
     const deleteAllBtn = document.getElementById('delete-all-users-btn');
     deleteAllBtn.addEventListener('click', async () => {
-        const confirmation1 = confirm("تحذير: هذا الإجراء سيقوم بحذف جميع المستخدمين باستثناء حساب المسؤول. لا يمكن التراجع عن هذا الإجراء. هل أنت متأكد؟");
-        if (!confirmation1) return;
+        const confirmed = await showConfirmModal(
+            'تحذير حذف جماعي',
+            'هذا الإجراء سيقوم بحذف جميع المستخدمين باستثناء حساب المسؤول. لا يمكن التراجع عنه. هل أنت متأكد؟',
+            {
+                iconClass: 'fas fa-exclamation-triangle',
+                iconColor: 'var(--danger-color)',
+                confirmText: 'نعم، متأكد',
+                confirmClass: 'submit-btn danger-btn'
+            });
+        if (!confirmed) return;
 
         const confirmation2 = prompt("للتأكيد، يرجى كتابة 'حذف الكل' في المربع أدناه:");
         if (confirmation2 !== 'حذف الكل') {
@@ -393,32 +261,266 @@ export function renderUsersPage() {
         }
     });
 
-    // Add sorting logic
-    document.querySelectorAll('#users-table th[data-sort]').forEach(header => {
-        header.addEventListener('click', () => {
-            const column = header.dataset.sort;
-            if (currentSort.column === column) {
-                currentSort.direction = currentSort.direction === 'asc' ? 'desc' : 'asc';
-            } else {
-                currentSort.column = column;
-                currentSort.direction = 'asc';
-            }
-            renderUserTable();
+    // Add User form toggle
+    const addUserHeader = document.getElementById('add-user-header');
+    if (addUserHeader) {
+        addUserHeader.addEventListener('click', () => {
+            document.querySelector('.add-user-container').classList.toggle('open');
         });
-    });
+    }
+}
 
-    // Add password strength meter logic
-    const newPasswordInput = document.getElementById('new-password');
-    const newPasswordMeter = newPasswordInput.nextElementSibling;
-    const newPasswordText = newPasswordMeter.nextElementSibling;
-    newPasswordInput.addEventListener('input', () => {
-        updatePasswordStrength(newPasswordInput.value, newPasswordMeter, newPasswordText);
-    });
+/**
+ * Attaches listeners to elements that persist outside of the main content area, like modals.
+ * It runs only once to avoid duplicating listeners.
+ */
+function initializePageListeners() {
+    if (listenersInitialized) {
+        console.log('[Debug] Listeners already initialized. Skipping.');
+        return;
+    }
+    console.log('[Debug] Initializing persistent listeners for User Page...');
 
+    // --- Add User Modal ---
+    const addForm = document.getElementById('add-user-form');
+    if(addForm) {
+        addForm.addEventListener('submit', handleAddUserSubmit);
+        // Password strength meter for add form
+        const addPasswordInput = document.getElementById('add-password');
+        const addPasswordMeter = addForm.querySelector('.password-strength-meter');
+        const addPasswordText = addForm.querySelector('.strength-text');
+        addPasswordInput.addEventListener('input', () => {
+            updatePasswordStrength(addPasswordInput.value, addPasswordMeter, addPasswordText);
+        });
+    }
+
+    // --- Edit User Modal ---
     const editPasswordInput = document.getElementById('edit-password');
     const editPasswordMeter = editPasswordInput.nextElementSibling;
     const editPasswordText = editPasswordMeter.nextElementSibling;
-    editPasswordInput.addEventListener('input', () => {
+    if (editPasswordInput) editPasswordInput.addEventListener('input', () => {
         updatePasswordStrength(editPasswordInput.value, editPasswordMeter, editPasswordText);
     });
+
+    const editForm = document.getElementById('user-edit-form');
+    editForm.addEventListener('submit', handleEditUserSubmit);
+
+    const editModal = document.getElementById('user-edit-modal');
+    const closeEditBtn = document.getElementById('user-edit-modal-close-btn');
+    closeEditBtn.addEventListener('click', closeEditModal);
+    editModal.addEventListener('click', (e) => { if (e.target === editModal) closeEditModal(); });
+
+    // Handle avatar PREVIEW within the edit modal
+    const avatarContainer = document.getElementById('edit-user-avatar-container');
+    const avatarUploadInput = document.createElement('input');
+    avatarUploadInput.type = 'file';
+    avatarUploadInput.id = 'edit-avatar-upload-input';
+    avatarUploadInput.name = 'avatar';
+    avatarUploadInput.accept = 'image/png, image/jpeg, image/webp';
+    avatarUploadInput.style.display = 'none';
+    avatarContainer.appendChild(avatarUploadInput);
+
+    avatarUploadInput.addEventListener('change', () => {
+        const file = avatarUploadInput.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                let img = avatarContainer.querySelector('img');
+                if (img) {
+                    img.src = e.target.result;
+                } else {
+                    const placeholder = avatarContainer.querySelector('.profile-avatar-placeholder');
+                    if (placeholder) placeholder.style.display = 'none';
+                    img = document.createElement('img');
+                    img.src = e.target.result;
+                    img.className = 'profile-avatar';
+                    avatarContainer.prepend(img);
+                }
+            };
+            reader.readAsDataURL(file);
+        }
+    });
+
+    listenersInitialized = true;
+    console.log('[Debug] Persistent listeners attached successfully.');
+}
+
+// --- Modal Controls ---
+function openEditModal(user) {
+    console.log('[Debug] Opening "Edit User" modal for user:', user.username);
+    const modal = document.getElementById('user-edit-modal');
+    const userIdInput = document.getElementById('edit-user-id');
+    const usernameInput = document.getElementById('edit-username');
+    const emailInput = document.getElementById('edit-email');
+    const roleInput = document.getElementById('edit-role');
+    const passwordInput = document.getElementById('edit-password');
+    const avatarContainer = document.getElementById('edit-user-avatar-container');
+    const avatarUploadInput = document.getElementById('edit-avatar-upload-input');
+
+    userIdInput.value = user.id;
+    usernameInput.value = user.username;
+    emailInput.value = user.email;
+    roleInput.value = user.role;
+    passwordInput.value = '';
+    avatarUploadInput.value = ''; // Clear any previously selected file
+
+    // Dynamically create the avatar part to ensure it's fresh
+    const avatarContent = `
+        ${user.avatar_url
+            ? `<img src="${user.avatar_url}" alt="الصورة الشخصية" class="profile-avatar">`
+            : `<div class="profile-avatar-placeholder"><i class="fas fa-user"></i></div>`
+        }
+        <label for="edit-avatar-upload-input" class="avatar-edit-overlay">
+            <i class="fas fa-camera"></i>
+        </label>
+    `;
+    // Clear previous content and add new avatar content
+    avatarContainer.innerHTML = avatarContent;
+    avatarContainer.appendChild(avatarUploadInput); // Re-append the persistent input
+
+    const isSelf = user.id.toString() === JSON.parse(localStorage.getItem('user')).id.toString();
+    const isAdmin = user.id === 1;
+
+    usernameInput.disabled = isAdmin;
+    roleInput.disabled = isSelf || isAdmin;
+
+    modal.classList.add('show');
+}
+
+function closeEditModal() {
+    const modal = document.getElementById('user-edit-modal');
+    modal.classList.remove('show');
+    modal.querySelector('form').reset();
+}
+
+// --- Event Handlers ---
+
+async function handleAddUserSubmit(e) {
+    e.preventDefault();
+    console.log("[Debug] 'Add User' form submitted. Processing...");
+    const form = e.target;
+    const submitBtn = form.querySelector('button[type="submit"]');
+    const formData = new FormData(form);
+
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري الإضافة...';
+
+    try {
+        const result = await fetchWithAuth('/api/users', { method: 'POST', body: formData });        
+        showToast(result.message || 'تمت إضافة المستخدم بنجاح.');
+        form.reset(); // Reset the form
+        document.querySelector('.add-user-container').classList.remove('open'); // Close the accordion
+        allUsers.push(result.data);
+        renderUserCards();
+    } catch (error) {
+        console.error("An error occurred while adding the user:", error);
+        showToast(error.message, true);
+    } finally {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = 'إضافة الموظف';
+    }
+}
+
+async function handleEditUserSubmit(e) {
+    e.preventDefault();
+    console.log("[Debug] 'Edit User' form submitted. Processing...");
+    const form = e.target;
+    const submitBtn = form.querySelector('button[type="submit"]');
+    const userId = document.getElementById('edit-user-id').value;
+    const formData = new FormData(form);
+
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري الحفظ...';
+
+    try {
+        const result = await fetchWithAuth(`/api/users/${userId}`, { method: 'PUT', body: formData });
+        showToast('تم تحديث بيانات المستخدم بنجاح.');
+        closeEditModal();
+        const updatedUser = result.user;
+        const userIndex = allUsers.findIndex(u => u.id == updatedUser.id);
+        if (userIndex > -1) {
+            allUsers[userIndex] = { ...allUsers[userIndex], ...updatedUser };
+            const userCard = document.getElementById(`user-card-${updatedUser.id}`);
+            if (userCard) userCard.outerHTML = createUserCard(allUsers[userIndex]);
+        }
+    } catch (error) {
+        console.error("An error occurred while editing the user:", error);
+        showToast(error.message, true);
+    } finally {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = 'حفظ التغييرات';
+    }
+}
+
+async function handleCardClick(e) {
+    const button = e.target.closest('button');
+    
+    if (button) {
+        const action = button.dataset.action;
+        const userId = button.dataset.id;
+
+        if (action === 'edit') {
+            const user = allUsers.find(u => u.id == userId);
+            if (user) openEditModal(user);
+        } else if (action === 'delete') {
+            const card = button.closest('.user-card');
+            const confirmed = await showConfirmModal(
+                'تأكيد الحذف',
+                'هل أنت متأكد من حذف هذا المستخدم؟ لا يمكن التراجع عن هذا الإجراء.',
+                {
+                    iconClass: 'fas fa-trash-alt',
+                    iconColor: 'var(--danger-color)',
+                    confirmText: 'نعم، حذف',
+                    confirmClass: 'submit-btn danger-btn'
+                });
+            if (confirmed) {
+                try {
+                    await fetchWithAuth(`/api/users/${userId}`, { method: 'DELETE' });
+                    showToast('تم حذف المستخدم بنجاح.');
+                    allUsers = allUsers.filter(u => u.id != userId);
+                    card.classList.add('row-fade-out');
+                    setTimeout(() => {
+                        renderUserCards(); // Re-render to update stats and table
+                    }, 400);
+                } catch (error) {
+                    showToast(error.message, true);
+                }
+            }
+        } else if (button.classList.contains('copy-email')) {
+            const email = button.dataset.email;
+            navigator.clipboard.writeText(email).then(() => {
+                showToast('تم نسخ البريد الإلكتروني.');
+            }).catch(err => {
+                showToast('فشل نسخ البريد الإلكتروني.', true);
+            });
+        }
+    }
+}
+
+async function handleStatusToggle(e) {
+    if (!e.target.classList.contains('status-toggle')) return;
+    const toggle = e.target;
+    const userId = toggle.dataset.id;
+    const is_active = toggle.checked;
+    const card = toggle.closest('.user-card');
+
+    try {
+        await fetchWithAuth(`/api/users/${userId}/status`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ is_active })
+        });
+        showToast(`تم ${is_active ? 'تفعيل' : 'تعطيل'} المستخدم.`);
+        card.classList.toggle('inactive', !is_active);
+        const userIndex = allUsers.findIndex(u => u.id == userId);
+        if (userIndex > -1) {
+            allUsers[userIndex].is_active = is_active;
+            // Re-render the specific card and stats
+            card.outerHTML = createUserCard(allUsers[userIndex]);
+            renderUserStats();
+        }
+    } catch (error) {
+        showToast(error.message, true);
+        toggle.checked = !is_active; // Revert toggle on error
+    }
 }

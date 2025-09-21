@@ -19,25 +19,26 @@ export async function fetchWithAuth(url, options = {}) {
 
         clearTimeout(timeoutId); // Clear the timeout if the request succeeds
 
-        if (response.status === 401) {
-            localStorage.removeItem('token');
-            localStorage.removeItem('user');
-            location.reload();
-            throw new Error('انتهت صلاحية الجلسة. الرجاء تسجيل الدخول مرة أخرى.');
-        }
-
-        const contentType = response.headers.get('content-type');
-        if (!contentType || !contentType.includes('application/json')) {
-            const errorText = await response.text();
-            throw new Error(`استجابة غير متوقعة من السيرفر (Status: ${response.status}). قد يكون السيرفر متوقفاً.`);
-        }
-
-        const data = await response.json();
-
         if (!response.ok) {
-            throw new Error(data.message || data.error || `HTTP Error: ${response.status}`);
+            if (response.status === 401) {
+                localStorage.removeItem('token');
+                localStorage.removeItem('user');
+                location.reload();
+                throw new Error('انتهت صلاحية الجلسة. الرجاء تسجيل الدخول مرة أخرى.');
+            }
+            // Try to parse the error response as JSON. If it fails, it's not a standard API error.
+            try {
+                const errorData = await response.json();
+                throw new Error(errorData.message || errorData.error || `HTTP Error: ${response.status}`);
+            } catch (jsonError) {
+                // This happens if the server returns HTML (e.g., a 500 error page) instead of JSON.
+                console.error("Failed to parse server error response as JSON:", jsonError);
+                throw new Error(`استجابة غير متوقعة من السيرفر (Status: ${response.status}). قد يكون هناك خطأ في الخادم.`);
+            }
         }
 
+        // If the response is OK, we expect JSON.
+        const data = await response.json();
         return data;
     } catch (error) {
         clearTimeout(timeoutId);

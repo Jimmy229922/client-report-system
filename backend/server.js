@@ -42,6 +42,13 @@ const bot = new Telegraf(config.BOT_TOKEN);
 // 2.5. إعداد Supabase
 const supabase = createClient(config.SUPABASE_URL, config.SUPABASE_KEY);
 
+// --- Database Schema Note ---
+// The following changes assume you have updated your 'users' table in Supabase.
+// If you haven't, please run the following SQL commands in your Supabase SQL Editor:
+// ALTER TABLE public.users ADD COLUMN role TEXT NOT NULL DEFAULT 'editor';
+// ALTER TABLE public.users ADD COLUMN is_active BOOLEAN NOT NULL DEFAULT true;
+// UPDATE public.users SET role = 'admin' WHERE id = 1;
+
 
 // 3. إعداد Multer (للتعامل مع الصور)
 // سيتم تخزين الصور في الذاكرة مؤقتاً بدلاً من حفظها على القرص
@@ -77,8 +84,8 @@ const verifyToken = (req, res, next) => {
 
 const verifyAdmin = (req, res, next) => {
     // This middleware assumes verifyToken has run before it.
-    // The user with ID 1 or email 'admin@inzo.com' is the admin.
-    if (req.userId !== 1 && req.userEmail !== 'admin@inzo.com') {
+    // The user with ID 1 is the admin.
+    if (req.userId !== 1) {
         return res.status(403).json({ message: "صلاحية الوصول مرفوضة. هذه العملية للمسؤول فقط." });
     }
     next();
@@ -96,17 +103,21 @@ app.post('/api/login', async (req, res) => {
     if (error && error.code !== 'PGRST116') return res.status(500).json({ message: 'Server error.' });
     if (!user) return res.status(404).json({ message: 'البريد الإلكتروني أو كلمة المرور غير صحيحة.' });
 
+    if (!user.is_active) {
+        return res.status(403).json({ auth: false, token: null, message: 'تم تعطيل هذا الحساب. يرجى التواصل مع المسؤول.' });
+    }
+
     const passwordIsValid = bcrypt.compareSync(password, user.password);
     if (!passwordIsValid) return res.status(401).json({ auth: false, token: null, message: 'البريد الإلكتروني أو كلمة المرور غير صحيحة.' });
 
-    const token = jwt.sign({ id: user.id, username: user.username, email: user.email, avatar_url: user.avatar_url }, config.JWT_SECRET, {
+    const token = jwt.sign({ id: user.id, username: user.username, email: user.email }, config.JWT_SECRET, {
         expiresIn: 86400 // 24 hours
     });
 
-    res.status(200).json({ auth: true, token: token, user: { id: user.id, username: user.username, email: user.email, avatar_url: user.avatar_url } });
+    res.status(200).json({ auth: true, token: token, user: { id: user.id, username: user.username, email: user.email, avatar_url: user.avatar_url, has_completed_tour: user.has_completed_tour } });
 });
 
-app.put('/api/profile/password', verifyToken, verifyAdmin, async (req, res) => {
+app.put('/api/profile/password', verifyToken, async (req, res) => {
     const { currentPassword, newPassword } = req.body;
     const userId = req.userId;
 
@@ -140,7 +151,7 @@ app.put('/api/profile/password', verifyToken, verifyAdmin, async (req, res) => {
     res.json({ message: "تم تغيير كلمة المرور بنجاح." });
 });
 
-app.put('/api/profile/details', verifyToken, verifyAdmin, async (req, res) => {
+app.put('/api/profile/details', verifyToken, async (req, res) => {
     const { username, email } = req.body;
     const userId = req.userId;
 
@@ -177,7 +188,7 @@ app.put('/api/profile/details', verifyToken, verifyAdmin, async (req, res) => {
 
     const { data: updatedUser, error: fetchError } = await supabase
         .from('users')
-        .select('id, username, email, avatar_url')
+        .select('id, username, email, avatar_url, has_completed_tour')
         .eq('id', userId)
         .single();
 
@@ -188,7 +199,23 @@ app.put('/api/profile/details', verifyToken, verifyAdmin, async (req, res) => {
     res.json({ message: "تم تحديث البيانات بنجاح.", user: updatedUser });
 });
 
-app.post('/api/profile/avatar', verifyToken, verifyAdmin, async (req, res) => {
+app.post('/api/profile/tour-completed', verifyToken, async (req, res) => {
+    const userId = req.userId;
+    try {
+        const { error } = await supabase
+            .from('users')
+            .update({ has_completed_tour: true })
+            .eq('id', userId);
+        if (error) throw error;
+        res.status(200).json({ message: 'Tour status updated successfully.' });
+    } catch (error) {
+        console.error('Error marking tour as completed:', error);
+        // Don't send a critical error to the user, just log it.
+        res.status(500).json({ message: 'Failed to update tour status on the server.' });
+    }
+});
+
+app.post('/api/profile/avatar', verifyToken, upload.single('avatar'), async (req, res) => {
     const userId = req.userId;
     const file = req.file;
 
@@ -230,7 +257,7 @@ app.post('/api/profile/avatar', verifyToken, verifyAdmin, async (req, res) => {
         const publicUrl = publicUrlData.publicUrl;
 
         // 5. Update the user's record in the database
-        const { data: updatedUser, error: updateError } = await supabase.from('users').update({ avatar_url: publicUrl }).eq('id', userId).select('id, username, email, avatar_url').single();
+        const { data: updatedUser, error: updateError } = await supabase.from('users').update({ avatar_url: publicUrl }).eq('id', userId).select('id, username, email, avatar_url, has_completed_tour').single();
         if (updateError) throw updateError;
 
         res.json({ message: 'تم تحديث الصورة الشخصية بنجاح.', user: updatedUser });
@@ -372,7 +399,7 @@ app.get('/api/reports', verifyToken, async (req, res) => { // verifyToken provid
 app.delete('/api/reports/:id', verifyToken, async (req, res) => { // verifyToken provides req.userId
     const reportId = req.params.id;
     const userId = req.userId;
-    const isAdmin = userId === 1;
+    const isAdmin = req.userId === 1;
 
     // First, get the report to check its owner
     const { data: report, error: fetchError } = await supabase.from('reports').select('user_id').eq('id', reportId).single();
@@ -396,32 +423,53 @@ app.delete('/api/reports/:id', verifyToken, async (req, res) => { // verifyToken
 
 // Endpoint for statistics
 app.get('/api/stats', verifyToken, async (req, res) => {
+    const userId = req.userId;
+    const isAdmin = userId === 1;
+    console.log(`[API /api/stats] Request from user ID: ${userId}, Is Admin: ${isAdmin}`);
+
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
+    // Helper function to apply user filter if not admin
+    const userFilter = (query) => {
+        return isAdmin ? query : query.eq('user_id', userId);
+    };
+
     const queries = [
-        supabase.from('reports').select('*', { count: 'exact', head: true }),
-        supabase.from('reports').select('*', { count: 'exact', head: true }).gte('timestamp', today.toISOString()),
-        supabase.from('reports').select('*', { count: 'exact', head: true }).ilike('report_text', '%#suspicious%'),
-        supabase.from('reports').select('*', { count: 'exact', head: true }).ilike('report_text', '%#deposit%'),
-        supabase.from('reports').select('*', { count: 'exact', head: true }).ilike('report_text', '%#new-position%'),
-        supabase.from('reports').select('*', { count: 'exact', head: true }).ilike('report_text', '%#credit-out%'),
-        supabase.from('reports').select('*', { count: 'exact', head: true }).ilike('report_text', '%تقرير تحويل الحسابات%'),
-        supabase.from('reports').select('*', { count: 'exact', head: true }).ilike('report_text', '%#payouts%')
+        userFilter(supabase.from('reports').select('*', { count: 'exact', head: true })),
+        userFilter(supabase.from('reports').select('*', { count: 'exact', head: true }).gte('timestamp', today.toISOString())),
+        userFilter(supabase.from('reports').select('*', { count: 'exact', head: true }).ilike('report_text', '%#suspicious%')),
+        userFilter(supabase.from('reports').select('*', { count: 'exact', head: true }).ilike('report_text', '%#deposit%')),
+        userFilter(supabase.from('reports').select('*', { count: 'exact', head: true }).ilike('report_text', '%#new-position%')),
+        userFilter(supabase.from('reports').select('*', { count: 'exact', head: true }).ilike('report_text', '%#credit-out%')),
+        userFilter(supabase.from('reports').select('*', { count: 'exact', head: true }).ilike('report_text', '%تقرير تحويل الحسابات%')),
+        userFilter(supabase.from('reports').select('*', { count: 'exact', head: true }).ilike('report_text', '%#payouts%'))
     ];
 
     const results = await Promise.all(queries);
     const [total, reports_today, suspicious, deposit, new_positions, credit_out, account_transfer, payouts] = results.map(r => r.count);
 
     const errors = results.filter(r => r.error);
-    if (errors.length > 0) return res.status(500).json({ error: errors[0].error.message });
+    if (errors.length > 0) {
+        console.error("Stats error:", errors[0].error);
+        return res.status(500).json({ error: errors[0].error.message });
+    }
 
     res.json({ message: "success", data: { total, reports_today, suspicious, deposit, new_positions, credit_out, account_transfer, payouts } });
 });
 
 // Endpoint for weekly stats
 app.get('/api/stats/weekly', verifyToken, async (req, res) => {
-    const { data, error } = await supabase.rpc('get_daily_stats');
+    const userId = req.userId;
+    const isAdmin = userId === 1;
+    const filterId = isAdmin ? null : userId;
+    console.log(`[API /api/stats/weekly] Request from user ID: ${userId}, Is Admin: ${isAdmin}. Filtering by user: ${filterId}`);
+
+    // Pass user_id to the RPC function. If admin, pass NULL to get all data.
+    const { data, error } = await supabase.rpc('get_daily_stats', { 
+        user_filter_id: filterId
+    });
+
     if (error) {
         return res.status(500).json({ "error": `Database function error: ${error.message}` });
     }
@@ -430,12 +478,30 @@ app.get('/api/stats/weekly', verifyToken, async (req, res) => {
 
 // Endpoint for recent reports
 app.get('/api/reports/recent', verifyToken, async (req, res) => {
+    const userId = req.userId;
+    const isAdmin = userId === 1;
+    console.log(`[API /api/reports/recent] Request from user ID: ${userId}, Is Admin: ${isAdmin}`);
+
     try {
-        const { data, error } = await supabase
-            .from('reports')
-            .select('id, report_text, timestamp, users(username)')
-            .order('timestamp', { ascending: false })
-            .limit(5);
+        let query;
+        if (isAdmin) {
+            // Admin sees all reports and the username of the creator
+            query = supabase
+                .from('reports')
+                .select('id, report_text, timestamp, users(username)')
+                .order('timestamp', { ascending: false })
+                .limit(5);
+        } else {
+            // Regular user sees only their own reports, no author needed
+            query = supabase
+                .from('reports')
+                .select('id, report_text, timestamp')
+                .eq('user_id', userId)
+                .order('timestamp', { ascending: false })
+                .limit(5);
+        }
+
+        const { data, error } = await query;
         if (error) throw error;
         // Ensure data is an array, even if null is returned
         res.json({ message: "success", data: data || [] });
@@ -447,12 +513,34 @@ app.get('/api/reports/recent', verifyToken, async (req, res) => {
 
 // Endpoint for top contributor
 app.get('/api/stats/top-contributor', verifyToken, async (req, res) => {
+    const userId = req.userId;
+    const isAdmin = userId === 1;
+    console.log(`[API /api/stats/top-contributor] Request from user ID: ${userId}, Is Admin: ${isAdmin}`);
+
     try {
-        // .single() will error if no rows are found. We can use .limit(1) and check the result.
-        const { data, error } = await supabase.rpc('get_top_contributor').limit(1);
-        if (error) throw error;
-        // If data is not null and has an entry, return it, otherwise return an empty object.
-        res.json({ message: "success", data: (data && data.length > 0) ? data[0] : {} });
+        if (isAdmin) {
+            // Admin gets the global top contributors
+            console.log(`[Top Contributor] Admin request. Fetching top 3.`);
+            const { data, error } = await supabase.rpc('get_top_contributor').limit(3);
+            if (error) {
+                console.error(`[Top Contributor] RPC error:`, error);
+                throw error;
+            }
+            console.log(`[Top Contributor] RPC result:`, data);
+            res.json({ message: "success", data: data || [] }); // Return an array
+        } else {
+            // Regular user gets their own stats
+            const { data: user, error: userError } = await supabase.from('users').select('username, avatar_url').eq('id', userId).single();
+            if (userError) throw userError;
+
+            const { count, error: countError } = await supabase.from('reports').select('*', { count: 'exact', head: true }).eq('user_id', userId);
+            if (countError) throw countError;
+
+            res.json({ 
+                message: "success", 
+                data: { username: user.username, avatar_url: user.avatar_url, report_count: count, is_self: true } 
+            });
+        }
     } catch (error) {
         console.error("Error in /api/stats/top-contributor:", error);
         res.status(500).json({ error: error.message });
@@ -465,6 +553,118 @@ app.get('/api/stats/top-contributor', verifyToken, async (req, res) => {
 app.get('/api/health', (req, res) => {
     res.status(200).json({ status: 'ok' });
 });
+// --- Instructions Endpoints ---
+
+// --- Notifications Endpoints ---
+app.get('/api/notifications', verifyToken, async (req, res) => {
+    const { data, error } = await supabase
+        .from('notifications')
+        .select('*')
+        .eq('user_id', req.userId)
+        .order('created_at', { ascending: false })
+        .limit(10);
+
+    if (error) return res.status(500).json({ error: error.message });
+    res.json({ data });
+});
+
+app.post('/api/notifications/mark-as-read', verifyToken, async (req, res) => {
+    const { error } = await supabase
+        .from('notifications')
+        .update({ is_read: true })
+        .eq('user_id', req.userId)
+        .eq('is_read', false);
+
+    if (error) return res.status(500).json({ error: error.message });
+    res.status(204).send();
+});
+
+// GET all instructions (public)
+app.get('/api/instructions', async (req, res) => {
+    const { data, error } = await supabase
+        .from('instructions')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+    if (error) return res.status(500).json({ error: error.message });
+    res.json({ data });
+});
+
+// POST a new instruction (admin only)
+app.post('/api/instructions', verifyToken, verifyAdmin, async (req, res) => {
+    const { title, content, search_terms, category } = req.body;
+    if (!title || !content || !category) {
+        return res.status(400).json({ message: 'العنوان، المحتوى، والقسم مطلوبان.' });
+    }
+
+    const { data, error } = await supabase
+        .from('instructions')
+        .insert({ title, content, search_terms, category })
+        .select()
+        .single();
+
+    if (error) return res.status(500).json({ error: error.message });
+
+    // Create notifications for all users about the new instruction
+    if (data) {
+        try {
+            const { data: users, error: usersError } = await supabase.from('users').select('id').eq('is_active', true);
+            if (usersError) throw usersError;
+
+            const notifications = users.map(user => ({
+                user_id: user.id,
+                message: `تمت إضافة تعليمة جديدة: ${data.title.replace(/<[^>]*>?/gm, '')}`,
+                link: '#instructions'
+            }));
+            if (notifications.length > 0) await supabase.from('notifications').insert(notifications);
+        } catch (e) { console.error('[Instructions] Failed to create new instruction notifications:', e.message); }
+    }
+    res.status(201).json({ message: 'تمت إضافة التعليمة بنجاح.', data });
+});
+
+// PUT (update) an instruction (admin only)
+app.put('/api/instructions/:id', verifyToken, verifyAdmin, async (req, res) => {
+    const { id } = req.params;
+    const { title, content, search_terms, category } = req.body;
+
+    const { data, error } = await supabase
+        .from('instructions')
+        .update({ title, content, search_terms, category })
+        .eq('id', id)
+        .select()
+        .single();
+
+    if (error) return res.status(500).json({ error: error.message });
+    if (!data) return res.status(404).json({ message: 'التعليمة غير موجودة.' });
+
+    // Create notifications for all users about the updated instruction
+    if (data) {
+        try {
+            const { data: users, error: usersError } = await supabase.from('users').select('id').eq('is_active', true);
+            if (usersError) throw usersError;
+
+            const notifications = users.map(user => ({
+                user_id: user.id,
+                message: `تم تحديث تعليمة: ${data.title.replace(/<[^>]*>?/gm, '')}`,
+                link: '#instructions'
+            }));
+            if (notifications.length > 0) await supabase.from('notifications').insert(notifications);
+        } catch (e) { console.error('[Instructions] Failed to create update instruction notifications:', e.message); }
+    }
+
+    res.json({ message: 'تم تحديث التعليمة بنجاح.', data });
+});
+
+// DELETE an instruction (admin only)
+app.delete('/api/instructions/:id', verifyToken, verifyAdmin, async (req, res) => {
+    const { id } = req.params;
+
+    const { error, count } = await supabase.from('instructions').delete({ count: 'exact' }).eq('id', id);
+
+    if (error) return res.status(500).json({ error: error.message });
+    if (count === 0) return res.status(404).json({ message: 'التعليمة غير موجودة.' });
+    res.json({ message: 'تم حذف التعليمة بنجاح.' });
+});
 
 
 // --- User Management Endpoints ---
@@ -472,7 +672,7 @@ app.get('/api/health', (req, res) => {
 // Get all users
 app.get('/api/users', verifyToken, verifyAdmin, async (req, res) => {
     const { search } = req.query;
-    let query = supabase.from('users').select('id, username, email, avatar_url, created_at');
+    let query = supabase.from('users').select('id, username, email, avatar_url, created_at, role, is_active');
 
     if (search) {
         // Search in both username and email fields
@@ -489,8 +689,9 @@ app.get('/api/users', verifyToken, verifyAdmin, async (req, res) => {
 });
 
 // Add a new user
-app.post('/api/users', verifyToken, verifyAdmin, async (req, res) => {
-    const { username, email, password } = req.body;
+app.post('/api/users', verifyToken, verifyAdmin, upload.single('avatar'), async (req, res) => {
+    const { username, email, password, role } = req.body;
+    const file = req.file;
 
     if (!username || !email || !password) {
         return res.status(400).json({ message: "اسم المستخدم، البريد الإلكتروني، وكلمة المرور مطلوبان." });
@@ -502,43 +703,102 @@ app.post('/api/users', verifyToken, verifyAdmin, async (req, res) => {
         return res.status(400).json({ message: "يجب أن تكون كلمة المرور 6 أحرف على الأقل." });
     }
 
+    const allowedRoles = ['admin', 'editor'];
+    if (role && !allowedRoles.includes(role)) {
+        return res.status(400).json({ message: "الدور المحدد غير صالح." });
+    }
+
     const salt = bcrypt.genSaltSync(10);
     const hash = bcrypt.hashSync(password, salt);
 
-    const { data, error } = await supabase
+    // Initial user data to insert
+    const newUserPayload = {
+        username,
+        email: email.toLowerCase(),
+        password: hash,
+        role: role || 'editor',
+        is_active: true
+    };
+
+    // Insert user without avatar first
+    const { data: user, error: insertError } = await supabase
         .from('users')
-        .insert({ username, email: email.toLowerCase(), password: hash, avatar_url: null })
-        .select('id, username, email, avatar_url, created_at')
+        .insert(newUserPayload)
+        .select('id, username, email, avatar_url, created_at, role, is_active')
         .single();
 
-    if (error) {
-        if (error.code === '23505') { // Unique constraint violation
+    if (insertError) {
+        if (insertError.code === '23505') {
             return res.status(409).json({ message: "البريد الإلكتروني موجود بالفعل." });
         }
-        return res.status(500).json({ error: error.message });
+        return res.status(500).json({ error: insertError.message });
     }
-    res.status(201).json({ message: "User created", data });
+
+    let finalUser = user;
+    let message = "تم إنشاء المستخدم بنجاح.";
+
+    // If user was created and there's a file, handle avatar upload
+    if (user && file) {
+        try {
+            const fileExt = path.extname(file.originalname);
+            const fileName = `user_${user.id}/${Date.now()}${fileExt}`;
+
+            const { error: uploadError } = await supabase.storage.from('avatars').upload(fileName, file.buffer, { contentType: file.mimetype });
+            if (uploadError) throw uploadError;
+
+            const { data: publicUrlData } = supabase.storage.from('avatars').getPublicUrl(fileName);
+
+            // Update the user record with the avatar URL
+            const { data: updatedUser, error: updateError } = await supabase
+                .from('users')
+                .update({ avatar_url: publicUrlData.publicUrl })
+                .eq('id', user.id)
+                .select('id, username, email, avatar_url, created_at, role, is_active')
+                .single();
+
+            if (updateError) throw updateError;
+            finalUser = updatedUser; // Use the fully updated user data
+        } catch (avatarError) {
+            console.error('Avatar upload failed for new user, but user was created:', avatarError);
+            message = "تم إنشاء المستخدم ولكن فشل رفع الصورة.";
+        }
+    }
+
+    // Create a notification for the main admin (ID 1) about the new user
+    if (finalUser) {
+        try {
+            const { error: notifError } = await supabase.from('notifications').insert({
+                user_id: 1, // Notify admin with ID 1
+                message: `تم إنشاء مستخدم جديد: ${finalUser.username}`,
+                link: '#users'
+            });
+            if (notifError) throw notifError;
+        } catch (e) {
+            console.error('Failed to create notification for new user:', e.message);
+        }
+    }
+
+    res.status(201).json({ message, data: finalUser });
 });
 
-// Update user data (username, email, password)
-app.put('/api/users/:id', verifyToken, verifyAdmin, async (req, res) => {
-    const { password, username, email } = req.body;
+// Update a user's details (Admin only)
+app.put('/api/users/:id', verifyToken, verifyAdmin, upload.single('avatar'), async (req, res) => {
     const { id } = req.params;
-
-    // Prevent admin (ID 1) from changing their username via this endpoint
-    if (username && id == 1) {
-        return res.status(403).json({ message: "لا يمكن تغيير اسم المستخدم الخاص بالمسؤول." });
-    }
-
-    if (!password && !username && !email) {
-        return res.status(400).json({ message: "لا يوجد بيانات للتحديث." });
-    }
-
+    const { username, email, password, role } = req.body;
+    const file = req.file;
     const updateData = {};
 
-    if (username) {
-        updateData.username = username;
+    // Prevent admin (ID 1) from being modified in critical ways
+    if (id == 1) {
+        if (role && role !== 'admin') {
+            return res.status(403).json({ message: "لا يمكن تغيير دور المسؤول الرئيسي." });
+        }
+        if (username) {
+            return res.status(403).json({ message: "لا يمكن تغيير اسم مستخدم المسؤول الرئيسي." });
+        }
     }
+
+    if (username) updateData.username = username;
 
     if (email) {
         if (!/^\S+@\S+\.\S+$/.test(email)) {
@@ -547,30 +807,92 @@ app.put('/api/users/:id', verifyToken, verifyAdmin, async (req, res) => {
         updateData.email = email.toLowerCase();
     }
 
-    // Only validate and hash password if it's a non-empty string
-    if (password && typeof password === 'string') {
-        if (password.length < 6) {
-            return res.status(400).json({ message: "يجب أن تكون كلمة المرور 6 أحرف على الأقل." });
-        }
+    if (role) {
+        const allowedRoles = ['admin', 'editor'];
+        if (!allowedRoles.includes(role)) return res.status(400).json({ message: "الدور المحدد غير صالح." });
+        updateData.role = role;
+    }
+
+    if (password && typeof password === 'string' && password.length > 0) {
+        if (password.length < 6) return res.status(400).json({ message: "يجب أن تكون كلمة المرور 6 أحرف على الأقل." });
         const salt = bcrypt.genSaltSync(10);
         const hash = bcrypt.hashSync(password, salt);
         updateData.password = hash;
     }
 
-    const { data, error } = await supabase.from('users').update(updateData).eq('id', id).select('id, username, email, avatar_url, created_at').single();
+    if (Object.keys(updateData).length === 0 && !file) {
+        return res.status(400).json({ message: "لا توجد بيانات للتحديث." });
+    }
+
+    // Handle avatar upload if a file is present
+    if (file) {
+        try {
+            // Get user data to find old avatar to delete
+            const { data: user, error: fetchError } = await supabase.from('users').select('avatar_url').eq('id', id).single();
+            if (fetchError && fetchError.code !== 'PGRST116') throw fetchError;
+
+            if (user && user.avatar_url) {
+                const oldAvatarPath = user.avatar_url.split('/avatars/')[1];
+                if (oldAvatarPath) {
+                    await supabase.storage.from('avatars').remove([oldAvatarPath]);
+                }
+            }
+
+            // Upload new avatar
+            const fileExt = path.extname(file.originalname);
+            const fileName = `user_${id}/${Date.now()}${fileExt}`;
+
+            const { error: uploadError } = await supabase.storage.from('avatars').upload(fileName, file.buffer, { contentType: file.mimetype, upsert: true });
+            if (uploadError) throw uploadError;
+
+            const { data: publicUrlData } = supabase.storage.from('avatars').getPublicUrl(fileName);
+            updateData.avatar_url = publicUrlData.publicUrl;
+
+        } catch (avatarError) {
+            console.error('Avatar update failed during user edit:', avatarError);
+            return res.status(500).json({ message: 'فشل تحديث الصورة، لم يتم حفظ أي تغييرات أخرى.' });
+        }
+    }
+
+    const { data, error } = await supabase.from('users').update(updateData).eq('id', id).select('id, username, email, avatar_url, created_at, role, is_active').single();
 
     if (error) {
-        if (error.code === '23505') {
-            return res.status(409).json({ message: "البريد الإلكتروني موجود بالفعل." });
-        }
+        if (error.code === '23505') return res.status(409).json({ message: "البريد الإلكتروني موجود بالفعل." });
         return res.status(500).json({ error: error.message });
     }
-
-    if (!data) {
-        return res.status(404).json({ message: "المستخدم غير موجود." });
-    }
+    if (!data) return res.status(404).json({ message: "المستخدم غير موجود." });
 
     res.json({ message: "تم تحديث بيانات المستخدم بنجاح.", user: data });
+});
+
+// Toggle user active status
+app.put('/api/users/:id/status', verifyToken, verifyAdmin, async (req, res) => {
+    const { id: userIdToUpdate } = req.params;
+    const { is_active } = req.body;
+
+    if (typeof is_active !== 'boolean') {
+        return res.status(400).json({ message: "الحالة (is_active) يجب أن تكون true أو false." });
+    }
+
+    // Prevent deactivating the main admin or oneself
+    if (userIdToUpdate == 1) {
+        return res.status(403).json({ message: "لا يمكن تعطيل حساب المسؤول الرئيسي." });
+    }
+    if (userIdToUpdate == req.userId) {
+        return res.status(403).json({ message: "لا يمكنك تعطيل حسابك بنفسك." });
+    }
+
+    const { data, error } = await supabase
+        .from('users')
+        .update({ is_active: is_active })
+        .eq('id', userIdToUpdate)
+        .select('id, is_active')
+        .single();
+
+    if (error) return res.status(500).json({ error: error.message });
+    if (!data) return res.status(404).json({ message: "المستخدم غير موجود." });
+
+    res.json({ message: `تم ${is_active ? 'تفعيل' : 'تعطيل'} المستخدم بنجاح.`, user: data });
 });
 
 // Delete a user
@@ -667,7 +989,7 @@ app.post('/api/system/update', verifyToken, (req, res) => {
     const command = 'git pull && cd backend && npm install';
     console.log(`[Update] Executing command: ${command}`);
 
-    exec(command, { cwd: projectRoot }, (err, stdout, stderr) => {
+    exec(command, { cwd: projectRoot }, async (err, stdout, stderr) => {
         const log = `> ${command}\n\n${stdout}\n${stderr}`;
         console.log('[Update] stdout:', stdout);
         if (stderr) console.error('[Update] stderr:', stderr);
@@ -680,6 +1002,24 @@ app.post('/api/system/update', verifyToken, (req, res) => {
         if (stdout.includes('Already up to date.')) {
             console.log('[Update] System is already up to date.');
             return res.json({ message: 'النظام محدث بالفعل. لا حاجة لإعادة التشغيل.', log: log, needsRestart: false });
+        }
+
+        // Create notifications for all users about the update
+        try {
+            const { data: users, error: usersError } = await supabase.from('users').select('id').eq('is_active', true);
+            if (usersError) throw usersError;
+
+            const notifications = users.map(user => ({
+                user_id: user.id,
+                message: 'تم تحديث النظام بنجاح. قد تحتاج لإعادة تحميل الصفحة.',
+                link: '#home'
+            }));
+
+            if (notifications.length > 0) {
+                supabase.from('notifications').insert(notifications).then(() => console.log(`[Update] Created ${notifications.length} update notifications.`));
+            }
+        } catch (e) {
+            console.error('[Update] Failed to create update notifications:', e.message);
         }
 
         // If we are here, there were updates.
@@ -718,6 +1058,23 @@ app.get('/api/version', (req, res) => {
     }
 });
 
+// Centralized Error Handler
+// This should be placed after all your API routes but before the frontend fallback.
+// It catches errors from middleware (like Multer) and unhandled exceptions in routes.
+app.use((err, req, res, next) => {
+    // Multer-specific error handling
+    if (err instanceof multer.MulterError) {
+        return res.status(400).json({ message: `Multer error: ${err.message}` });
+    }
+    // Generic error handling
+    console.error('--- UNHANDLED ERROR ---');
+    console.error(err.stack);
+    res.status(500).json({
+        message: 'حدث خطأ غير متوقع في الخادم.',
+        error: err.message // Send back the actual error message for debugging
+    });
+});
+
 // 7. Fallback for Frontend Routing
 app.use((req, res) => {
     // For any request that doesn't match a previous route, send the index.html file.
@@ -743,7 +1100,7 @@ async function initializeAdmin() {
       const hash = bcrypt.hashSync("password", salt);
       const { error: insertError } = await supabase
         .from('users')
-        .insert({ id: 1, username: 'INZO LLC', email: 'admin@inzo.com', password: hash, avatar_url: null });
+        .insert({ id: 1, username: 'INZO LLC', email: 'admin@inzo.com', password: hash, avatar_url: null, role: 'admin', is_active: true, has_completed_tour: true });
 
       if (insertError) {
         console.error('Failed to create default admin user:', insertError);

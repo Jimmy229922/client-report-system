@@ -2,6 +2,8 @@ import { renderHomePage, cleanupHomePage } from './page-home.js';
 import { renderArchivePage } from './page-archive.js';
 import { renderUsersPage } from './page-users.js';
 import { renderProfilePage } from './page-profile.js';
+import { renderComparatorPage } from './page-comparator.js';
+import { renderInstructionsPage } from './page-instructions.js';
 import { createDepositReportPageHTML, createGeneralReportPageHTML, initCreateReportPage } from './page-report-form.js';
 import { showLoader, hideLoader, updateActiveLink } from './ui.js';
 
@@ -19,6 +21,8 @@ const routes = {
     '#home': renderHomePage,
     '#archive': renderArchivePage,
     '#users': renderUsersPage,
+    '#comparator': renderComparatorPage,
+    '#instructions': renderInstructionsPage,
     '#profile': renderProfilePage,
     '#reports/suspicious': () => createGeneralReportPageHTML('Suspicious Report'),
     '#reports/deposit': () => createDepositReportPageHTML('Deposit Report'),
@@ -26,7 +30,10 @@ const routes = {
     '#reports/credit-out': () => createGeneralReportPageHTML('Credit Out Report'),
     '#reports/account-transfer': () => createGeneralReportPageHTML('تحويل الحسابات'),
     '#reports/payouts': () => createGeneralReportPageHTML('PAYOUTS'),
+    
 };
+
+
 
 export function navigate() {
     if (isFormDirty && !confirm('لديك تغييرات غير محفوظة. هل أنت متأكد من مغادرة الصفحة؟')) {
@@ -52,7 +59,7 @@ export function navigate() {
         }
     }
 
-    if (window.location.hash === '#users' && (!user || (user.id !== 1 && user.email !== 'admin@inzo.com'))) {
+    if (window.location.hash === '#users' && (!user || user.id !== 1)) {
         console.warn('Access denied to user management page.');
         window.location.hash = '#home'; // Redirect to home
         return; // Stop navigation
@@ -62,14 +69,13 @@ export function navigate() {
     const mainContent = document.getElementById('main-content');
 
     showLoader();
-    setTimeout(async () => {
+    // Use an IIFE to keep the async/await structure without the artificial delay.
+    (async () => {
         try {
             const pageRenderer = routes[path];
 
             if (typeof pageRenderer === 'function') {
                 const content = await pageRenderer(); // This might return a string or nothing
-                // If the renderer returns a string, set it as the content.
-                // Otherwise, assume the function handled its own DOM manipulation (like home and archive pages).
                 if (typeof content === 'string') {
                     mainContent.innerHTML = content;
                 }
@@ -90,5 +96,5 @@ export function navigate() {
             hideLoader();
             window.scrollTo(0, 0);
         }
-    }, 250); // Reduced delay for faster navigation
+    })();
 }

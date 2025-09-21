@@ -93,14 +93,20 @@ export function initIpWidget() {
 
             if (document.hasFocus()) {
                 try {
-                    const text = await navigator.clipboard.readText();
-                    const potentialIp = text.trim();
+                    const clipboardText = await navigator.clipboard.readText();
+                    const trimmedText = clipboardText.trim();
                     
-                    if (/^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$/.test(potentialIp) && potentialIp !== lastCheckedIp) {
-                        lastCheckedIp = potentialIp;
+                    // Regex to find an IP address pattern within a string (e.g., in a URL)
+                    const ipRegex = /(?:[0-9]{1,3}\.){3}[0-9]{1,3}/;
+                    const match = trimmedText.match(ipRegex);
+
+                    // If an IP is found in the text and it's different from the last one we checked
+                    if (match && match[0] && match[0] !== lastCheckedIp) {
+                        const extractedIp = match[0];
+                        lastCheckedIp = extractedIp;
                         showWidget();
-                        ipInput.value = potentialIp;
-                        await performLookup(potentialIp);
+                        ipInput.value = extractedIp;
+                        await performLookup(extractedIp);
                     }
                 } catch (err) {
                     if (err.name !== 'NotFoundError') {

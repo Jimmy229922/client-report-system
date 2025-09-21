@@ -15,6 +15,22 @@ echo.
 REM Navigate to the backend directory
 cd backend
 
+REM Check if node_modules exists, if not, run npm install
+IF NOT EXIST "node_modules" (
+    echo.
+    echo Installing backend dependencies for the first time...
+    call npm install
+    echo.
+)
+
+REM Check if config.json exists, if not, run the setup script
+IF NOT EXIST "config.json" (
+    echo.
+    echo Configuration file not found. Starting one-time setup...
+    node setup.js
+    echo.
+)
+
 REM Start the Node.js server
 node server.js
 

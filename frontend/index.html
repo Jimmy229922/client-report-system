@@ -33,18 +33,6 @@
         <div class="shooting-star"></div>
         <div class="shooting-star"></div>
         <div class="shooting-star"></div>
-        <div class="shooting-star"></div>
-        <div class="shooting-star"></div>
-        <div class="shooting-star"></div>
-        <div class="shooting-star"></div>
-        <div class="shooting-star"></div>
-        <div class="shooting-star"></div>
-        <div class="shooting-star"></div>
-        <div class="shooting-star"></div>
-        <div class="shooting-star"></div>
-        <div class="shooting-star"></div>
-        <div class="shooting-star"></div>
-        <div class="shooting-star"></div>
     </div>
 
     <div id="login-container">
@@ -84,10 +72,22 @@
                     </div>
                 </li>
                 <li><a href="#archive" class="nav-link">الأرشيف</a></li>
+                <li><a href="#instructions" class="nav-link">التعليمات</a></li>
+                <li><a href="#comparator" class="nav-link">مقارنة الحسابات</a></li>
             </ul>
             <div class="nav-actions">
                 <button id="theme-toggle-btn" aria-label="تبديل الوضع"><i class="fas fa-sun"></i></button>
-                <button id="quick-ip-check-btn" class="icon-btn" title="فحص سريع للـ IP"><i class="fas fa-magnifying-glass-location"></i></button>
+                <button id="quick-ip-check-btn" class="icon-btn" aria-label="فحص سريع للـ IP"><i class="fas fa-magnifying-glass-location"></i></button>
+                <!-- Notifications Dropdown -->
+                <div class="dropdown">
+                    <button id="notifications-btn" class="icon-btn" aria-label="الإشعارات">
+                        <i class="fas fa-bell"></i>
+                        <span id="notification-badge" class="badge hidden"></span>
+                    </button>
+                    <div id="notifications-list" class="dropdown-content">
+                        <!-- Notifications will be rendered here -->
+                    </div>
+                </div>
                 <div class="dropdown">
                     <a href="javascript:void(0)" class="nav-link" id="user-profile-btn">
                         <span id="navbar-avatar-container">
@@ -98,7 +98,8 @@
                     <div class="dropdown-content">
                         <a href="#profile">الملف الشخصي</a>
                         <a href="#users" id="user-management-link" class="hidden">إدارة المستخدمين</a>
-                        <a href="javascript:void(0)" id="update-app-btn">تحديث النظام</a>
+                        <a href="javascript:void(0)" id="restart-tour-btn">إعادة الجولة التعريفية</a>
+                        <a href="javascript:void(0)" id="update-app-btn" class="hidden">تحديث النظام</a>
                     </div>
                 </div>
                 <button id="logout-btn" class="icon-btn" title="تسجيل الخروج"><i class="fas fa-sign-out-alt"></i></button>
@@ -109,11 +110,6 @@
         <main id="main-content">
             <!-- سيتم تحميل محتوى الصفحات هنا -->
         </main>
-
-        <!-- Application Footer -->
-        <footer id="app-footer">
-            <span id="app-version"></span>
-        </footer>
     </div>
 
     <!-- حاوية الإشعار -->
@@ -126,38 +122,98 @@
         <div id="image-caption"></div>
     </div>
 
+    <!-- Generic Confirmation Modal -->
+    <div id="confirm-modal" class="modal">
+        <div class="modal-dialog" style="max-width: 400px; text-align: center;">
+            <div class="modal-header" style="justify-content: center; border-bottom: none; padding-bottom: 0;">
+                <h3 id="confirm-modal-title" style="margin-bottom: 0; font-size: 1.5rem;"></h3>
+                <!-- Close button removed for a cleaner, centered design -->
+            </div>
+            <div class="modal-body" style="padding-top: 1rem;">
+                <div id="confirm-modal-icon" style="font-size: 3rem; margin-bottom: 1rem;"></div>
+                <p id="confirm-modal-text" style="font-size: 1.1rem; color: var(--text-color-secondary);"></p>
+            </div>
+            <div class="modal-footer" style="border-top: none; justify-content: center; gap: 1rem;">
+                <button id="confirm-modal-cancel-btn" class="cancel-btn">إلغاء</button>
+                <button id="confirm-modal-ok-btn" class="submit-btn"></button>
+            </div>
+        </div>
+    </div>
+
     <!-- Generic Modal for User Edit -->
-    <div id="user-edit-modal" class="modal" style="display: none;">
+    <div id="user-edit-modal" class="modal">
         <div class="modal-dialog form-container">
             <div class="modal-header">
                 <h2 id="user-edit-modal-title" class="page-title" style="margin-bottom: 0; font-size: 1.8rem;">تعديل بيانات المستخدم</h2>
                 <button class="close-btn" id="user-edit-modal-close-btn">&times;</button>
             </div>
-            <div class="modal-body" style="display: grid; grid-template-columns: auto 1fr; gap: 2rem; align-items: flex-start;">
-                <div class="profile-avatar-container" id="edit-user-avatar-container">
+            <div class="modal-body">
+                <div class="profile-avatar-container" id="edit-user-avatar-container" style="margin: 0 auto 1.5rem auto;">
                     <!-- Avatar will be rendered here by JS -->
                 </div>
-                <div class="user-edit-form-fields">
-                    <form id="user-edit-form">
-                        <input type="hidden" id="edit-user-id">
-                        <div class="form-group">
-                            <label for="edit-username">اسم المستخدم</label>
-                            <input type="text" id="edit-username" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="edit-email">البريد الإلكتروني</label>
-                            <input type="email" id="edit-email" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="edit-password">كلمة مرور جديدة (اختياري)</label>
-                            <input type="password" id="edit-password" placeholder="اتركه فارغاً لعدم التغيير">
-                            <div class="password-strength-meter"><div class="strength-bar"></div><div class="strength-bar"></div><div class="strength-bar"></div><div class="strength-bar"></div></div>
-                            <small id="edit-password-strength-text" class="strength-text"></small>
-                        </div>
-                        <button type="submit" class="submit-btn">حفظ التغييرات</button>
-                    </form>
-                </div>
+                <form id="user-edit-form">
+                    <input type="hidden" id="edit-user-id">
+                    <div class="form-group">
+                        <label for="edit-username">اسم المستخدم</label>
+                        <input type="text" id="edit-username" name="username" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="edit-email">البريد الإلكتروني</label>
+                        <input type="email" id="edit-email" name="email" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="edit-role">الدور</label>
+                        <select id="edit-role" name="role" required>
+                            <option value="editor">محرر (Editor)</option>
+                            <option value="admin">مسؤول (Admin)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="edit-password">كلمة مرور جديدة (اختياري)</label>
+                        <input type="password" id="edit-password" name="password" placeholder="اتركه فارغاً لعدم التغيير">
+                        <div class="password-strength-meter"><div class="strength-bar"></div><div class="strength-bar"></div><div class="strength-bar"></div><div class="strength-bar"></div></div>
+                        <small id="edit-password-strength-text" class="strength-text"></small>
+                    </div>
+                    <button type="submit" class="submit-btn">حفظ التغييرات</button>
+                </form>
             </div>
+        </div>
+    </div>
+
+    <!-- Modal for Add/Edit Instruction -->
+    <div id="instruction-modal" class="modal">
+        <div class="modal-dialog form-container" style="max-width: 800px;">
+            <div class="modal-header">
+                <h2 id="instruction-modal-title" class="page-title" style="margin-bottom: 0; font-size: 1.8rem;">إضافة تعليمة جديدة</h2>
+                <button class="close-btn" id="instruction-modal-close-btn">&times;</button>
+            </div>
+            <form id="instruction-form" class="modal-body">
+                <input type="hidden" id="instruction-id">
+                <div class="form-group">
+                    <label for="instruction-title">العنوان (يدعم أيقونات FontAwesome)</label>
+                    <input type="text" id="instruction-title" placeholder='مثال: &lt;i class="fas fa-cogs"&gt;&lt;/i&gt; تدقيق التقارير' required>
+                </div>
+                <div class="form-group">
+                    <label for="instruction-content">المحتوى</label>
+                    <small class="form-hint" style="margin-bottom: 0.5rem;">ملاحظة: عند استخدام "إضافة قالب تدقيق"، قم باستبدال النصوص الموجودة بين القوسين `[...]` بالمعلومات الصحيحة.</small>
+                    <textarea id="instruction-content" rows="10" placeholder="اكتب المحتوى هنا واستخدم شريط الأدوات للتنسيق (مثل القوائم، الألوان، والأنماط المخصصة)." required></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="instruction-search-terms">كلمات مفتاحية للبحث (مفصولة بمسافات)</label>
+                    <input type="text" id="instruction-search-terms" placeholder="مثال: b52 b53 uk netherlands">
+                </div>
+                <div class="form-group">
+                    <label for="instruction-category">القسم</label>
+                    <select id="instruction-category" required>
+                        <!-- Options will be populated by JS -->
+                    </select>
+                </div>
+                <div class="form-group hidden" id="new-category-container">
+                    <label for="new-category-name">اسم القسم الجديد</label>
+                    <input type="text" id="new-category-name" placeholder="مثال: تدقيق الحسابات">
+                </div>
+                <button type="submit" class="submit-btn">حفظ التعليمة</button>
+            </form>
         </div>
     </div>
 
@@ -172,36 +228,26 @@
         </div>
         <div class="widget-body">
             <input type="text" id="widget-ip-input" placeholder="...جاري مراقبة الحافظة" autocomplete="off">
-            <div id="widget-ip-result" class="widget-result"></div>
+            <div id="widget-ip-result" class="widget-result">
+                <div class="widget-placeholder">الصق عنوان IP أو ابدأ الكتابة...</div>
+            </div>
             <div id="widget-history-container" class="hidden">
                 <div class="history-header">
-                    <h4><i class="fas fa-history"></i> السجل الحديث</h4>
-                    <button id="widget-clear-history-btn" class="clear-history-btn">مسح</button>
+                    <h4><i class="fas fa-history"></i> السجل</h4>
+                    <button id="widget-clear-history-btn" class="clear-history-btn" title="مسح السجل"><i class="fas fa-trash-alt"></i></button>
                 </div>
                 <ul id="widget-history-list"></ul>
             </div>
-            <div class="widget-resizer"></div>
         </div>
+        <div class="widget-resizer"></div>
     </div>
 
-    <!-- Custom Confirmation Modal -->
-    <div id="confirm-modal" class="modal">
-        <div id="confirm-modal-dialog" class="modal-dialog form-container">
-            <div class="modal-header">
-                <h2 id="confirm-modal-title" class="page-title" style="margin-bottom: 0; font-size: 1.5rem;"></h2>
-                <button class="close-btn" id="confirm-modal-close-btn">&times;</button>
-            </div>
-            <div class="modal-body">
-                <p id="confirm-modal-text"></p>
-                <div class="modal-actions">
-                    <button id="confirm-modal-cancel-btn" class="copy-btn">إلغاء</button>
-                    <button id="confirm-modal-ok-btn" class="submit-btn">تأكيد</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
+    <!-- TinyMCE Rich Text Editor -->
+    <!-- ملاحظة: استبدل "no-api-key" بمفتاح API الخاص بك من موقع tiny.cloud لإزالة رسالة التحذير -->
+    <script src="https://cdn.tiny.cloud/1/ii1wrd35xpwdpdm4oaoc7lapcgtl9xtuoqfqcioc00bp04b3/tinymce/6/tinymce.min.js" referrerpolicy="origin"></script>
     <script src="main.js" type="module"></script>
     <script src="ip-widget.js" type="module"></script>
+    <!-- IP-to-Country Library for fast, local lookups -->
+    <script src="https://cdn.jsdelivr.net/npm/ip-to-country-lite/ip-to-country-lite.min.js"></script>
 </body>
 </html>

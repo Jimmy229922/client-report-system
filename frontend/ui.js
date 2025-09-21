@@ -89,30 +89,49 @@ export function handleTheme() {
     });
 }
 
-export function showConfirmModal(title, text) {
+export function showConfirmModal(title, text, options = {}) {
+    const {
+        iconClass = 'fas fa-question-circle', // Default icon
+        iconColor = 'var(--accent-color)', // Default color
+        confirmClass = 'submit-btn',
+        confirmText = 'موافق',
+        cancelText = 'إلغاء'
+    } = options;
+
     return new Promise((resolve) => {
         const modal = document.getElementById('confirm-modal');
         const titleEl = document.getElementById('confirm-modal-title');
+        const iconEl = document.getElementById('confirm-modal-icon');
         const textEl = document.getElementById('confirm-modal-text');
         const okBtn = document.getElementById('confirm-modal-ok-btn');
         const cancelBtn = document.getElementById('confirm-modal-cancel-btn');
-        const closeBtn = document.getElementById('confirm-modal-close-btn');
+
+        // The close button was removed from the HTML for a cleaner look.
+        if (!modal || !titleEl || !iconEl || !textEl || !okBtn || !cancelBtn) {
+            console.error('Confirmation modal elements are missing from the DOM. Falling back to native confirm().');
+            resolve(confirm(`${title}\n\n${text}`));
+            return;
+        }
 
         titleEl.textContent = title;
         textEl.textContent = text;
+        iconEl.innerHTML = `<i class="${iconClass}"></i>`;
+        iconEl.style.color = iconColor;
+
+        okBtn.className = confirmClass;
+        okBtn.textContent = confirmText;
+        cancelBtn.textContent = cancelText;
 
         const closeModal = (result) => {
             modal.classList.remove('show');
             okBtn.onclick = null;
             cancelBtn.onclick = null;
-            closeBtn.onclick = null;
             modal.onclick = null;
             resolve(result);
         };
 
         okBtn.onclick = () => closeModal(true);
         cancelBtn.onclick = () => closeModal(false);
-        closeBtn.onclick = () => closeModal(false);
         modal.onclick = (e) => {
             if (e.target === modal) closeModal(false);
         };

@@ -1,6 +1,7 @@
-import { handleTheme, updateNavbarUser, showToast, showConfirmModal } from './ui.js';
+import { handleTheme, updateNavbarUser, showToast, showConfirmModal, timeAgo } from './ui.js';
 import { navigate } from './router.js';
 import { initIpWidget } from './ip-widget.js';
+import { checkAndStartTour } from './tour.js';
 
 function handleImagePreviewModal() {
     const modal = document.getElementById('image-preview-modal');
@@ -25,17 +26,16 @@ function setupUIForUser() {
     const updateAppBtn = document.getElementById('update-app-btn');
     updateNavbarUser(); // Update username and avatar
 
-    // Show update button for all logged-in users
-    if (updateAppBtn) updateAppBtn.classList.remove('hidden');
-
     const userStr = localStorage.getItem('user');
     if (userStr) {
         // Defensive check to prevent crash from corrupted data
         if (userStr && userStr !== 'undefined' && userStr !== 'null') {
             try {
                 const user = JSON.parse(userStr);
+                // Make the update button visible to all logged-in users
+                if (updateAppBtn) updateAppBtn.classList.remove('hidden');
                 // Show admin-only links
-                if (user && (user.id === 1 || user.email === 'admin@inzo.com')) { // Admin-only UI elements
+                if (user && user.id === 1) { // Admin-only UI elements
                     if (userManagementLink) userManagementLink.classList.remove('hidden');
                 }
             } catch (error) {
@@ -126,7 +126,14 @@ function checkServerStatus(attempts = 0) {
 }
 
 async function handleAppUpdate() {
-    const confirmed = await showConfirmModal('تأكيد تحديث النظام', 'هل أنت متأكد من أنك تريد البحث عن تحديثات وتثبيتها؟ سيتم إعادة تشغيل السيرفر.');
+    const confirmed = await showConfirmModal(
+        'تأكيد تحديث النظام', 
+        'هل أنت متأكد من أنك تريد البحث عن تحديثات وتثبيتها؟ سيتم إعادة تشغيل السيرفر.',
+        {
+            iconClass: 'fas fa-cloud-download-alt',
+            confirmText: 'نعم، تحديث'
+        }
+    );
     if (!confirmed) {
         return;
     }
@@ -160,6 +167,74 @@ async function handleAppUpdate() {
     }
 }
 
+async function fetchAndRenderNotifications() {
+    const list = document.getElementById('notifications-list');
+    const badge = document.getElementById('notification-badge');
+    if (!list || !badge) return;
+
+    try {
+        // Use a direct fetch here to avoid the global error handling of fetchWithAuth for this non-critical, polling feature
+        const response = await fetch('/api/notifications', {
+            headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+        });
+        if (!response.ok) throw new Error('Network response was not ok');
+
+        const result = await response.json();
+        const notifications = result.data || [];
+
+        const unreadCount = notifications.filter(n => !n.is_read).length;
+        
+        if (unreadCount > 0) {
+            badge.textContent = unreadCount > 9 ? '9+' : unreadCount;
+            badge.classList.remove('hidden');
+        } else {
+            badge.classList.add('hidden');
+        }
+
+        if (notifications.length === 0) {
+            list.innerHTML = '<div class="notification-item" style="text-align: center; color: #aaa;">لا توجد إشعارات.</div>';
+            return;
+        }
+
+        list.innerHTML = notifications.map(n => `
+            <a href="${n.link || '#'}" class="notification-item ${!n.is_read ? 'unread' : ''}" data-id="${n.id}">
+                ${n.message}
+                <span class="time">${timeAgo(n.created_at)}</span>
+            </a>
+        `).join('');
+
+    } catch (error) {
+        console.error('Failed to fetch notifications:', error);
+        // Do not show an error in the UI to keep it clean, just log it.
+    }
+}
+
+function handleNotifications() {
+    const btn = document.getElementById('notifications-btn');
+    const list = document.getElementById('notifications-list');
+    const badge = document.getElementById('notification-badge');
+
+    if (!btn || !list) return;
+
+    btn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        const isVisible = list.style.display === 'block';
+        list.style.display = isVisible ? 'none' : 'block';
+
+        if (!isVisible && !badge.classList.contains('hidden')) {
+            badge.classList.add('hidden');
+            list.querySelectorAll('.unread').forEach(item => item.classList.remove('unread'));
+            await fetch('/api/notifications/mark-as-read', { method: 'POST', headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` } });
+        }
+    });
+
+    document.addEventListener('click', (e) => {
+        if (list.style.display === 'block' && !list.contains(e.target) && !btn.contains(e.target)) {
+            list.style.display = 'none';
+        }
+    });
+}
+
 export function initApp() {
     handleTheme();
     handleImagePreviewModal();
@@ -170,12 +245,38 @@ export function initApp() {
         updateBtn.addEventListener('click', handleAppUpdate);
     }
 
+    const restartTourBtn = document.getElementById('restart-tour-btn');
+    if (restartTourBtn) {
+        restartTourBtn.addEventListener('click', () => checkAndStartTour(true));
+    }
+
     document.getElementById('logout-btn').addEventListener('click', async () => {
-        const confirmed = await showConfirmModal('تأكيد تسجيل الخروج', 'هل أنت متأكد من أنك تريد تسجيل الخروج؟');
+        const confirmed = await showConfirmModal(
+            'تسجيل الخروج',
+            'هل أنت متأكد من رغبتك في تسجيل الخروج؟',
+            {
+                iconClass: 'fas fa-sign-out-alt',
+                iconColor: 'var(--danger-color)',
+                confirmText: 'نعم، تسجيل الخروج',
+                confirmClass: 'submit-btn danger-btn',
+                cancelText: 'إلغاء'
+            }
+        );
         if (confirmed) {
-            localStorage.removeItem('token');
-            localStorage.removeItem('user'); // Clear user info on logout
-            location.reload();
+            showToast('جاري تسجيل الخروج...');
+
+            // For a clean logout, we clear all stored data except for the user's theme preference.
+            const theme = localStorage.getItem('theme');
+            localStorage.clear();
+            if (theme) {
+                localStorage.setItem('theme', theme);
+            }
+
+            // Redirect to the login page after a short delay to allow the user to see the toast message.
+            setTimeout(() => {
+                // Use replace() to prevent the logged-in page from being in the browser history.
+                window.location.replace('/');
+            }, 1000);
         }
     });
 
@@ -183,4 +284,9 @@ export function initApp() {
     
     setupUIForUser(); // Setup UI based on user role
     navigate(); // Load initial page
+
+    // Initialize notifications
+    handleNotifications();
+    fetchAndRenderNotifications();
+    setInterval(fetchAndRenderNotifications, 60000); // Poll for new notifications every minute
 }

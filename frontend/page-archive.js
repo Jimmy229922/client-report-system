@@ -1,5 +1,5 @@
 import { fetchWithAuth } from './api.js';
-import { showToast } from './ui.js';
+import { showToast, showConfirmModal } from './ui.js';
 
 function getReportType(reportText) {
     if (reportText.includes('#suspicious')) return 'تقارير مشبوهة';
@@ -28,17 +28,16 @@ async function fetchAndRenderArchive(searchTerm = '') {
 
             archiveGrid.innerHTML = Object.keys(reportsByType).sort().map(type => {
                 const reportsHtml = reportsByType[type].map(report => {
-                    // For admins, show author only if it's not the admin themselves (ID 1)
-                    const authorHtml = report.users && report.users.username && report.user_id !== 1
-                        ? `<span class="report-author"><i class="fas fa-user-pen"></i> ${report.users.username}</span>`
+                    // For admins, show author. For others, it won't be in the data.
+                    const authorHtml = report.users && report.users.username
+                        ? `<div class="report-author"><i class="fas fa-user-pen"></i><span>بواسطة:</span><strong>${report.users.username}</strong></div>`
                         : '';
 
                     return `
                         <div class="archive-card" id="report-card-${report.id}">
                             <div class="archive-card-header">
                                 <strong>${report.report_text.split('\n')[0]}</strong>
-                                <div class="header-meta">
-                                    ${authorHtml}
+                                <div class="header-meta">                                    
                                     <span>${new Date(report.timestamp).toLocaleTimeString('ar-EG')}</span>
                                 </div>
                             </div>
@@ -52,6 +51,7 @@ async function fetchAndRenderArchive(searchTerm = '') {
                                     <button class="archive-btn delete" data-id="${report.id}"><i class="fas fa-trash"></i></button>
                                 </div>
                             </div>
+                            ${authorHtml}
                         </div>
                     `;
                 }).join('');
@@ -110,7 +110,16 @@ function handleCopy(button) {
 
 async function handleDelete(button) {
     const reportId = button.dataset.id;
-    if (confirm('هل أنت متأكد من حذف هذا التقرير؟ لا يمكن التراجع عن هذا الإجراء.')) {
+    const confirmed = await showConfirmModal(
+        'تأكيد الحذف',
+        'هل أنت متأكد من حذف هذا التقرير؟ لا يمكن التراجع عن هذا الإجراء.',
+        {
+            iconClass: 'fas fa-trash-alt',
+            iconColor: 'var(--danger-color)',
+            confirmText: 'نعم، حذف',
+            confirmClass: 'submit-btn danger-btn'
+        });
+    if (confirmed) {
         try {
             await fetchWithAuth(`/api/reports/${reportId}`, { method: 'DELETE' });
             document.getElementById(`report-card-${reportId}`).remove();

@@ -165,7 +165,7 @@ export function renderProfilePage() {
         }
     }
 
-    const isAdmin = user && (user.id === 1 || user.email === 'admin@inzo.com');
+    const isAdmin = user && user.id === 1;
 
     const mainContent = document.getElementById('main-content');
     mainContent.innerHTML = `

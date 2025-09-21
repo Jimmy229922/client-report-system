@@ -388,10 +388,20 @@ async function handleIpLookup(ipInput) {
     const countryInput = form.querySelector('#country');
     const countryIcon = form.querySelector('#country-icon');
 
-    if (!countryInput || !countryIcon) return;
+    if (!countryInput || !countryIcon) return;    
 
-    // Reset fields if IP is invalid
-    if (!/^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$/.test(ip)) {
+    // Regex to find an IP address pattern within the input string
+    const ipRegex = /(?:[0-9]{1,3}\.){3}[0-9]{1,3}/;
+    const match = ip.match(ipRegex);
+    const extractedIp = match ? match[0] : null;
+
+    // If an IP was extracted and it's different from the current input, update the input
+    if (extractedIp && ipInput.value !== extractedIp) {
+        ipInput.value = extractedIp;
+    }
+
+    // Reset fields if no valid IP is found
+    if (!extractedIp) {
         countryInput.value = "";
         countryIcon.className = 'fas fa-globe';
         countryIcon.innerHTML = '';
@@ -404,7 +414,7 @@ async function handleIpLookup(ipInput) {
 
     // Use the new, faster ipwhois.io API
     try {
-        const response = await fetch(`https://ipwhois.app/json/${ip}`);
+        const response = await fetch(`https://ipwhois.app/json/${extractedIp}`);
         const data = await response.json();
         if (data.success) {
             countryInput.value = data.country;

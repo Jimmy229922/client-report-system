@@ -90,39 +90,89 @@ function renderRecentReports(reports) {
         return;
     }
 
-    container.innerHTML = reports.map(report => `
-        <div class="recent-report-item">
+    // Group reports by title to avoid repetition
+    const groupedReports = reports.reduce((acc, report) => {
+        const title = report.report_text.split('\n')[0];
+        if (!acc[title]) {
+            acc[title] = {
+                title: title,
+                count: 0,
+                latest_timestamp: report.timestamp,
+                // Since reports are sorted descending, the first author we see is the latest one.
+                author: report.users ? report.users.username : null
+            };
+        }
+        acc[title].count++;
+        return acc;
+    }, {});
+
+    container.innerHTML = Object.values(groupedReports).map(group => `
+        <a href="#archive" class="recent-report-item">
             <div class="recent-report-header">
-                <a href="#archive" class="recent-report-title">${report.report_text.split('\n')[0]}</a>
-                <span class="recent-report-time">${timeAgo(report.timestamp)}</span>
+                <span class="recent-report-title">${group.title} ${group.count > 1 ? `<span class="report-group-count">(${group.count})</span>` : ''}</span>
+                <span class="recent-report-time">${timeAgo(group.latest_timestamp)}</span>
             </div>
-            <div class="recent-report-author">
-                بواسطة: ${report.users ? report.users.username : '<em>محذوف</em>'}
-            </div>
-        </div>
+            ${group.author ? `<div class="recent-report-author">أحدث تقرير بواسطة: ${group.author}</div>` : ''}
+        </a>
     `).join('');
 }
 
-function renderTopContributor(contributor) {
+function renderTopContributor(contributorData) {
     const container = document.getElementById('top-contributor-container');
-    if (!container) return;
+    const titleEl = container.previousElementSibling;
+    if (!container || !titleEl) return;
 
-    if (!contributor || !contributor.username || contributor.report_count === 0) {
-        container.innerHTML = '<p>لا يوجد مساهمين بعد.</p>';
+    // Case 1: Data is for the current user (non-admin)
+    if (contributorData && contributorData.is_self) {
+        titleEl.innerHTML = `<i class="fas fa-user-chart"></i> إحصائياتك`;
+        const avatarHtml = contributorData.avatar_url
+            ? `<img src="${contributorData.avatar_url}" alt="${contributorData.username}" class="top-contributor-avatar">`
+            : `<div class="top-contributor-avatar-placeholder"><i class="fas fa-user"></i></div>`;
+
+        container.innerHTML = `
+            ${avatarHtml}
+            <div class="top-contributor-info">
+                <span class="top-contributor-name">${contributorData.username}</span>
+                <span class="top-contributor-count">${contributorData.report_count} تقارير</span>
+            </div>
+        `;
         return;
     }
 
-    const avatarHtml = contributor.avatar_url
-        ? `<img src="${contributor.avatar_url}" alt="${contributor.username}" class="top-contributor-avatar">`
-        : `<div class="top-contributor-avatar-placeholder"><i class="fas fa-user"></i></div>`;
+    // Case 2: Data is an array for the admin (Top 3)
+    if (Array.isArray(contributorData)) {
+        titleEl.innerHTML = `<i class="fas fa-trophy"></i> المساهمون الأعلى`;
+        if (contributorData.length === 0) {
+            container.innerHTML = '<p style="text-align: center; width: 100%;">لا يوجد مساهمين بعد.</p>';
+            return;
+        }
 
-    container.innerHTML = `
-        ${avatarHtml}
-        <div class="top-contributor-info">
-            <span class="top-contributor-name">${contributor.username}</span>
-            <span class="top-contributor-count">${contributor.report_count} تقارير</span>
-        </div>
-    `;
+        const rankIcons = [
+            '<i class="fas fa-medal rank-gold"></i>',
+            '<i class="fas fa-medal rank-silver"></i>',
+            '<i class="fas fa-medal rank-bronze"></i>'
+        ];
+
+        container.innerHTML = `
+            <ul class="top-contributors-list">
+                ${contributorData.map((user, index) => `
+                    <li class="top-contributor-list-item">
+                        <div class="contributor-rank">${rankIcons[index] || `<span>${index + 1}</span>`}</div>
+                        ${user.avatar_url ? `<img src="${user.avatar_url}" alt="${user.username}" class="top-contributor-avatar small">` : `<div class="top-contributor-avatar-placeholder small"><i class="fas fa-user"></i></div>`}
+                        <div class="top-contributor-info">
+                            <span class="top-contributor-name">${user.username}</span>
+                            <span class="top-contributor-count">${user.report_count} تقارير</span>
+                        </div>
+                    </li>
+                `).join('')}
+            </ul>
+        `;
+        return;
+    }
+
+    // Fallback
+    titleEl.innerHTML = `<i class="fas fa-trophy"></i> المساهم الأعلى`;
+    container.innerHTML = '<p style="text-align: center; width: 100%;">لا يوجد مساهمين بعد.</p>';
 }
 
 function renderSystemHealth(isHealthy) {
@@ -147,112 +197,83 @@ function renderSystemHealth(isHealthy) {
 }
 
 function renderStatCards(stats) {
-    const totalReportsContainer = document.querySelector('.total-reports-container');
-    const subStatsGrid = document.querySelector('.sub-stats-grid');
+    const statsGrid = document.getElementById('stats-grid');
+    if (!statsGrid) return;
 
-    if (totalReportsContainer) {
-        totalReportsContainer.innerHTML = `
-            <a href="#archive" class="stat-card total-reports">
-                <div class="stat-card-icon"><i class="fas fa-file-alt"></i></div>
-                <div class="stat-card-info">
-                    <h3>Total Reports <small>إجمالي التقارير</small></h3>
-                    <p>${stats.total || 0}</p>
-                </div>
-            </a>
-        `;
-    }
-
-    if (subStatsGrid) {
-        subStatsGrid.innerHTML = `
-            <a href="#archive" class="stat-card reports-today">
-                <div class="stat-card-icon"><i class="fas fa-calendar-day"></i></div>
-                <div class="stat-card-info">
-                    <h3>Reports Today <small>تقارير اليوم</small></h3>
-                    <p>${stats.reports_today || 0}</p>
-                </div>
-            </a>
-            <a href="#reports/suspicious" class="stat-card suspicious">
-                <div class="stat-card-icon"><i class="fas fa-user-secret"></i></div>
-                <div class="stat-card-info">
-                    <h3>Suspicious <small>تقارير مشبوهة</small></h3>
-                    <p>${stats.suspicious || 0}</p>
-                </div>
-            </a>
-            <a href="#reports/deposit" class="stat-card deposit">
-                <div class="stat-card-icon"><i class="fas fa-money-bill-wave"></i></div>
-                <div class="stat-card-info">
-                    <h3>Deposit <small>إيداعات</small></h3>
-                    <p>${stats.deposit || 0}</p>
-                </div>
-            </a>
-            <a href="#reports/new-position" class="stat-card new-position">
-                <div class="stat-card-icon"><i class="fas fa-chart-line"></i></div>
-                <div class="stat-card-info">
-                    <h3>New Position <small>صفقات جديدة</small></h3>
-                    <p>${stats.new_positions || 0}</p>
-                </div>
-            </a>
-            <a href="#reports/credit-out" class="stat-card credit-out">
-                <div class="stat-card-icon"><i class="fas fa-credit-card"></i></div>
-                <div class="stat-card-info">
-                    <h3>Credit Out <small>سحب رصيد</small></h3>
-                    <p>${stats.credit_out || 0}</p>
-                </div>
-            </a>
-            <a href="#reports/account-transfer" class="stat-card account-transfer">
-                <div class="stat-card-icon"><i class="fas fa-exchange-alt"></i></div>
-                <div class="stat-card-info">
-                    <h3>Account Transfer <small>تحويل حسابات</small></h3>
-                    <p>${stats.account_transfer || 0}</p>
-                </div>
-            </a>
-            <a href="#reports/payouts" class="stat-card payouts">
-                <div class="stat-card-icon"><i class="fas fa-hand-holding-usd"></i></div>
-                <div class="stat-card-info">
-                    <h3>PAYOUTS <small>دفعات</small></h3>
-                    <p>${stats.payouts || 0}</p>
-                </div>
-            </a>
-        `;
-    }
+    statsGrid.innerHTML = `
+        <a href="#archive" class="stat-card total-reports">
+            <div class="stat-card-icon"><i class="fas fa-file-alt"></i></div>
+            <div class="stat-card-info">
+                <h3>Total Reports <small>إجمالي التقارير</small></h3>
+                <p>${stats.total || 0}</p>
+            </div>
+        </a>
+        <a href="#archive" class="stat-card reports-today">
+            <div class="stat-card-icon"><i class="fas fa-calendar-day"></i></div>
+            <div class="stat-card-info">
+                <h3>Reports Today <small>تقارير اليوم</small></h3>
+                <p>${stats.reports_today || 0}</p>
+            </div>
+        </a>
+        <a href="#reports/suspicious" class="stat-card suspicious">
+            <div class="stat-card-icon"><i class="fas fa-user-secret"></i></div>
+            <div class="stat-card-info">
+                <h3>Suspicious <small>تقارير مشبوهة</small></h3>
+                <p>${stats.suspicious || 0}</p>
+            </div>
+        </a>
+        <a href="#reports/deposit" class="stat-card deposit">
+            <div class="stat-card-icon"><i class="fas fa-money-bill-wave"></i></div>
+            <div class="stat-card-info">
+                <h3>Deposit <small>إيداعات</small></h3>
+                <p>${stats.deposit || 0}</p>
+            </div>
+        </a>
+        <a href="#reports/new-position" class="stat-card new-position">
+            <div class="stat-card-icon"><i class="fas fa-chart-line"></i></div>
+            <div class="stat-card-info">
+                <h3>New Position <small>صفقات جديدة</small></h3>
+                <p>${stats.new_positions || 0}</p>
+            </div>
+        </a>
+        <a href="#reports/credit-out" class="stat-card credit-out">
+            <div class="stat-card-icon"><i class="fas fa-credit-card"></i></div>
+            <div class="stat-card-info">
+                <h3>Credit Out <small>سحب رصيد</small></h3>
+                <p>${stats.credit_out || 0}</p>
+            </div>
+        </a>
+        <a href="#reports/account-transfer" class="stat-card account-transfer">
+            <div class="stat-card-icon"><i class="fas fa-exchange-alt"></i></div>
+            <div class="stat-card-info">
+                <h3>Account Transfer <small>تحويل حسابات</small></h3>
+                <p>${stats.account_transfer || 0}</p>
+            </div>
+        </a>
+        <a href="#reports/payouts" class="stat-card payouts">
+            <div class="stat-card-icon"><i class="fas fa-hand-holding-usd"></i></div>
+            <div class="stat-card-info">
+                <h3>PAYOUTS <small>دفعات</small></h3>
+                <p>${stats.payouts || 0}</p>
+            </div>
+        </a>
+    `;
 }
 
 function renderWeeklyChart(weeklyData) {
     const ctx = document.getElementById('weekly-chart');
-    if (!ctx) return;
+    if (!ctx || !Array.isArray(weeklyData)) return;
 
     if (weeklyChart) {
         weeklyChart.destroy();
     }
 
-    // Prepare data for the last 24 hours
-    const last24Hours = [...Array(24)].map((_, i) => {
-        const d = new Date();
-        d.setHours(d.getHours() - i);
-        return date_trunc('hour', d); // Helper function to zero out minutes/seconds
-    }).reverse();
-
-    const chartLabels = last24Hours.map(date => date.toLocaleTimeString('ar-EG', { hour: 'numeric', hour12: true }));
-    
-    // Create a lookup map for efficiency and to handle potential invalid dates safely
-    const dataMap = new Map();
-    if (Array.isArray(weeklyData)) {
-        for (const item of weeklyData) {
-            if (item && item.hour_timestamp) {
-                try {
-                    const key = date_trunc('hour', new Date(item.hour_timestamp)).toISOString();
-                    dataMap.set(key, item.count);
-                } catch (e) {
-                    console.warn(`Skipping invalid date from API: ${item.hour_timestamp}`);
-                }
-            }
-        }
-    }
-
-    const chartData = last24Hours.map(date => {
-        const dateStr = date.toISOString();
-        return dataMap.get(dateStr) || 0;
-    });
+    // The new SQL function provides a complete, ordered list of the last 24 hours.
+    // We can use it directly.
+    const chartLabels = weeklyData.map(item => 
+        new Date(item.hour_timestamp).toLocaleTimeString('ar-EG', { hour: 'numeric', hour12: true })
+    );
+    const chartData = weeklyData.map(item => item.count);
 
     weeklyChart = new Chart(ctx, {
         type: 'line',
@@ -346,13 +367,6 @@ function renderWeeklyChart(weeklyData) {
     });
 }
 
-// Helper function to truncate date to the hour
-function date_trunc(unit, d) {
-    const newDate = new Date(d);
-    newDate.setMinutes(0, 0, 0);
-    return newDate;
-}
-
 export function renderHomePage() {
     const mainContent = document.getElementById('main-content');
     mainContent.innerHTML = `
@@ -360,16 +374,11 @@ export function renderHomePage() {
             <h1>لوحة التحكم</h1>
             <p>نظرة عامة سريعة على نشاط النظام والإحصائيات الرئيسية.</p>
         </div>
-        <div class="home-grid">
+        <div id="stats-grid" class="stats-grid">
+            ${Array(8).fill('<div class="stat-card loading"><div class="spinner"></div></div>').join('')}
+        </div>
+        <div class="home-layout">
             <div class="home-main-column">
-                <div id="stats-grid" class="stats-grid">
-                    <div class="total-reports-container">
-                        <div class="stat-card total-reports loading"><div class="spinner"></div></div>
-                    </div>
-                    <div class="sub-stats-grid">
-                        ${Array(6).fill('<div class="stat-card loading"><div class="spinner"></div></div>').join('')}
-                    </div>
-                </div>
                 <div class="chart-card">
                     <h3><i class="fas fa-chart-bar"></i> النشاط اليومي (آخر 24 ساعة)</h3>
                     <div class="chart-container">

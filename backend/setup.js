@@ -1,6 +1,7 @@
 const fs = require('fs');
 const readline = require('readline');
 const crypto = require('crypto');
+const path = require('path');
 
 const rl = readline.createInterface({
   input: process.stdin,
@@ -63,9 +64,29 @@ async function setup() {
 
   try {
     fs.writeFileSync('config.json', configContent);
-    console.log('\n\n\x1b[32m%s\x1b[0m', '✅ Setup complete! config.json file created successfully.'); // Green text
-    console.log('IMPORTANT: You must now commit this `config.json` file to GitHub.');
-    console.log('After that, your friend can pull the changes and run the application directly.');
+    console.log('\n\n\x1b[32m%s\x1b[0m', '✅ Configuration complete! `config.json` file created successfully.');
+
+    // Ensure config.json is in .gitignore
+    const gitignorePath = path.join(__dirname, '..', '.gitignore');
+    const gitignoreEntry = '\n# Secret configuration file\nbackend/config.json\n';
+    try {
+        if (fs.existsSync(gitignorePath)) {
+            if (!fs.readFileSync(gitignorePath, 'utf8').includes('backend/config.json')) {
+                fs.appendFileSync(gitignorePath, gitignoreEntry);
+                console.log('\x1b[32m%s\x1b[0m', '✓ Added `backend/config.json` to .gitignore to keep your keys safe.');
+            }
+        } else {
+            fs.writeFileSync(gitignorePath, gitignoreEntry.trim());
+            console.log('\x1b[32m%s\x1b[0m', '✓ Created .gitignore and added `backend/config.json` to keep your keys safe.');
+        }
+    } catch (e) {
+        console.warn('\n\x1b[33m%s\x1b[0m', 'Warning: Could not automatically update .gitignore. Please manually add `backend/config.json` to your .gitignore file.');
+    }
+
+    console.log('\n--- Deployment Instructions ---');
+    console.log('1. Make sure this project is on a private GitHub repository.');
+    console.log('2. You can now share the GitHub repository link with your employees.');
+    console.log('3. They can download the project and run `start-server.bat` to begin the setup on their machine.');
   } catch (error) {
     console.error('\n\n\x1b[31m%s\x1b[0m', '❌ Failed to create config.json file:', error); // Red text
   } finally {
