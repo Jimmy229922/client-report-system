@@ -8,11 +8,6 @@ function createElements() {
     // Add class to body to handle overlay effect and prevent scrolling
     document.body.classList.add('tour-active');
 
-    // Create a full-screen overlay to block interactions
-    const overlay = document.createElement('div');
-    overlay.id = 'tour-overlay';
-    document.body.appendChild(overlay);
-
     // Create tooltip
     tooltip = document.createElement('div');
     tooltip.id = 'tour-tooltip';
@@ -130,10 +125,6 @@ async function endTour() {
     document.querySelectorAll('.tour-highlight').forEach(el => el.classList.remove('tour-highlight'));
     document.body.classList.remove('tour-active');
     if (tooltip) tooltip.remove();
-
-    // Remove the overlay
-    const overlay = document.getElementById('tour-overlay');
-    if (overlay) overlay.remove();
     
     // Update backend first
     try {
@@ -193,11 +184,28 @@ export function checkAndStartTour(force = false) {
                         text: 'هذه هي صفحة الأرشيف، حيث يمكنك تصفح جميع التقارير السابقة والبحث فيها.' 
                     },
                     { 
-                        action: () => { window.location.hash = '#reports/suspicious'; },
+                        action: () => { window.location.hash = '#instructions'; },
                         selector: '#main-content .page-title', 
-                        text: 'وهذا نموذج لإنشاء تقرير. يمكنك ملء الحقول وإرفاق الصور ثم إرساله.' 
+                        text: 'هنا تجد صفحة التعليمات، وهي مرجع سريع للإجراءات والسياسات المتبعة في القسم.' 
                     },
-                    { selector: '.nav-actions', text: 'هذه هي منطقة الإجراءات السريعة. يمكنك من هنا فحص IP، تبديل الوضع الليلي، والوصول إلى ملفك الشخصي وتسجيل الخروج.' },
+                    { 
+                        action: () => { window.location.hash = '#comparator'; },
+                        selector: '#main-content .page-title', 
+                        text: 'وهذه أداة متقدمة لمقارنة قوائم الحسابات واستخراج البيانات الجديدة بسهولة.' 
+                    },
+                    { 
+                        action: () => { window.location.hash = '#home'; }, // Go back to home to ensure buttons are visible
+                        selector: '#quick-ip-check-btn', 
+                        text: 'أداة سريعة لفحص أي IP تقوم بنسخه. ستظهر تلقائياً عند نسخ IP صالح.' 
+                    },
+                    { 
+                        selector: '#theme-toggle-btn', 
+                        text: 'استخدم هذا الزر للتبديل بين الوضع الليلي والنهاري لتريح عينيك.' 
+                    },
+                    { 
+                        selector: '#user-profile-btn', 
+                        text: 'من هنا يمكنك الوصول لملفك الشخصي، تحديث النظام، وإعادة الجولة التعريفية.' 
+                    },
                 ];
 
                 if (isAdmin) {

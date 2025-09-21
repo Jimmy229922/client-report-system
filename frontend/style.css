@@ -2391,23 +2391,12 @@ body.tour-active {
     overflow: hidden;
 }
 
-/* A real overlay to block clicks on the rest of the page */
-#tour-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(12, 12, 29, 0.85);
-    z-index: 9998; /* Below the highlight and tooltip */
-    animation: fadeIn 0.4s ease-out;
-}
-
 .tour-highlight {
     position: relative;
     z-index: 9999;
-    /* The overlay is now a separate element. This shadow provides a "glow" effect. */
-    box-shadow: 0 0 15px 5px rgba(77, 91, 249, 0.5);
+    /* This creates a "hole" in a pseudo-overlay, a very effective technique.
+       The element itself remains clear and interactive. */
+    box-shadow: 0 0 0 9999px rgba(12, 12, 29, 0.85);
     border-radius: 8px; /* A default, can be overridden for circular elements */
     transition: box-shadow 0.4s ease-in-out;
 }
@@ -2419,7 +2408,7 @@ body.tour-active {
     color: var(--text-color);
     padding: 1.5rem;
     border-radius: 12px;
-    border: 1px solid var(--border-color);
+    border: 1px solid var(--accent-color);
     box-shadow: 0 8px 30px rgba(0,0,0,0.3);
     width: 340px;
     max-width: 90vw;
