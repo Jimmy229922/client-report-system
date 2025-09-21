@@ -257,6 +257,20 @@ async function fetchAndRenderNotifications() {
     const badge = document.getElementById('notification-badge');
     if (!list || !badge) return;
 
+    // Ensure header and items container exist. This prevents re-rendering the header
+    // on refresh, which would reset the status indicator.
+    if (!list.querySelector('.notification-header')) {
+        list.innerHTML = `
+            <div class="notification-header">
+                <h4>الإشعارات</h4>
+                <div id="notification-status-indicator" class="status-indicator disconnected" title="انقطع الاتصال اللحظي، جاري إعادة المحاولة..."></div>
+                <button id="refresh-notifications-btn" class="icon-btn" title="تحديث"><i class="fas fa-sync-alt"></i></button>
+            </div>
+            <div id="notification-items-container"></div>
+        `;
+    }
+    const itemsContainer = document.getElementById('notification-items-container');
+
     const userStr = localStorage.getItem('user');
     let isAdmin = false;
     if (userStr) {
@@ -281,19 +295,11 @@ async function fetchAndRenderNotifications() {
         }
 
         if (notifications.length === 0) {
-            list.innerHTML = '<div class="notification-item" style="text-align: center; color: #aaa;">لا توجد إشعارات.</div>';
+            itemsContainer.innerHTML = '<div class="notification-item" style="text-align: center; color: #aaa;">لا توجد إشعارات.</div>';
             return;
         }
 
-        const header = `
-            <div class="notification-header">
-                <h4>الإشعارات</h4>
-                <div id="notification-status-indicator" class="status-indicator disconnected" title="انقطع الاتصال اللحظي، جاري إعادة المحاولة..."></div>
-                <button id="refresh-notifications-btn" class="icon-btn" title="تحديث"><i class="fas fa-sync-alt"></i></button>
-            </div>
-        `;
-
-        const itemsHtml = notifications.map(n => {
+        itemsContainer.innerHTML = notifications.map(n => {
             const adminDeleteBtn = isAdmin ? `<button class="delete-notification-btn" data-message="${n.message}" data-link="${n.link}" title="حذف هذا الإشعار للجميع">&times;</button>` : '';
             return `
                 <div class="notification-item-wrapper">
@@ -304,8 +310,6 @@ async function fetchAndRenderNotifications() {
                     ${adminDeleteBtn}
                 </div>`;
         }).join('');
-
-        list.innerHTML = header + itemsHtml;
 
     } catch (error) {
         console.error('Failed to fetch notifications:', error);
