@@ -244,7 +244,7 @@ function handleNotifications() {
         if (!isVisible && !badge.classList.contains('hidden')) {
             badge.classList.add('hidden');
             list.querySelectorAll('.unread').forEach(item => item.classList.remove('unread'));
-            await fetch('/api/notifications/mark-as-read', { method: 'POST', headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` } });
+            await fetchWithAuth('/api/notifications/mark-as-read', { method: 'POST' });
         }
     });
 
@@ -283,6 +283,41 @@ function handleNotifications() {
             }
         }
     });
+}
+
+function initRealtimeNotifications() {
+    const token = localStorage.getItem('token');
+    if (!token) return;
+
+    const eventSource = new EventSource(`/api/notifications/events?token=${token}`);
+
+    eventSource.onmessage = function(event) {
+        try {
+            const data = JSON.parse(event.data);
+            console.log('[SSE] Received event:', data);
+
+            switch (data.type) {
+                case 'notification_created':
+                case 'notification_deleted':
+                    // For both creating and deleting, the simplest and most reliable
+                    // way to update the UI is to just refetch the entire list.
+                    fetchAndRenderNotifications();
+                    break;
+                case 'connected':
+                    console.log('[SSE] Successfully connected to event stream.');
+                    break;
+            }
+        } catch (error) {
+            console.error('[SSE] Error parsing event data:', error);
+        }
+    };
+
+    eventSource.onerror = function(err) {
+        console.error('EventSource failed:', err);
+        eventSource.close();
+        // Attempt to reconnect after a delay
+        setTimeout(initRealtimeNotifications, 10000); // Reconnect after 10 seconds
+    };
 }
 
 export function initApp() {
@@ -338,5 +373,5 @@ export function initApp() {
     // Initialize notifications
     handleNotifications();
     fetchAndRenderNotifications();
-    setInterval(fetchAndRenderNotifications, 60000); // Poll for new notifications every minute
+    initRealtimeNotifications(); // Start listening for real-time events
 }

@@ -61,6 +61,29 @@ app.use(express.urlencoded({ extended: true })); // لتحليل البيانا�
 // تقديم ملفات الواجهة الأمامية بشكل ثابت
 app.use(express.static(path.join(__dirname, '../frontend')));
 
+// --- Real-time Event Setup (Server-Sent Events) ---
+let clients = [];
+
+function sendEventToAll(data) {
+    const eventString = `data: ${JSON.stringify(data)}\n\n`;
+    clients.forEach(client => client.res.write(eventString));
+    console.log(`[SSE] Sent event of type '${data.type}' to ${clients.length} client(s).`);
+}
+
+const verifyTokenForSSE = (req, res, next) => {
+    const token = req.query.token;
+    if (!token) {
+        return res.status(403).end(); // End the request for SSE
+    }
+    jwt.verify(token, config.JWT_SECRET, (err, decoded) => {
+        if (err) {
+            return res.status(401).end();
+        }
+        req.userId = decoded.id;
+        next();
+    });
+};
+
 const verifyToken = (req, res, next) => {
     let token = req.headers['authorization'];
 
@@ -556,6 +579,30 @@ app.get('/api/health', (req, res) => {
 // --- Instructions Endpoints ---
 
 // --- Notifications Endpoints ---
+
+// SSE endpoint for real-time events
+app.get('/api/notifications/events', verifyTokenForSSE, (req, res) => {
+    const headers = {
+        'Content-Type': 'text/event-stream',
+        'Connection': 'keep-alive',
+        'Cache-Control': 'no-cache'
+    };
+    res.writeHead(200, headers);
+
+    const clientId = Date.now();
+    const newClient = { id: clientId, userId: req.userId, res: res };
+    clients.push(newClient);
+    console.log(`[SSE] Client ${clientId} (User ${req.userId}) connected. Total clients: ${clients.length}`);
+
+    // Send a welcome/connection confirmation event
+    res.write(`data: ${JSON.stringify({ type: 'connected' })}\n\n`);
+
+    req.on('close', () => {
+        clients = clients.filter(client => client.id !== clientId);
+        console.log(`[SSE] Client ${clientId} disconnected. Total clients: ${clients.length}`);
+    });
+});
+
 app.get('/api/notifications', verifyToken, async (req, res) => {
     const { data, error } = await supabase
         .from('notifications')
@@ -592,6 +639,13 @@ app.delete('/api/notifications/group', verifyToken, verifyAdmin, async (req, res
         .delete({ count: 'exact' })
         .eq('message', message)
         .eq('link', link);
+
+    // If deletion was successful, send a real-time event to all clients
+    if (!error && count > 0) {
+        sendEventToAll({
+            type: 'notification_deleted'
+        });
+    }
 
     if (error) {
         return res.status(500).json({ error: error.message });
@@ -639,6 +693,7 @@ app.post('/api/instructions', verifyToken, verifyAdmin, async (req, res) => {
                 link: '#instructions'
             }));
             if (notifications.length > 0) await supabase.from('notifications').insert(notifications);
+            sendEventToAll({ type: 'notification_created' });
         } catch (e) { console.error('[Instructions] Failed to create new instruction notifications:', e.message); }
     }
     res.status(201).json({ message: 'تمت إضافة التعليمة بنجاح.', data });
@@ -671,6 +726,7 @@ app.put('/api/instructions/:id', verifyToken, verifyAdmin, async (req, res) => {
                 link: '#instructions'
             }));
             if (notifications.length > 0) await supabase.from('notifications').insert(notifications);
+            sendEventToAll({ type: 'notification_created' });
         } catch (e) { console.error('[Instructions] Failed to create update instruction notifications:', e.message); }
     }
 
@@ -1038,7 +1094,8 @@ app.post('/api/system/update', verifyToken, (req, res) => {
             }));
 
             if (notifications.length > 0) {
-                supabase.from('notifications').insert(notifications).then(() => console.log(`[Update] Created ${notifications.length} update notifications.`));
+                await supabase.from('notifications').insert(notifications);
+                sendEventToAll({ type: 'notification_created' });
             }
         } catch (e) {
             console.error('[Update] Failed to create update notifications:', e.message);
