@@ -2,6 +2,7 @@ import { handleTheme, updateNavbarUser, showToast, showConfirmModal, timeAgo } f
 import { navigate } from './router.js';
 import { initIpWidget } from './ip-widget.js';
 import { checkAndStartTour } from './tour.js';
+import { fetchWithAuth } from './api.js';
 
 function handleImagePreviewModal() {
     const modal = document.getElementById('image-preview-modal');
@@ -187,13 +188,7 @@ async function fetchAndRenderNotifications() {
     }
 
     try {
-        // Use a direct fetch here to avoid the global error handling of fetchWithAuth for this non-critical, polling feature
-        const response = await fetch('/api/notifications', {
-            headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
-        });
-        if (!response.ok) throw new Error('Network response was not ok');
-
-        const result = await response.json();
+        const result = await fetchWithAuth('/api/notifications');
         const notifications = result.data || [];
 
         const unreadCount = notifications.filter(n => !n.is_read).length;
@@ -243,7 +238,7 @@ function handleNotifications() {
         if (!isVisible && !badge.classList.contains('hidden')) {
             badge.classList.add('hidden');
             list.querySelectorAll('.unread').forEach(item => item.classList.remove('unread'));
-            await fetch('/api/notifications/mark-as-read', { method: 'POST', headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` } });
+            await fetchWithAuth('/api/notifications/mark-as-read', { method: 'POST' });
         }
     });
 
