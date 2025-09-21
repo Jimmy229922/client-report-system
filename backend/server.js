@@ -851,6 +851,8 @@ app.post('/api/users', verifyToken, verifyAdmin, upload.single('avatar'), async 
                 link: '#users'
             });
             if (notifError) throw notifError;
+            // Send event to clients
+            sendEventToAll({ type: 'notification_created' });
         } catch (e) {
             console.error('Failed to create notification for new user:', e.message);
         }

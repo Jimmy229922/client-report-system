@@ -188,13 +188,8 @@ async function fetchAndRenderNotifications() {
     }
 
     try {
-        // Use a direct fetch here to avoid the global error handling of fetchWithAuth for this non-critical, polling feature
-        const response = await fetch('/api/notifications', {
-            headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
-        });
-        if (!response.ok) throw new Error('Network response was not ok');
-
-        const result = await response.json();
+        // Using fetchWithAuth for consistency and robust error handling
+        const result = await fetchWithAuth('/api/notifications');
         const notifications = result.data || [];
 
         const unreadCount = notifications.filter(n => !n.is_read).length;
