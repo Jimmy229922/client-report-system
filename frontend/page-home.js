@@ -404,15 +404,11 @@ export function renderHomePage() {
                     <div id="system-health-container" class="system-health-container">
                         <!-- Content will be rendered by renderSystemHealth -->
                     </div>
-                    <div class="system-health-footer">
-                        <span id="app-version-health" class="app-version-badge"></span>
-                    </div>
                 </div>
             </div>
         </div>
     `;
     fetchAndRenderHomePageData();
-    loadAndDisplayVersion();
 
     // Clear any existing interval before setting a new one
     if (healthCheckInterval) clearInterval(healthCheckInterval);

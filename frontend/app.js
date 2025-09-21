@@ -206,7 +206,14 @@ async function fetchAndRenderNotifications() {
             return;
         }
 
-        list.innerHTML = notifications.map(n => {
+        const header = `
+            <div class="notification-header">
+                <h4>الإشعارات</h4>
+                <button id="refresh-notifications-btn" class="icon-btn" title="تحديث"><i class="fas fa-sync-alt"></i></button>
+            </div>
+        `;
+
+        const itemsHtml = notifications.map(n => {
             const adminDeleteBtn = isAdmin ? `<button class="delete-notification-btn" data-message="${n.message}" data-link="${n.link}" title="حذف هذا الإشعار للجميع">&times;</button>` : '';
             return `
                 <div class="notification-item-wrapper">
@@ -217,6 +224,8 @@ async function fetchAndRenderNotifications() {
                     ${adminDeleteBtn}
                 </div>`;
         }).join('');
+
+        list.innerHTML = header + itemsHtml;
 
     } catch (error) {
         console.error('Failed to fetch notifications:', error);
@@ -251,6 +260,17 @@ function handleNotifications() {
 
     list.addEventListener('click', async (e) => {
         const deleteBtn = e.target.closest('.delete-notification-btn');
+        const refreshBtn = e.target.closest('#refresh-notifications-btn');
+
+        if (refreshBtn) {
+            e.preventDefault();
+            e.stopPropagation();
+            const icon = refreshBtn.querySelector('i');
+            icon.classList.add('fa-spin');
+            await fetchAndRenderNotifications(); // This will re-render and remove the spinning button
+            return;
+        }
+
         if (deleteBtn) {
             e.preventDefault(); // Prevent navigation if the link is clicked
             e.stopPropagation(); // Stop the click from propagating to the link or the dropdown handler
