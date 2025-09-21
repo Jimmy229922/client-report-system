@@ -1,6 +1,18 @@
 import { fetchWithAuth } from './api.js';
 import { showToast, showConfirmModal } from './ui.js';
 
+let IS_ADMIN = false; // Cache admin status
+let reportsByTypeCache = {}; // Cache for lazy loading reports in accordions
+
+function checkAdminStatus() {
+    const userStr = localStorage.getItem('user');
+    if (!userStr) return false;
+    try {
+        const user = JSON.parse(userStr);
+        return user.id === 1;
+    } catch (e) { return false; }
+}
+
 function getReportType(report) { // Changed to accept the whole report object
     // Prioritize the new 'type' column if it exists
     if (report.type) {
@@ -38,7 +50,11 @@ function createReportCard(report) {
     // The image thumbnails container, now with a 'hidden' class
     const imagesContainerHtml = hasImages
         ? `<div class="archive-image-thumbnails hidden">
-            ${report.image_urls.map(url => `<img src="${url}" alt="صورة مرفقة" class="archive-thumbnail img-preview">`).join('')}
+            ${report.image_urls.map(url => `
+                <div class="archive-thumbnail-wrapper">
+                    <img src="${url}" alt="صورة مرفقة" class="archive-thumbnail img-preview">
+                    ${IS_ADMIN ? `<button class="delete-image-btn" data-report-id="${report.id}" data-image-url="${url}" title="حذف هذه الصورة">&times;</button>` : ''}
+                </div>`).join('')}
            </div>`
         : '';
 
@@ -80,6 +96,8 @@ async function fetchAndRenderArchive(searchTerm = '') {
     const archiveGrid = document.getElementById('archive-grid');
     if (!archiveGrid) return;
     archiveGrid.innerHTML = `<div class="spinner"></div>`;
+    reportsByTypeCache = {}; // Clear cache on new fetch/search
+    IS_ADMIN = checkAdminStatus(); // Check admin status once per page load
     try {
         const result = await fetchWithAuth(`/api/reports?search=${encodeURIComponent(searchTerm)}`);
 
@@ -104,16 +122,17 @@ async function fetchAndRenderArchive(searchTerm = '') {
                 return acc;
             }, {});
 
-            archiveGrid.innerHTML = Object.keys(reportsByType).sort().map(type => {
-                const reportsHtml = `<div class="archive-section-grid">${reportsByType[type].map(createReportCard).join('')}</div>`;
+            reportsByTypeCache = reportsByType; // Store data for lazy loading
+
+            archiveGrid.innerHTML = Object.keys(reportsByTypeCache).sort().map(type => {
 
                 return `
                     <div class="accordion-group">
                         <div class="accordion-header">
-                            <h3>${type} (${reportsByType[type].length})</h3>
+                            <h3>${type} (${reportsByTypeCache[type].length})</h3>
                             <i class="fas fa-chevron-down"></i>
                         </div>
-                        <div class="accordion-content">${reportsHtml}</div>
+                        <div class="accordion-content" data-report-type="${type}"></div>
                     </div>
                 `;
             }).join('');
@@ -132,8 +151,18 @@ async function fetchAndRenderArchive(searchTerm = '') {
 function setupArchiveInteractions() {
     document.querySelectorAll('.accordion-header').forEach(header => {
         header.addEventListener('click', () => {
-            header.classList.toggle('active');
             const content = header.nextElementSibling;
+            const reportType = content.dataset.reportType;
+
+            // Lazy load content if it hasn't been loaded yet
+            if (!content.hasAttribute('data-loaded')) {
+                const reports = reportsByTypeCache[reportType] || [];
+                const reportsHtml = `<div class="archive-section-grid">${reports.map(createReportCard).join('')}</div>`;
+                content.innerHTML = reportsHtml;
+                content.setAttribute('data-loaded', 'true');
+            }
+
+            header.classList.toggle('active');
             if (content.style.maxHeight) {
                 content.style.maxHeight = null;
             } else {
@@ -143,29 +172,20 @@ function setupArchiveInteractions() {
         });
     });
 
-    document.querySelectorAll('.archive-btn').forEach(button => {
-        button.addEventListener('click', async (e) => {
-            const currentButton = e.currentTarget;
-            if (currentButton.classList.contains('copy')) {
-                handleCopy(currentButton);
-            } else if (currentButton.classList.contains('delete')) {
-                handleDelete(currentButton);
-            } else if (currentButton.classList.contains('show-images')) {
-                // --- بداية التعديل: منطق إظهار الصور ---
-                const card = currentButton.closest('.archive-card');
-                if (card) {
-                    const thumbnails = card.querySelector('.archive-image-thumbnails');
-                    if (thumbnails) {
-                        thumbnails.classList.remove('hidden');
-                        currentButton.style.display = 'none'; // إخفاء الزر بعد النقر
-                    }
-                }
-                // --- نهاية التعديل ---
-            }
-        });
+    // Use event delegation for all actions within the archive grid
+    const archiveGrid = document.getElementById('archive-grid');
+    if (!archiveGrid) return;
+
+    archiveGrid.addEventListener('click', async (e) => {
+        const button = e.target.closest('.archive-btn, .delete-image-btn');
+        if (!button) return;
+
+        if (button.classList.contains('copy')) handleCopy(button);
+        else if (button.classList.contains('delete')) handleDelete(button);
+        else if (button.classList.contains('show-images')) handleShowImages(button);
+        else if (button.classList.contains('delete-image-btn')) handleDeleteImage(button);
     });
 }
-
 function handleCopy(button) {
     const reportText = button.dataset.reportText;
     navigator.clipboard.writeText(reportText).then(() => {
@@ -173,6 +193,17 @@ function handleCopy(button) {
     }).catch(err => {
         showToast('فشل نسخ النص.', true);
     });
+}
+
+function handleShowImages(button) {
+    const card = button.closest('.archive-card');
+    if (card) {
+        const thumbnails = card.querySelector('.archive-image-thumbnails');
+        if (thumbnails) {
+            thumbnails.classList.remove('hidden');
+            button.style.display = 'none'; // Hide the button after clicking
+        }
+    }
 }
 
 async function handleDelete(button) {
@@ -207,6 +238,38 @@ async function handleDelete(button) {
                 // If no reports are left in this group, remove the whole group
                 group.remove();
             }
+        } catch (err) {
+            showToast(err.message, true);
+        }
+    }
+}
+
+async function handleDeleteImage(button) {
+    const reportId = button.dataset.reportId;
+    const imageUrl = button.dataset.imageUrl;
+
+    const confirmed = await showConfirmModal(
+        'تأكيد حذف الصورة',
+        'هل أنت متأكد من حذف هذه الصورة فقط من التقرير؟ لا يمكن التراجع عن هذا الإجراء.',
+        {
+            iconClass: 'fas fa-image',
+            iconColor: 'var(--danger-color)',
+            confirmText: 'نعم، حذف الصورة',
+            confirmClass: 'submit-btn danger-btn'
+        }
+    );
+
+    if (confirmed) {
+        try {
+            const result = await fetchWithAuth(`/api/reports/${reportId}/images`, {
+                method: 'DELETE',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ imageUrl })
+            });
+            showToast(result.message);
+            // Remove the image from the DOM
+            const thumbnailWrapper = button.closest('.archive-thumbnail-wrapper');
+            if (thumbnailWrapper) thumbnailWrapper.remove();
         } catch (err) {
             showToast(err.message, true);
         }

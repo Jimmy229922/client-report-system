@@ -288,6 +288,7 @@ async function fetchAndRenderNotifications() {
         const header = `
             <div class="notification-header">
                 <h4>الإشعارات</h4>
+                <div id="notification-status-indicator" class="status-indicator disconnected" title="انقطع الاتصال اللحظي، جاري إعادة المحاولة..."></div>
                 <button id="refresh-notifications-btn" class="icon-btn" title="تحديث"><i class="fas fa-sync-alt"></i></button>
             </div>
         `;
@@ -386,9 +387,33 @@ function initRealtimeNotifications() {
     console.log('[SSE] Initializing real-time connection...');
     const eventSource = new EventSource(`/api/notifications/events?token=${token}`);
 
+    const updateIndicator = (isConnected) => {
+        const statusIndicator = document.getElementById('notification-status-indicator');
+        if (statusIndicator) {
+            if (isConnected) {
+                statusIndicator.classList.remove('disconnected');
+                statusIndicator.classList.add('connected');
+                statusIndicator.title = 'متصل بالتحديثات اللحظية';
+            } else {
+                statusIndicator.classList.remove('connected');
+                statusIndicator.classList.add('disconnected');
+                statusIndicator.title = 'انقطع الاتصال اللحظي، جاري إعادة المحاولة...';
+            }
+        }
+    };
+
     eventSource.onopen = () => {
         console.log('[SSE] Connection to server opened.');
+        updateIndicator(true);
     };
+
+    // NEW: Add a listener for our custom heartbeat event.
+    // This confirms the connection is alive without cluttering the main message handler.
+    eventSource.addEventListener('heartbeat', (event) => {
+        console.log('[SSE] Heartbeat received.', event.data);
+        // We know the connection is good, so ensure the indicator is green.
+        updateIndicator(true);
+    });
 
     eventSource.onmessage = function(event) {
         try {
@@ -406,6 +431,7 @@ function initRealtimeNotifications() {
                     break;
                 case 'connected':
                     console.log('[SSE] Successfully connected to event stream.');
+                    updateIndicator(true);
                     break;
             }
         } catch (error) {
@@ -414,7 +440,13 @@ function initRealtimeNotifications() {
     };
 
     eventSource.onerror = function(err) {
-        console.error('EventSource failed:', err);
+        console.error('[SSE] EventSource connection failed. This can be due to a server restart, network issue, or an authentication problem (like an expired token). The browser does not provide specific details.', err);
+        if (err.target && err.target.readyState === EventSource.CLOSED) {
+            console.error('[SSE] The connection was closed by the server or due to a network error.');
+        } else {
+            console.error('[SSE] An unknown error occurred with the EventSource.');
+        }
+        updateIndicator(false);
         eventSource.close();
         // Attempt to reconnect after a delay
         console.log('[SSE] Connection lost. Attempting to reconnect in 10 seconds...');

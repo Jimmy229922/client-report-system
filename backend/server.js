@@ -65,6 +65,22 @@ app.use(express.static(path.join(__dirname, '../frontend')));
 // --- Real-time Event Setup (Server-Sent Events) ---
 let clients = [];
 
+// Heartbeat to keep connections alive through proxies and firewalls
+setInterval(() => {
+    // This is a named event that the client can listen for or ignore.
+    // It's more robust than a comment as it actively confirms the connection is alive.
+    const eventString = `event: heartbeat\ndata: ${new Date().toISOString()}\n\n`;
+    clients.forEach(client => {
+        try {
+            client.res.write(eventString);
+        } catch (error) {
+            // The 'close' event on the request object is the canonical way to handle disconnections.
+            // We just log here for debugging purposes and let the 'close' handler do the cleanup.
+            console.warn(`[SSE Heartbeat] Failed to send heartbeat to client ${client.id}. It may have disconnected.`);
+        }
+    });
+}, 20000); // Send a keep-alive event every 20 seconds
+
 function sendEventToAll(data) {
     const eventString = `data: ${JSON.stringify(data)}\n\n`;
     // Create a copy of the clients array to prevent issues if a client disconnects during the loop
@@ -81,14 +97,20 @@ function sendEventToAll(data) {
 }
 
 const verifyTokenForSSE = (req, res, next) => {
+    console.log('[SSE Auth] Verifying token for new connection...');
     const token = req.query.token;
     if (!token) {
+        console.error('[SSE Auth] FAILED: No token provided in query string. Connection rejected with 403.');
         return res.status(403).end(); // End the request for SSE
     }
+    console.log('[SSE Auth] Token found in query string.');
+
     jwt.verify(token, config.JWT_SECRET, (err, decoded) => {
         if (err) {
+            console.error(`[SSE Auth] FAILED: JWT verification failed. Error: ${err.message}. Connection rejected with 401.`);
             return res.status(401).end();
         }
+        console.log(`[SSE Auth] SUCCESS: Token verified for user ID: ${decoded.id}.`);
         req.userId = decoded.id;
         next();
     });
@@ -530,6 +552,56 @@ app.delete('/api/reports/:id', verifyToken, async (req, res) => { // verifyToken
         return res.status(500).json({ "error": deleteError.message });
     }
     res.json({ "message": "deleted", changes: count });
+});
+
+// Endpoint to delete a single image from a report (Admin only)
+app.delete('/api/reports/:reportId/images', verifyToken, verifyAdmin, async (req, res) => {
+    const { reportId } = req.params;
+    const { imageUrl } = req.body;
+
+    if (!imageUrl) {
+        return res.status(400).json({ error: "Image URL is required." });
+    }
+
+    try {
+        // 1. Fetch the report
+        const { data: report, error: fetchError } = await supabase
+            .from('reports')
+            .select('image_urls')
+            .eq('id', reportId)
+            .single();
+
+        if (fetchError) {
+            return res.status(404).json({ error: "التقرير غير موجود." });
+        }
+
+        if (!report.image_urls || !report.image_urls.includes(imageUrl)) {
+            return res.status(404).json({ error: "الصورة المحددة غير موجودة في هذا التقرير." });
+        }
+
+        // 2. Remove the image from the array
+        const updatedImageUrls = report.image_urls.filter(url => url !== imageUrl);
+
+        // 3. Update the report in the database
+        const { error: updateError } = await supabase
+            .from('reports')
+            .update({ image_urls: updatedImageUrls, image_count: updatedImageUrls.length })
+            .eq('id', reportId);
+
+        if (updateError) {
+            console.error(`Failed to update report ${reportId} after image deletion:`, updateError);
+            throw new Error("فشل تحديث سجل التقرير في قاعدة البيانات.");
+        }
+
+        // 4. Delete the image file from storage
+        const imagePath = imageUrl.substring(imageUrl.indexOf('/reports-images/') + '/reports-images/'.length);
+        const { error: storageError } = await supabase.storage.from('reports-images').remove([imagePath]);
+        if (storageError) console.error(`Failed to delete image file '${imagePath}' from storage:`, storageError);
+        res.json({ message: "تم حذف الصورة بنجاح." });
+    } catch (error) {
+        console.error("Error deleting image from report:", error);
+        res.status(500).json({ error: error.message || "حدث خطأ في الخادم." });
+    }
 });
 
 // Endpoint for statistics

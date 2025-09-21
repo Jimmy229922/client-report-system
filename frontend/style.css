@@ -325,6 +325,32 @@ main {
     font-size: 1rem;
 }
 
+.status-indicator {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    transition: background-color 0.5s ease, box-shadow 0.5s ease;
+    margin-right: auto; /* Push to the left in RTL */
+    margin-left: 10px; /* Space from title */
+}
+
+.status-indicator.connected {
+    background-color: var(--success-color);
+    box-shadow: 0 0 8px var(--success-color);
+}
+
+.status-indicator.disconnected {
+    background-color: var(--danger-color);
+    box-shadow: 0 0 8px var(--danger-color);
+    animation: pulse-disconnected 2s infinite;
+}
+
+@keyframes pulse-disconnected {
+    0% { box-shadow: 0 0 8px var(--danger-color); }
+    50% { box-shadow: 0 0 0px var(--danger-color); }
+    100% { box-shadow: 0 0 8px var(--danger-color); }
+}
+
 #refresh-notifications-btn {
     font-size: 0.9rem;
     color: #aaa;
@@ -1058,6 +1084,34 @@ main {
     padding: 0.75rem 1.5rem;
     background-color: var(--input-bg);
     border-top: 1px solid var(--border-color);
+}
+
+.archive-thumbnail-wrapper {
+    position: relative;
+    flex-shrink: 0; /* Prevent shrinking in flex container */
+}
+
+.delete-image-btn {
+    position: absolute;
+    top: -5px;
+    right: -5px;
+    background: var(--danger-color);
+    color: white;
+    border: 2px solid var(--card-bg);
+    border-radius: 50%;
+    width: 22px;
+    height: 22px;
+    font-size: 14px;
+    font-weight: bold;
+    cursor: pointer;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    transition: transform 0.2s ease, background-color 0.2s ease;
+}
+.delete-image-btn:hover {
+    transform: scale(1.2);
+    background-color: #a82330;
 }
 
 .archive-thumbnail {
