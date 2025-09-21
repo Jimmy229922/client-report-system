@@ -1145,10 +1145,39 @@ main { padding: 2rem; max-width: 1200px; margin: 2rem auto; animation: fadeIn 0.
     gap: 1.5rem;
 }
 
-.home-main-column h2, .home-sidebar-column h2 {
+.sidebar-card {
+    background-color: var(--card-bg);
+    padding: 1.5rem;
+    border-radius: 12px;
+    border: 1px solid var(--border-color);
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+.sidebar-card::before {
+    content: '';
+    position: absolute;
+    top: -25%;
+    left: -50%;
+    width: 200%;
+    height: 150%;
+    background: radial-gradient(circle, rgba(77, 91, 249, 0.05), transparent 50%);
+    animation: rotateGradient 25s linear infinite;
+    z-index: 0;
+}
+
+.sidebar-card h2, .sidebar-card h3 {
+    position: relative;
+    z-index: 1;
     margin: 0;
-    padding-bottom: 0.5rem;
+    padding-bottom: 1rem;
     border-bottom: 1px solid var(--border-color);
+    font-size: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
 }
 
 .chart-placeholder {
@@ -1221,28 +1250,12 @@ a.recent-report-item:hover {
     margin: 0;
 }
 
-/* --- Top Contributor Card Styles --- */
-.top-contributor-card {
-    margin-top: 2rem;
-}
-
-.top-contributor-card h3 {
-    margin: 0 0 1rem 0;
-    padding-bottom: 1rem;
-    border-bottom: 1px solid var(--border-color);
-    font-size: 1.5rem;
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-}
-
 .top-contributor-container {
-    background-color: var(--card-bg);
-    padding: 1.5rem;
-    border-radius: 8px;
     display: flex;
     align-items: center;
     gap: 1rem;
+    position: relative; /* To stay above the pseudo-element */
+    z-index: 1;
 }
 
 .top-contributor-avatar, .top-contributor-avatar-placeholder {
@@ -1263,20 +1276,6 @@ a.recent-report-item:hover {
 .top-contributor-name { font-weight: bold; font-size: 1.1rem; }
 .top-contributor-count { font-size: 0.9rem; color: #aaa; }
 
-/* --- System Health Card Styles --- */
-.system-health-card {
-    margin-top: 2rem;
-}
-
-.system-health-card h3 {
-    margin: 0 0 1rem 0;
-    padding-bottom: 1rem;
-    border-bottom: 1px solid var(--border-color);
-    font-size: 1.5rem;
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-}
 
 /* --- Login Screen Styles --- */
 
@@ -1679,6 +1678,60 @@ a.recent-report-item:hover {
 #tour-next-btn:hover { opacity: 0.8; }
 
 
+/* =============================================== */
+/* === Dashboard Header Styles === */
+/* =============================================== */
+
+.dashboard-header {
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 16px;
+    padding: 2.5rem;
+    text-align: center;
+    margin-bottom: 2.5rem;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.15);
+    position: relative;
+    overflow: hidden;
+}
+
+.dashboard-header::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: radial-gradient(circle, rgba(77, 91, 249, 0.1), transparent 40%);
+    animation: rotateGradient 20s linear infinite;
+}
+
+@keyframes rotateGradient {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+.dashboard-header h1 {
+    font-size: 2.5rem;
+    color: var(--text-color);
+    margin: 0 0 0.75rem 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+    position: relative; /* To stay above the pseudo-element */
+    z-index: 1;
+}
+
+.dashboard-header p {
+    font-size: 1.1rem;
+    color: #aaa;
+    margin: 0;
+    max-width: 600px;
+    margin-left: auto;
+    margin-right: auto;
+    position: relative; /* To stay above the pseudo-element */
+    z-index: 1;
+}
 /* =============================================== */
 /* === Changelog Modal Styles === */
 /* =============================================== */

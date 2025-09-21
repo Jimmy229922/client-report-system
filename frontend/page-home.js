@@ -119,7 +119,7 @@ function renderRecentReports(reports) {
 
 function renderTopContributor(contributorData) {
     const container = document.getElementById('top-contributor-container');
-    const titleEl = container.previousElementSibling;
+    const titleEl = document.getElementById('top-contributor-title');
     if (!container || !titleEl) return;
 
     // Case 1: Data is for the current user (non-admin)
@@ -371,8 +371,8 @@ export function renderHomePage() {
     const mainContent = document.getElementById('main-content');
     mainContent.innerHTML = `
         <div class="dashboard-header">
-            <h1>لوحة التحكم</h1>
-            <p>نظرة عامة سريعة على نشاط النظام والإحصائيات الرئيسية.</p>
+            <h1><i class="fas fa-tachometer-alt"></i> لوحة التحكم</h1>
+            <p>نظرة عامة على نشاط النظام والإحصائيات الرئيسية.</p>
         </div>
         <div id="stats-grid" class="stats-grid">
             ${Array(8).fill('<div class="stat-card loading"><div class="spinner"></div></div>').join('')}
@@ -387,15 +387,17 @@ export function renderHomePage() {
                 </div>
             </div>
             <div class="home-sidebar-column">
-                <h2><i class="fas fa-history"></i> أحدث التقارير</h2>
-                <div id="recent-reports-container" class="recent-reports-container">
-                    <div class="spinner"></div>
+                <div class="sidebar-card">
+                    <h2><i class="fas fa-history"></i> أحدث التقارير</h2>
+                    <div id="recent-reports-container" class="recent-reports-container">
+                        <div class="spinner"></div>
+                    </div>
                 </div>
-                <div class="top-contributor-card">
-                    <h3><i class="fas fa-trophy"></i> المساهم الأعلى</h3>
+                <div class="sidebar-card">
+                    <h3 id="top-contributor-title"><i class="fas fa-trophy"></i> المساهم الأعلى</h3>
                     <div id="top-contributor-container" class="top-contributor-container"></div>
                 </div>
-                <div class="system-health-card">
+                <div class="sidebar-card">
                     <h3><i class="fas fa-heart-pulse"></i> حالة النظام</h3>
                     <div id="system-health-container" class="system-health-container">
                         <div id="system-health-status" class="health-status-wrapper"></div>
