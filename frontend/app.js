@@ -284,7 +284,12 @@ function initRealtimeNotifications() {
     const token = localStorage.getItem('token');
     if (!token) return;
 
+    console.log('[SSE] Initializing real-time connection...');
     const eventSource = new EventSource(`/api/notifications/events?token=${token}`);
+
+    eventSource.onopen = () => {
+        console.log('[SSE] Connection to server opened.');
+    };
 
     eventSource.onmessage = function(event) {
         try {
@@ -293,9 +298,11 @@ function initRealtimeNotifications() {
 
             switch (data.type) {
                 case 'notification_created':
+                    showToast('لديك إشعار جديد!');
+                    fetchAndRenderNotifications();
+                    break;
                 case 'notification_deleted':
-                    // For both creating and deleting, the simplest and most reliable
-                    // way to update the UI is to just refetch the entire list.
+                    // Just refresh the list without a toast to avoid being intrusive.
                     fetchAndRenderNotifications();
                     break;
                 case 'connected':
@@ -311,8 +318,84 @@ function initRealtimeNotifications() {
         console.error('EventSource failed:', err);
         eventSource.close();
         // Attempt to reconnect after a delay
-        setTimeout(initRealtimeNotifications, 10000); // Reconnect after 10 seconds
+        console.log('[SSE] Connection lost. Attempting to reconnect in 10 seconds...');
+        setTimeout(initRealtimeNotifications, 10000);
     };
+}
+
+async function checkVersionAndShowChangelog() {
+    try {
+        const versionRes = await fetch('/api/version');
+        if (!versionRes.ok) return;
+        const { version: currentVersion } = await versionRes.json();
+
+        const lastSeenVersion = localStorage.getItem('appVersion');
+
+        // Show changelog if the version is new and it's not the very first visit
+        if (currentVersion && currentVersion !== lastSeenVersion && lastSeenVersion !== null) {
+            const changelogRes = await fetch('/api/changelog/latest');
+            if (!changelogRes.ok) return;
+            const changelogData = await changelogRes.json();
+
+            // Only show if the latest changelog matches the current app version
+            if (changelogData.version === currentVersion) {
+                showChangelogModal(changelogData);
+            }
+        }
+        
+        // Always update the version in storage if it's different or not set
+        if (currentVersion && currentVersion !== lastSeenVersion) {
+             localStorage.setItem('appVersion', currentVersion);
+        }
+
+    } catch (error) {
+        console.error("Failed to check version or show changelog:", error);
+    }
+}
+
+function showChangelogModal(changelog) {
+    const modal = document.getElementById('changelog-modal');
+    const titleEl = document.getElementById('changelog-title');
+    const bodyEl = document.getElementById('changelog-body');
+    const okBtn = document.getElementById('changelog-modal-ok-btn');
+    const closeBtn = document.getElementById('changelog-modal-close-btn');
+
+    if (!modal || !titleEl || !bodyEl || !okBtn || !closeBtn) return;
+
+    titleEl.innerHTML = `ما الجديد في الإصدار <span class="app-version-badge" style="color: var(--accent-color)">v${changelog.version}</span>`;
+    
+    const changeTypeMap = {
+        new: { icon: 'fa-plus-circle', text: 'إضافة جديدة', class: 'new' },
+        improvement: { icon: 'fa-arrow-alt-circle-up', text: 'تحسين', class: 'improvement' },
+        fix: { icon: 'fa-wrench', text: 'إصلاح', class: 'fix' }
+    };
+
+    bodyEl.innerHTML = `
+        <ul>
+            ${changelog.changes.map(change => {
+                const typeInfo = changeTypeMap[change.type] || { icon: 'fa-info-circle', text: 'تغيير', class: '' };
+                return `
+                    <li>
+                        <i class="fas ${typeInfo.icon} changelog-item-icon ${typeInfo.class}"></i>
+                        <div>
+                            <strong>${typeInfo.text}:</strong>
+                            <p>${change.description}</p>
+                        </div>
+                    </li>
+                `;
+            }).join('')}
+        </ul>
+    `;
+
+    const closeModal = () => modal.classList.remove('show');
+
+    okBtn.onclick = closeModal;
+    closeBtn.onclick = closeModal;
+    modal.onclick = (e) => {
+        if (e.target === modal) closeModal();
+    };
+
+    modal.classList.add('show');
 }
 
 export function initApp() {
@@ -369,4 +452,5 @@ export function initApp() {
     handleNotifications();
     fetchAndRenderNotifications();
     initRealtimeNotifications(); // Start listening for real-time events
+    checkVersionAndShowChangelog();
 }

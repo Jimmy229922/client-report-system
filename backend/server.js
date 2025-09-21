@@ -1,5 +1,6 @@
 // 1. استيراد المكتبات
 let config;
+const changelog = require('./changelog.json');
 try {
     // First, try to load the shared config file.
     config = require('./config.json');
@@ -66,8 +67,17 @@ let clients = [];
 
 function sendEventToAll(data) {
     const eventString = `data: ${JSON.stringify(data)}\n\n`;
-    clients.forEach(client => client.res.write(eventString));
-    console.log(`[SSE] Sent event of type '${data.type}' to ${clients.length} client(s).`);
+    // Create a copy of the clients array to prevent issues if a client disconnects during the loop
+    const currentClients = [...clients]; 
+    currentClients.forEach(client => {
+        try {
+            client.res.write(eventString);
+        } catch (error) {
+            console.error(`[SSE] Failed to send event to client ${client.id}. Removing client.`, error.message);
+            clients = clients.filter(c => c.id !== client.id);
+        }
+    });
+    console.log(`[SSE] Sent event of type '${data.type}' to ${currentClients.length} client(s).`);
 }
 
 const verifyTokenForSSE = (req, res, next) => {
@@ -576,6 +586,17 @@ app.get('/api/stats/top-contributor', verifyToken, async (req, res) => {
 app.get('/api/health', (req, res) => {
     res.status(200).json({ status: 'ok' });
 });
+
+// Endpoint to get the latest changelog entry
+app.get('/api/changelog/latest', (req, res) => {
+    // Assuming the changelog is sorted with the newest version first
+    if (changelog && changelog.length > 0) {
+        res.json(changelog[0]);
+    } else {
+        res.status(404).json({ error: "Changelog not found or is empty." });
+    }
+});
+
 // --- Instructions Endpoints ---
 
 // --- Notifications Endpoints ---

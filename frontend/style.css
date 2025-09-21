@@ -1603,6 +1603,45 @@ a.recent-report-item:hover {
 
 
 /* =============================================== */
+/* === Changelog Modal Styles === */
+/* =============================================== */
+
+#changelog-body ul {
+    list-style: none;
+    padding: 0;
+    margin-top: 1rem;
+}
+
+#changelog-body li {
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+    padding: 1rem 0;
+    border-bottom: 1px solid var(--border-color);
+}
+
+#changelog-body li:last-child {
+    border-bottom: none;
+}
+
+.changelog-item-icon {
+    font-size: 1.2rem;
+    margin-top: 4px;
+    width: 20px; /* Align icons */
+    text-align: center;
+}
+
+.changelog-item-icon.new { color: var(--success-color); }
+.changelog-item-icon.improvement { color: var(--accent-color); }
+.changelog-item-icon.fix { color: #ff9800; } /* Amber color */
+
+#changelog-body li div p {
+    margin: 0.25rem 0 0 0;
+    color: #ccc;
+    font-size: 0.95rem;
+    line-height: 1.6;
+}
+/* =============================================== */
 /* === Instructions Page Styles === */
 /* =============================================== */
 
