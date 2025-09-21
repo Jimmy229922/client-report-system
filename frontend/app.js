@@ -172,6 +172,15 @@ async function fetchAndRenderNotifications() {
     const badge = document.getElementById('notification-badge');
     if (!list || !badge) return;
 
+    const userStr = localStorage.getItem('user');
+    let isAdmin = false;
+    if (userStr) {
+        try {
+            const user = JSON.parse(userStr);
+            isAdmin = user.id === 1;
+        } catch (e) { /* ignore */ }
+    }
+
     try {
         // Use a direct fetch here to avoid the global error handling of fetchWithAuth for this non-critical, polling feature
         const response = await fetch('/api/notifications', {
@@ -196,12 +205,17 @@ async function fetchAndRenderNotifications() {
             return;
         }
 
-        list.innerHTML = notifications.map(n => `
-            <a href="${n.link || '#'}" class="notification-item ${!n.is_read ? 'unread' : ''}" data-id="${n.id}">
-                ${n.message}
-                <span class="time">${timeAgo(n.created_at)}</span>
-            </a>
-        `).join('');
+        list.innerHTML = notifications.map(n => {
+            const adminDeleteBtn = isAdmin ? `<button class="delete-notification-btn" data-message="${n.message}" data-link="${n.link}" title="حذف هذا الإشعار للجميع">&times;</button>` : '';
+            return `
+                <div class="notification-item-wrapper">
+                    <a href="${n.link || '#'}" class="notification-item ${!n.is_read ? 'unread' : ''}" data-id="${n.id}">
+                        ${n.message}
+                        <span class="time">${timeAgo(n.created_at)}</span>
+                    </a>
+                    ${adminDeleteBtn}
+                </div>`;
+        }).join('');
 
     } catch (error) {
         console.error('Failed to fetch notifications:', error);
@@ -231,6 +245,36 @@ function handleNotifications() {
     document.addEventListener('click', (e) => {
         if (list.style.display === 'block' && !list.contains(e.target) && !btn.contains(e.target)) {
             list.style.display = 'none';
+        }
+    });
+
+    list.addEventListener('click', async (e) => {
+        const deleteBtn = e.target.closest('.delete-notification-btn');
+        if (deleteBtn) {
+            e.preventDefault(); // Prevent navigation if the link is clicked
+            e.stopPropagation(); // Stop the click from propagating to the link or the dropdown handler
+
+            const message = deleteBtn.dataset.message;
+            const link = deleteBtn.dataset.link;
+
+            const confirmed = await showConfirmModal(
+                'تأكيد الحذف',
+                'هل أنت متأكد من حذف هذا الإشعار لجميع الموظفين؟',
+                {
+                    iconClass: 'fas fa-trash-alt',
+                    iconColor: 'var(--danger-color)',
+                    confirmText: 'نعم، حذف للجميع',
+                    confirmClass: 'submit-btn danger-btn'
+                }
+            );
+
+            if (confirmed) {
+                try {
+                    const result = await fetchWithAuth('/api/notifications/group', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ message, link }) });
+                    showToast(result.message);
+                    fetchAndRenderNotifications(); // Refresh the list
+                } catch (error) { showToast(error.message, true); }
+            }
         }
     });
 }

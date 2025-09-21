@@ -579,6 +579,28 @@ app.post('/api/notifications/mark-as-read', verifyToken, async (req, res) => {
     res.status(204).send();
 });
 
+// New endpoint for deleting a notification group (admin only)
+app.delete('/api/notifications/group', verifyToken, verifyAdmin, async (req, res) => {
+    const { message, link } = req.body;
+
+    if (!message || !link) {
+        return res.status(400).json({ message: "Message and link are required to identify the notification group." });
+    }
+
+    const { error, count } = await supabase
+        .from('notifications')
+        .delete({ count: 'exact' })
+        .eq('message', message)
+        .eq('link', link);
+
+    if (error) {
+        return res.status(500).json({ error: error.message });
+    }
+
+    if (count === 0) return res.status(200).json({ message: 'لم يتم العثور على إشعارات مطابقة أو تم حذفها بالفعل.' });
+    res.json({ message: `تم حذف ${count} إشعار بنجاح.` });
+});
+
 // GET all instructions (public)
 app.get('/api/instructions', async (req, res) => {
     const { data, error } = await supabase

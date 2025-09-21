@@ -83,15 +83,20 @@ function destroyRichTextEditor() {
 
 function renderInstructionCard(instruction) {
     const adminButtons = isAdmin ? `
-        <button class="action-btn" data-action="edit" data-id="${instruction.id}" title="تعديل"><i class="fas fa-pen"></i></button>
-        <button class="action-btn danger" data-action="delete" data-id="${instruction.id}" title="حذف"><i class="fas fa-trash-alt"></i></button>
+        <div class="instruction-card-actions">
+            <button class="action-btn" data-action="edit" data-id="${instruction.id}" title="تعديل"><i class="fas fa-pen"></i></button>
+            <button class="action-btn danger" data-action="delete" data-id="${instruction.id}" title="حذف"><i class="fas fa-trash-alt"></i></button>
+        </div>
     ` : '';
 
     return `
         <div class="instruction-card" id="instruction-card-${instruction.id}" data-search-term="${instruction.search_terms || ''}">
             <div class="instruction-header">
                 <h3>${instruction.title}</h3>
-                ${isAdmin ? `<div class="header-actions">${adminButtons}</div>` : ''}
+                <div class="header-actions">
+                    ${adminButtons}
+                    <i class="fas fa-chevron-down toggle-icon"></i>
+                </div>
             </div>
             <div class="instruction-body">
                 ${instruction.content}
