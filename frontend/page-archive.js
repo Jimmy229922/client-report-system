@@ -140,11 +140,28 @@ async function fetchAndRenderArchive(searchTerm = '') {
             // Accordion and action button logic
             setupArchiveInteractions();
         } else {
-            archiveGrid.innerHTML = '<p style="text-align: center;">لا توجد نتائج تطابق بحثك.</p>';
+            // This block handles the case where the API returns an empty data array.
+            // This is the correct behavior for a search with no results.
+            const messageHtml = searchTerm
+                ? `
+                <div class="empty-state-professional">
+                    <i class="fas fa-file-search"></i>
+                    <h3>لا توجد سجلات مطابقة</h3>
+                    <p>لم يتم العثور على أي تقارير لرقم الحساب <strong>"${searchTerm}"</strong>.</p>
+                </div>`
+                : '<p style="text-align: center; padding: 2rem;">لا توجد تقارير لعرضها في الأرشيف حالياً.</p>';
+            
+            archiveGrid.innerHTML = messageHtml;
         }
     } catch (error) {
         console.error('Failed to fetch archive:', error);
-        archiveGrid.innerHTML = `<p>فشل تحميل الأرشيف.</p><p class="error-details">${error.message}</p>`;
+        archiveGrid.innerHTML = `
+            <div class="empty-state-professional" style="border-color: var(--danger-color);">
+                <i class="fas fa-exclamation-triangle" style="color: var(--danger-color);"></i>
+                <h3>حدث خطأ</h3>
+                <p>فشل تحميل الأرشيف. يرجى المحاولة مرة أخرى.</p>
+                <p class="error-details">${error.message}</p>
+            </div>`;
     }
 }
 
@@ -278,8 +295,16 @@ async function handleDeleteImage(button) {
 
 export function renderArchivePage() {
     const mainContent = document.getElementById('main-content');
+    const cameFromComparator = !!sessionStorage.getItem('highlight-row');
+
+    const backButtonHtml = cameFromComparator ? 
+        `<a href="#comparator" id="back-to-comparator-btn" class="submit-btn" style="width: auto; padding: 0.6rem 1.2rem;"><i class="fas fa-arrow-left"></i> العودة للمقارنة</a>` : '';
+
     mainContent.innerHTML = `
-        <h1 class="page-title">أرشيف التقارير</h1>
+        <div class="page-header page-header-actions">
+            <h1 class="page-title">أرشيف التقارير</h1>
+            ${backButtonHtml}
+        </div>
         <div class="search-container">
             <i class="fas fa-search"></i>
             <input type="text" id="archive-search" class="search-input" placeholder="ابحث في التقارير (رقم حساب، IP، ...)">
@@ -298,5 +323,15 @@ export function renderArchivePage() {
         }, 500);
     });
 
-    fetchAndRenderArchive();
+    // Check for a search query in the URL hash
+    const [path, queryString] = location.hash.substring(1).split('?');
+    const params = new URLSearchParams(queryString || '');
+    const initialSearchTerm = params.get('search');
+
+    if (initialSearchTerm) {
+        searchInput.value = initialSearchTerm;
+        fetchAndRenderArchive(initialSearchTerm);
+    } else {
+        fetchAndRenderArchive();
+    }
 }

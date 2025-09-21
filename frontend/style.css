@@ -2468,6 +2468,12 @@ a.recent-report-item:hover {
     gap: 0.75rem;
 }
 
+.comparator-column .column-hint {
+    font-size: 0.9rem;
+    color: #aaa;
+    margin-bottom: 1rem;
+}
+
 .comparator-column .form-group {
     display: flex;
     flex-direction: column;
@@ -2528,6 +2534,9 @@ a.recent-report-item:hover {
 
 .comparator-actions {
     text-align: center;
+    display: flex;
+    justify-content: center;
+    gap: 1rem;
     margin-bottom: 2rem;
 }
 
@@ -2580,18 +2589,216 @@ a.recent-report-item:hover {
     word-break: break-all;
 }
 
-.no-timestamp-result {
-    color: #ff9800; /* An orange/amber color for warning/distinction */
+.results-output-box {
+    width: 100%;
+    min-height: auto;
+    max-height: 50vh; /* Allow table to scroll on large results */
+    overflow-y: auto;
+    background-color: transparent;
+    border: none;
+    padding: 0;
+    font-family: inherit;
+    font-size: inherit;
+    white-space: normal;
+    word-break: normal;
+}
+
+/* New styles for result categories */
+.result-category {
+    margin-bottom: 2.5rem;
+}
+
+.result-category:last-child {
+    margin-bottom: 0;
+}
+
+.result-category h3 {
+    font-size: 1.3rem;
+    margin-bottom: 1rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.result-category h3 .new-account-result { color: #81c784; }
+.result-category h3 .duplicate-account-result { color: #ff9800; }
+.result-category h3 .tainted-result { color: #e57373; }
+
+.table-wrapper {
+    overflow-x: auto; /* For responsiveness on small screens */
+}
+
+/* New styles for comparator results interactions */
+.account-cell-content {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+}
+
+.copyable-account {
+    cursor: pointer;
+    transition: color 0.2s ease;
+}
+
+.copyable-account:hover {
+    color: var(--accent-color);
+    text-decoration: underline;
+}
+
+.search-in-archive-btn {
+    color: #aaa;
+    text-decoration: none;
+    transition: all 0.2s ease;
+    opacity: 0; /* Hidden by default */
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: transparent;
+}
+
+.results-table tbody tr:hover .search-in-archive-btn {
+    opacity: 1; /* Show on row hover */
+}
+
+.search-in-archive-btn:hover {
+    color: white;
+    background-color: var(--accent-color);
+    transform: scale(1.1);
+}
+
+.focus-highlight {
+    position: relative;
+    z-index: 9999;
+    /* Creates a "hole-punch" overlay effect */
+    box-shadow: 0 0 0 9999px rgba(12, 12, 29, 0.85);
+    border-radius: 8px;
+    transition: box-shadow 0.4s ease-in-out;
+    animation: focus-glow 2.5s ease-out;
+}
+
+@keyframes focus-glow {
+    0%, 100% {
+        /* The box-shadow is already set by the class, no need to repeat */
+    }
+    20%, 80% {
+        /* Add an inner glow to the highlighted element during the animation */
+        box-shadow: 0 0 0 9999px rgba(12, 12, 29, 0.85), inset 0 0 15px rgba(77, 91, 249, 0.7);
+    }
+}
+
+/* New styles for the results table */
+.results-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9rem;
+}
+
+.results-table th, .results-table td {
+    padding: 0.75rem 1rem;
+    text-align: center;
+    border-bottom: 1px solid var(--border-color);
+    vertical-align: middle;
+}
+
+.results-table thead {
+    background-color: var(--input-bg);
+    position: sticky;
+    top: 0;
+    z-index: 1;
+}
+
+.results-table th {
+    font-weight: 600;
+    cursor: pointer;
+    user-select: none;
+    position: relative;
+}
+
+.results-table th:hover {
+    background-color: var(--border-color);
+}
+
+.results-table th::after {
+    content: '▲';
+    position: absolute;
+    left: 10px; /* For RTL */
+    top: 50%;
+    transform: translateY(-50%) scale(0.7);
+    opacity: 0.2;
+    transition: opacity 0.2s ease, color 0.2s ease;
+}
+
+.results-table th.sort-asc::after {
+    opacity: 1;
+    color: var(--accent-color);
+    content: '▲';
+}
+
+.results-table th.sort-desc::after {
+    opacity: 1;
+    color: var(--accent-color);
+    content: '▼';
+}
+
+.results-table tbody tr:hover {
+    background-color: var(--input-bg);
+}
+
+.results-table tr.tainted-result td {
+    color: #e57373;
+    font-style: italic;
+}
+
+.results-table tr.duplicate-account-result td {
+    color: #ff9800;
+}
+
+.results-table tr.new-account-result td {
+    color: #81c784;
+    font-weight: bold;
 }
 
 .result-separator {
     color: #aaa;
     font-style: italic;
+    display: block;
+    text-align: center;
+    margin: 1rem 0;
 }
 
 .no-results {
     color: #aaa;
     font-style: italic;
+}
+
+.empty-state-professional {
+    background-color: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 3rem 2rem;
+    text-align: center;
+    margin-top: 2rem;
+}
+
+.empty-state-professional i {
+    font-size: 3rem;
+    color: var(--accent-color);
+    margin-bottom: 1.5rem;
+}
+
+.empty-state-professional h3 {
+    font-size: 1.8rem;
+    margin-bottom: 0.75rem;
+}
+
+.empty-state-professional p {
+    color: #aaa;
 }
 
 @media (max-width: 768px) {

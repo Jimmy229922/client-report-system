@@ -65,7 +65,8 @@ export function navigate() {
         return; // Stop navigation
     }
 
-    const path = window.location.hash || '#home';
+    const fullPath = window.location.hash || '#home';
+    const [path] = fullPath.split('?'); // Get the base path before the query string
     const mainContent = document.getElementById('main-content');
 
     showLoader();
@@ -94,7 +95,10 @@ export function navigate() {
             mainContent.innerHTML = `<h1>حدث خطأ فادح أثناء تحميل الصفحة.</h1><p>الرجاء إبلاغ المطور بالخطأ التالي: ${error.message}</p>`;
         } finally {
             hideLoader();
-            window.scrollTo(0, 0);
+            // Do not scroll to top if we are returning to the comparator page to highlight a row.
+            if (!sessionStorage.getItem('highlight-row')) {
+                window.scrollTo(0, 0);
+            }
         }
     })();
 }

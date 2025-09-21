@@ -150,11 +150,11 @@ function getFormFields(reportType) {
 
 function getCommonReportData(form) {
     return {
-        ip: form.querySelector('#ip-input')?.value || 'غير محدد',
-        country: form.querySelector('#country')?.value || 'غير محدد',
-        email: form.querySelector('#email')?.value || 'غير محدد',
-        accountNumber: form.querySelector('#account-number')?.value || 'غير محدد',
-        notes: form.querySelector('#notes')?.value || 'لا يوجد',
+        ip: form.querySelector('#ip-input')?.value.trim() || 'غير محدد',
+        country: form.querySelector('#country')?.value.trim() || 'غير محدد',
+        email: form.querySelector('#email')?.value.trim() || 'غير محدد',
+        accountNumber: form.querySelector('#account-number')?.value.trim() || 'غير محدد',
+        notes: form.querySelector('#notes')?.value.trim() || 'لا يوجد',
     };
 }
 

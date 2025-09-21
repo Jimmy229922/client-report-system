@@ -478,13 +478,12 @@ app.post('/api/send-report', verifyToken, upload.array('images', 3), async (req,
 });
 
 // Endpoint to get all reports
-app.get('/api/reports', verifyToken, async (req, res) => { // verifyToken provides req.userId
+app.get('/api/reports', verifyToken, async (req, res) => {
     const limit = req.query.limit ? parseInt(req.query.limit) : 0;
     const search = req.query.search || '';
     const isAdmin = req.userId === 1;
 
     let query;
-
     if (isAdmin) {
         // Admin sees all reports and the username of the creator
         query = supabase.from('reports').select('*, image_urls, type, users(username)');
@@ -493,24 +492,43 @@ app.get('/api/reports', verifyToken, async (req, res) => { // verifyToken provid
         query = supabase.from('reports').select('*, image_urls, type').eq('user_id', req.userId);
     }
 
+    const isNumericSearch = /^\d+$/.test(search);
+
     if (search) {
-        query = query.ilike('report_text', `%${search}%`); // Use ilike for case-insensitive search
+        if (isNumericSearch) {
+            // If it's a number, perform a broad search for the account number field.
+            // This is intentionally loose to catch variations in spacing. We will filter precisely later.
+            query = query.like('report_text', `%رقم الحساب: ${search}%`);
+        } else {
+            // For other text (like IP, email, etc.), perform a general case-insensitive search
+            query = query.ilike('report_text', `%${search}%`);
+        }
     }
 
     query = query.order('timestamp', { ascending: false });
-
-    if (limit > 0) {
-        query = query.limit(limit);
-    }
+    if (limit > 0) query = query.limit(limit);
 
     const { data, error } = await query;
 
     if (error) {
         return res.status(500).json({ "error": error.message });
     }
+
+    // If we performed a numeric search, we must filter the results for an exact match
+    // to prevent '7' from matching '77777'.
+    let finalData = data;
+    if (search && isNumericSearch) {
+        finalData = data.filter(report => {
+            // This regex finds "رقم الحساب:", optional whitespace, and then captures the full number.
+            const match = report.report_text.match(/رقم الحساب:\s*(\d+)/);
+            // We return true only if a match was found AND the captured number is exactly our search term.
+            return match && match[1] === search;
+        });
+    }
+
     res.json({
         "message": "success",
-        "data": data
+        "data": finalData
     });
 });
 
