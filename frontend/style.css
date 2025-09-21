@@ -1761,6 +1761,30 @@ a.recent-report-item:hover {
 .top-contributors-grid {
     display: flex;}
 
+.self-stats-container .top-contributor-avatar {
+    width: 70px;
+    height: 70px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 3px solid var(--border-color);
+    flex-shrink: 0;
+}
+
+.self-stats-container .top-contributor-avatar-placeholder {
+    width: 70px;
+    height: 70px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: var(--input-bg);
+    border: 3px solid var(--border-color);
+    font-size: 2.5rem;
+    color: #aaa;
+    flex-shrink: 0;
+}
+
+
 /* =============================================== */
 /* === Dashboard Header Styles === */
 /* =============================================== */
@@ -1915,6 +1939,29 @@ a.recent-report-item:hover {
     font-size: 0.95rem;
     line-height: 1.6;
 }
+
+
+.changelog-version-group {
+    margin-bottom: 1.5rem;
+}
+.changelog-version-group:last-child {
+    margin-bottom: 0;
+}
+.changelog-version-group h4 {
+    font-size: 1.1rem;
+    padding-bottom: 0.75rem;
+    margin-bottom: 0.75rem;
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+.changelog-date {
+    font-size: 0.8rem;
+    color: #aaa;
+    font-weight: normal;
+}
+
 /* =============================================== */
 /* === Instructions Page Styles === */
 /* =============================================== */
