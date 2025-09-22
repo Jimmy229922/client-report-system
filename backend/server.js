@@ -94,8 +94,8 @@ setInterval(() => {
     });
 }, 20000); // Send a keep-alive event every 20 seconds
 
-function sendEventToAll(data) {
-    const eventString = `data: ${JSON.stringify(data)}\n\n`;
+function sendEventToAll(eventName, data = {}) {
+    const eventString = `event: ${eventName}\ndata: ${JSON.stringify(data)}\n\n`;
     // Create a copy of the clients array to prevent issues if a client disconnects during the loop
     const currentClients = [...clients]; 
     currentClients.forEach(client => {
@@ -106,7 +106,7 @@ function sendEventToAll(data) {
             clients = clients.filter(c => c.id !== client.id);
         }
     });
-    console.log(`[SSE] Sent event of type '${data.type}' to ${currentClients.length} client(s).`);
+    console.log(`[SSE] Sent event '${eventName}' to ${currentClients.length} client(s).`);
 }
 
 const verifyTokenForSSE = (req, res, next) => {
@@ -670,7 +670,7 @@ app.post('/api/broadcast/gold-market-close-with-image', verifyToken, upload.sing
 
             if (notifications.length > 0) {
                 await supabase.from('notifications').insert(notifications);
-                sendEventToAll({ type: 'gold_market_closed' }); // Send a specific event for this
+                sendEventToAll('gold_market_closed'); // Send a specific event for this
                 console.log(`[Broadcast] Created ${notifications.length} 'Gold Market Close' notifications.`);
             }
         } catch (notificationError) {
@@ -888,8 +888,8 @@ app.get('/api/notifications/events', verifyTokenForSSE, (req, res) => {
     clients.push(newClient);
     console.log(`[SSE] Client ${clientId} (User ${req.userId}) connected. Total clients: ${clients.length}`);
 
-    // Send a welcome/connection confirmation event
-    res.write(`data: ${JSON.stringify({ type: 'connected' })}\n\n`);
+    // Send a welcome/connection confirmation event TO THIS CLIENT ONLY
+    res.write(`event: connected\ndata: ${JSON.stringify({ message: 'Connection established' })}\n\n`);
 
     req.on('close', () => {
         clients = clients.filter(client => client.id !== clientId);
@@ -936,9 +936,7 @@ app.delete('/api/notifications/group', verifyToken, verifyAdmin, async (req, res
 
     // If deletion was successful, send a real-time event to all clients
     if (!error && count > 0) {
-        sendEventToAll({
-            type: 'notification_deleted'
-        });
+        sendEventToAll('notification_deleted');
     }
 
     if (error) {
@@ -987,7 +985,7 @@ app.post('/api/instructions', verifyToken, verifyAdmin, async (req, res) => {
                 link: '#instructions'
             }));
             if (notifications.length > 0) await supabase.from('notifications').insert(notifications);
-            sendEventToAll({ type: 'notification_created' });
+            sendEventToAll('notification_created');
         } catch (e) { console.error('[Instructions] Failed to create new instruction notifications:', e.message); }
     }
     res.status(201).json({ message: 'تمت إضافة التعليمة بنجاح.', data });
@@ -1020,7 +1018,7 @@ app.put('/api/instructions/:id', verifyToken, verifyAdmin, async (req, res) => {
                 link: '#instructions'
             }));
             if (notifications.length > 0) await supabase.from('notifications').insert(notifications);
-            sendEventToAll({ type: 'notification_created' });
+            sendEventToAll('notification_created');
         } catch (e) { console.error('[Instructions] Failed to create update instruction notifications:', e.message); }
     }
 
@@ -1172,7 +1170,7 @@ app.post('/api/broadcast/custom', verifyToken, verifyAdmin, async (req, res) => 
         const notifications = userIds.map(id => ({ user_id: id, message: notificationMessage, link: '#home' }));
 
         await supabase.from('notifications').insert(notifications);
-        sendEventToAll({ type: 'notification_created' });
+        sendEventToAll('notification_created');
         await logActivity(req, req.userId, 'send_custom_notification', { target, count: notifications.length });
         res.status(200).json({ success: true, message: `تم إرسال الإشعار إلى ${notifications.length} مستخدم بنجاح.` });
     } catch (error) {
@@ -1288,7 +1286,7 @@ app.post('/api/users', verifyToken, verifyAdmin, upload.single('avatar'), async 
             });
             if (notifError) throw notifError;
             // Send event to clients
-            sendEventToAll({ type: 'notification_created' });
+            sendEventToAll('notification_created');
         } catch (e) {
             console.error('Failed to create notification for new user:', e.message);
         }
@@ -1536,7 +1534,7 @@ app.post('/api/system/update', verifyToken, (req, res) => {
 
             if (notifications.length > 0) {
                 await supabase.from('notifications').insert(notifications);
-                sendEventToAll({ type: 'notification_created' });
+                sendEventToAll('notification_created');
             }
         } catch (e) {
             console.error('[Update] Failed to create update notifications:', e.message);

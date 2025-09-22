@@ -16,7 +16,9 @@ function playSound(soundElement) {
         console.warn("Notification sound blocked by browser. User must interact with the page first.");
         return;
     }
-    soundElement.play().catch(error => console.warn(`Could not play notification sound: ${error.message}`));
+    soundElement.play().catch(error => {
+        console.error(`Could not play notification sound. Name: ${error.name}, Message: ${error.message}. Ensure the audio file exists at the correct path.`);
+    });
 }
 
 function handleImagePreviewModal() {
@@ -557,37 +559,34 @@ function initRealtimeNotifications() {
         updateIndicator(true);
     });
 
-    eventSource.onmessage = function(event) {
-        try {
-            const data = JSON.parse(event.data);
-            console.log('[SSE] Received event:', data);
+    // --- NEW LOGIC: Using named events ---
 
-            switch (data.type) {
-                case 'gold_market_closed':
-                    showToast('تنبيه: تم إيقاف سوق الذهب!');
-                    playSound(goldNotificationSound);
-                    fetchAndRenderNotifications();
-                    break;
-                case 'notification_created':
-                    console.log('[SSE] Event "notification_created" received. Refreshing notifications list.');
-                    showToast('لديك إشعار جديد!');
-                    playSound(notificationSound);
-                    fetchAndRenderNotifications();
-                    break;
-                case 'notification_deleted':
-                    // Just refresh the list without a toast to avoid being intrusive.
-                    console.log('[SSE] Event "notification_deleted" received. Refreshing notifications list.');
-                    fetchAndRenderNotifications();
-                    break;
-                case 'connected':
-                    console.log('[SSE] Successfully connected to event stream.');
-                    updateIndicator(true);
-                    break;
-            }
-        } catch (error) {
-            console.error('[SSE] Error parsing event data:', error);
-        }
-    };
+    eventSource.addEventListener('connected', (event) => {
+        console.log('[SSE] Successfully connected to event stream.', event.data);
+        updateIndicator(true);
+    });
+
+    eventSource.addEventListener('gold_market_closed', (event) => {
+        console.log('[SSE] Event "gold_market_closed" received.');
+        showToast('تنبيه: تم إيقاف سوق الذهب!');
+        playSound(goldNotificationSound);
+        fetchAndRenderNotifications();
+    });
+
+    eventSource.addEventListener('notification_created', (event) => {
+        console.log('[SSE] Event "notification_created" received.');
+        showToast('لديك إشعار جديد!');
+        playSound(notificationSound);
+        fetchAndRenderNotifications();
+    });
+
+    eventSource.addEventListener('notification_deleted', (event) => {
+        console.log('[SSE] Event "notification_deleted" received. Refreshing notifications list.');
+        // Just refresh the list without a toast to avoid being intrusive.
+        fetchAndRenderNotifications();
+    });
+
+    // --- END OF NEW LOGIC ---
 
     eventSource.onerror = function(err) {
         console.error('[SSE] EventSource connection failed. This can be due to a server restart, network issue, or an authentication problem (like an expired token). The browser does not provide specific details.', err);
