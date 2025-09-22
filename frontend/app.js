@@ -71,13 +71,13 @@ function setupUIForUser() {
         if (userStr && userStr !== 'undefined' && userStr !== 'null') {
             try {
                 const user = JSON.parse(userStr);
-                // Show admin-only links
                 if (user && user.id === 1) { // Admin-only UI elements
                     if (userManagementLink) userManagementLink.classList.remove('hidden');
                     if (activityLogLink) activityLogLink.classList.remove('hidden');
                     if (analyticsLink) analyticsLink.classList.remove('hidden');
                     if (broadcastLink) broadcastLink.classList.remove('hidden');
                     if (adminSectionDivider) adminSectionDivider.classList.remove('hidden');
+                    // The update button is also admin-only
                     if (updateAppBtn) updateAppBtn.classList.remove('hidden');
                 }
             } catch (error) {
@@ -223,7 +223,10 @@ async function handleAppUpdate() {
  
     try {
         animateProgressBar(15000); // Simulate a 15-second update process
-        const result = await fetchWithAuth('/api/system/update', { method: 'POST' });
+        const result = await fetchWithAuth('/api/system/update', {
+            method: 'POST',
+            timeout: 180000 // 3-minute timeout to allow for git pull and npm install
+        });
  
         statusEl.textContent = result.message;
         

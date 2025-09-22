@@ -2,7 +2,9 @@
 
 export async function fetchWithAuth(url, options = {}) {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 20000); // 20-second timeout
+    // Use a custom timeout from options, or default to 20 seconds
+    const timeoutDuration = options.timeout || 20000;
+    const timeoutId = setTimeout(() => controller.abort(), timeoutDuration);
 
     const token = localStorage.getItem('token');
     const headers = { ...options.headers };
@@ -12,7 +14,7 @@ export async function fetchWithAuth(url, options = {}) {
 
     try {
         const response = await fetch(url, { 
-            ...options, 
+            ...options,
             headers,
             signal: controller.signal // Pass the abort signal to fetch
         });
