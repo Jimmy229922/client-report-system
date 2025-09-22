@@ -7,6 +7,7 @@ import { renderInstructionsPage } from './page-instructions.js';
 import { renderTemplatesPage } from './page-templates.js';
 import { renderActivityLogPage } from './page-activity-log.js';
 import { renderBroadcastPage } from './page-broadcast.js';
+import { renderAnalyticsPage } from './page-analytics.js';
 import { createDepositReportPageHTML, createGeneralReportPageHTML, initCreateReportPage } from './page-report-form.js';
 import { showLoader, hideLoader, updateActiveLink } from './ui.js';
 
@@ -29,6 +30,7 @@ const routes = {
     '#templates': renderTemplatesPage,
     '#activity-log': renderActivityLogPage,
     '#broadcast': renderBroadcastPage,
+    '#analytics': renderAnalyticsPage,
     '#profile': renderProfilePage,
     '#reports/suspicious': () => createGeneralReportPageHTML('Suspicious Report'),
     '#reports/deposit': () => createDepositReportPageHTML('Deposit Report'),
@@ -65,7 +67,7 @@ export function navigate() {
         }
     }
 
-    const adminOnlyPages = ['#users', '#activity-log', '#broadcast'];
+    const adminOnlyPages = ['#users', '#activity-log', '#broadcast', '#analytics'];
     const requestedPage = window.location.hash || '#home';
 
     if (adminOnlyPages.includes(requestedPage.split('?')[0]) && (!user || user.id !== 1)) {

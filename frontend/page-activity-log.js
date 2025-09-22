@@ -33,7 +33,6 @@ function formatAction(action, details) {
         'update_user': { text: 'تحديث بيانات مستخدم', icon: 'fa-user-edit', color: '#ff9800' },
         'toggle_user_status': { text: 'تغيير حالة مستخدم', icon: 'fa-user-clock', color: '#ff9800' },
         'delete_user': { text: 'حذف مستخدم', icon: 'fa-user-minus', color: 'var(--danger-color)' },
-        'send_custom_notification': { text: 'إرسال إشعار مخصص', icon: 'fa-bullhorn', color: 'var(--accent-color)' },
     };
     const info = actionMap[action] || { text: action, icon: 'fa-info-circle', color: '#aaa' };
     
@@ -47,9 +46,6 @@ function formatAction(action, details) {
             detailsText = `(مستخدم #${details.targetUserId} إلى ${details.newStatus ? 'نشط' : 'غير نشط'})`;
         }
         if (action === 'delete_user' && details.deletedUserId) detailsText = `(مستخدم #${details.deletedUserId})`;
-        if (action === 'send_custom_notification' && details.count) {
-            detailsText = `(إلى ${details.target === 'all' ? 'الجميع' : 'موظف معين'}, ${details.count} مستلم)`;
-        }
     }
 
     return `

@@ -633,7 +633,7 @@ app.post('/api/broadcast/gold-market-close-with-image', verifyToken, upload.sing
 
             if (notifications.length > 0) {
                 await supabase.from('notifications').insert(notifications);
-                sendEventToAll({ type: 'notification_created' });
+                sendEventToAll({ type: 'gold_market_closed' }); // Send a specific event for this
                 console.log(`[Broadcast] Created ${notifications.length} 'Gold Market Close' notifications.`);
             }
         } catch (notificationError) {
@@ -1064,6 +1064,45 @@ app.delete('/api/templates/:id', verifyToken, async (req, res) => {
     if (error) return res.status(500).json({ error: error.message });
     if (count === 0) return res.status(404).json({ message: 'القالب غير موجود أو لا تملك صلاحية حذفه.' });
     res.json({ message: 'تم حذف القالب بنجاح.' });
+});
+
+// --- Analytics Endpoint ---
+app.get('/api/analytics', verifyToken, verifyAdmin, async (req, res) => {
+    const { dateRange = 'last30' } = req.query;
+
+    let startDate = new Date();
+    const endDate = new Date();
+
+    switch (dateRange) {
+        case 'last7':
+            startDate.setDate(endDate.getDate() - 7);
+            break;
+        case 'last90':
+            startDate.setDate(endDate.getDate() - 90);
+            break;
+        case 'all':
+            startDate = new Date('2000-01-01'); // A very early date
+            break;
+        case 'last30':
+        default:
+            startDate.setDate(endDate.getDate() - 30);
+            break;
+    }
+
+    try {
+        const { data, error } = await supabase.rpc('get_analytics_dashboard', {
+            start_date: startDate.toISOString(),
+            end_date: endDate.toISOString()
+        });
+
+        if (error) throw error;
+
+        res.json({ message: 'success', data });
+
+    } catch (error) {
+        console.error('[Analytics] Error fetching analytics data:', error.message);
+        res.status(500).json({ error: 'Failed to fetch analytics data.' });
+    }
 });
 
 // Endpoint to send a custom broadcast message

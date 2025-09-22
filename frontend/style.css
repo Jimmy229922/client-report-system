@@ -3195,6 +3195,52 @@ a.recent-report-item:hover {
     color: #aaa;
 }
 
+/* =============================================== */
+/* === Analytics Page Styles === */
+/* =============================================== */
+
+.analytics-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(450px, 1fr));
+    gap: 1.5rem;
+    margin-top: 2rem;
+}
+
+.analytics-grid .chart-card.full-width {
+    grid-column: 1 / -1;
+}
+
+.analytics-grid .chart-card h3 {
+    margin-top: 0;
+    margin-bottom: 1.5rem;
+    font-size: 1.2rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.employee-performance-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.employee-performance-table th,
+.employee-performance-table td {
+    padding: 0.75rem 1rem;
+    text-align: right;
+    border-bottom: 1px solid var(--border-color);
+    vertical-align: middle;
+}
+
+.employee-performance-table thead {
+    background-color: var(--input-bg);
+}
+
+.employee-performance-table tbody tr:hover {
+    background-color: var(--input-bg);
+}
+
+
 @media (max-width: 768px) {
     .comparator-container {
         grid-template-columns: 1fr;

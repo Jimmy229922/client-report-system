@@ -4,6 +4,10 @@ import { initIpWidget } from './ip-widget.js';
 import { checkAndStartTour } from './tour.js';
 import { fetchWithAuth } from './api.js';
 
+// Audio element for notification sounds
+const notificationSound = new Audio('notification.mp3');
+const goldNotificationSound = new Audio('gold_notification.mp3');
+
 function handleImagePreviewModal() {
     const modal = document.getElementById('image-preview-modal');
     const modalImage = document.getElementById('modal-image-content');
@@ -55,6 +59,7 @@ function handleImagePreviewModal() {
 function setupUIForUser() {
     const userManagementLink = document.getElementById('user-management-link');
     const activityLogLink = document.getElementById('activity-log-link');
+    const analyticsLink = document.getElementById('analytics-link');
     const broadcastLink = document.getElementById('broadcast-link');
     const adminSectionDivider = document.getElementById('admin-section-divider');
     const updateAppBtn = document.getElementById('update-app-btn');
@@ -72,6 +77,7 @@ function setupUIForUser() {
                 if (user && user.id === 1) { // Admin-only UI elements
                     if (userManagementLink) userManagementLink.classList.remove('hidden');
                     if (activityLogLink) activityLogLink.classList.remove('hidden');
+                    if (analyticsLink) analyticsLink.classList.remove('hidden');
                     if (broadcastLink) broadcastLink.classList.remove('hidden');
                     if (adminSectionDivider) adminSectionDivider.classList.remove('hidden');
                 }
@@ -544,8 +550,20 @@ function initRealtimeNotifications() {
             console.log('[SSE] Received event:', data);
 
             switch (data.type) {
+                case 'gold_market_closed':
+                    showToast('تنبيه: تم إيقاف سوق الذهب!');
+                    // Play the specific gold sound
+                    goldNotificationSound.play().catch(error => {
+                        console.warn("Gold notification sound could not be played.", error);
+                    });
+                    fetchAndRenderNotifications();
+                    break;
                 case 'notification_created':
                     showToast('لديك إشعار جديد!');
+                    // Play sound, with a catch block for browser autoplay restrictions
+                    notificationSound.play().catch(error => {
+                        console.warn("Notification sound could not be played. This is often due to browser restrictions requiring user interaction first.", error);
+                    });
                     fetchAndRenderNotifications();
                     break;
                 case 'notification_deleted':
