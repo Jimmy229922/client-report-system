@@ -8,6 +8,17 @@ import { fetchWithAuth } from './api.js';
 const notificationSound = new Audio('notification.mp3');
 const goldNotificationSound = new Audio('gold_notification.mp3');
 
+let hasInteracted = false;
+document.body.addEventListener('click', () => { hasInteracted = true; }, { once: true });
+
+function playSound(soundElement) {
+    if (!hasInteracted) {
+        console.warn("Notification sound blocked by browser. User must interact with the page first.");
+        return;
+    }
+    soundElement.play().catch(error => console.warn(`Could not play notification sound: ${error.message}`));
+}
+
 function handleImagePreviewModal() {
     const modal = document.getElementById('image-preview-modal');
     const modalImage = document.getElementById('modal-image-content');
@@ -554,22 +565,18 @@ function initRealtimeNotifications() {
             switch (data.type) {
                 case 'gold_market_closed':
                     showToast('تنبيه: تم إيقاف سوق الذهب!');
-                    // Play the specific gold sound
-                    goldNotificationSound.play().catch(error => {
-                        console.warn("Gold notification sound could not be played.", error);
-                    });
+                    playSound(goldNotificationSound);
                     fetchAndRenderNotifications();
                     break;
                 case 'notification_created':
+                    console.log('[SSE] Event "notification_created" received. Refreshing notifications list.');
                     showToast('لديك إشعار جديد!');
-                    // Play sound, with a catch block for browser autoplay restrictions
-                    notificationSound.play().catch(error => {
-                        console.warn("Notification sound could not be played. This is often due to browser restrictions requiring user interaction first.", error);
-                    });
+                    playSound(notificationSound);
                     fetchAndRenderNotifications();
                     break;
                 case 'notification_deleted':
                     // Just refresh the list without a toast to avoid being intrusive.
+                    console.log('[SSE] Event "notification_deleted" received. Refreshing notifications list.');
                     fetchAndRenderNotifications();
                     break;
                 case 'connected':
