@@ -20,6 +20,38 @@ function renderNotificationItem(notification) {
     `;
 }
 
+function groupNotificationsByDate(notifications) {
+    const groups = {};
+    const today = new Date();
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+
+    const isSameDay = (d1, d2) =>
+        d1.getFullYear() === d2.getFullYear() &&
+        d1.getMonth() === d2.getMonth() &&
+        d1.getDate() === d2.getDate();
+
+    notifications.forEach(notification => {
+        const notificationDate = new Date(notification.created_at);
+        let groupKey;
+
+        if (isSameDay(notificationDate, today)) {
+            groupKey = 'اليوم';
+        } else if (isSameDay(notificationDate, yesterday)) {
+            groupKey = 'الأمس';
+        } else {
+            groupKey = notificationDate.toLocaleDateString('ar-EG', { year: 'numeric', month: 'long', day: 'numeric' });
+        }
+
+        if (!groups[groupKey]) {
+            groups[groupKey] = [];
+        }
+        groups[groupKey].push(notification);
+    });
+
+    return groups;
+}
+
 function renderPagination(pagination) {
     const container = document.getElementById('pagination-container');
     if (!container) return;
@@ -57,7 +89,20 @@ async function fetchAndRenderHistory() {
         const result = await fetchWithAuth(`/api/notifications?${params.toString()}`);
         
         if (result.data && result.data.length > 0) {
-            listContainer.innerHTML = result.data.map(renderNotificationItem).join('');
+            const groupedNotifications = groupNotificationsByDate(result.data);
+            
+            let html = '';
+            for (const date in groupedNotifications) {
+                html += `
+                    <div class="notification-date-group">
+                        <h3 class="notification-date-header">${date}</h3>
+                        <div class="notification-items-list">
+                            ${groupedNotifications[date].map(renderNotificationItem).join('')}
+                        </div>
+                    </div>
+                `;
+            }
+            listContainer.innerHTML = html;
         } else {
             listContainer.innerHTML = `
                 <div class="empty-state-professional">
@@ -98,7 +143,7 @@ export function renderNotificationsHistoryPage() {
             <p>جميع الإشعارات التي تلقيتها، مرتبة من الأحدث إلى الأقدم.</p>
         </div>
 
-        <div id="notifications-history-list" class="notifications-history-list">
+        <div id="notifications-history-list" class="notifications-history-container">
             <!-- Notifications will be rendered here -->
         </div>
         <div id="pagination-container"></div>
