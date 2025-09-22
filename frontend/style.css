@@ -3195,6 +3195,34 @@ a.recent-report-item:hover {
     color: #aaa;
 }
 
+
+/* Example CSS for notification types */
+.notification-item {
+    display: flex;
+    align-items: center;
+    gap: 12px; /* Add space between icon and text */
+}
+.notification-icon {
+    font-size: 1.2em;
+    color: var(--accent-color); /* Default color */
+    width: 20px; /* Fixed width for alignment */
+    text-align: center;
+}
+.notification-content {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+}
+.notification-message {
+    margin: 0;
+    line-height: 1.4;
+}
+/* Style based on type */
+.notification-type-success .notification-icon { color: var(--success-color); }
+.notification-type-warning .notification-icon { color: #FFD700; }
+.notification-type-danger .notification-icon { color: var(--danger-color); }
+
+
 /* =============================================== */
 /* === Analytics Page Styles === */
 /* =============================================== */

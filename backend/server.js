@@ -507,6 +507,26 @@ app.post('/api/send-report', verifyToken, upload.array('images', 3), async (req,
             console.log(`[DB Save] Successfully updated report ${reportId}.`);
         }
 
+        // Notify the admin (user_id: 1) about the new report
+        try {
+            const adminNotification = {
+                user_id: 1, // Admin's ID
+                message: `تقرير جديد تم إرساله بواسطة ${username}`,
+                link: '#archive', // Link to the archive page
+                type: 'info',
+                icon: 'fa-file-medical-alt'
+            };
+            const { error: notifError } = await supabase.from('notifications').insert(adminNotification);
+            if (notifError) throw notifError;
+
+            // Send a real-time event to all clients.
+            sendEventToAll('notification_created');
+            console.log(`[Notification] Sent notification to admin about new report ${reportId} from user ${username}.`);
+        } catch (notificationError) {
+            // Log the error but don't fail the whole request.
+            console.error('[Notification] Failed to create notification for new report:', notificationError.message);
+        }
+
         // إرسال رد ناجح إلى الواجهة الأمامية
         return res.status(200).json({ success: true, message: 'تم إرسال التقرير بنجاح!' });
 
@@ -981,8 +1001,10 @@ app.post('/api/instructions', verifyToken, verifyAdmin, async (req, res) => {
 
             const notifications = users.map(user => ({
                 user_id: user.id,
-                message: `تمت إضافة تعليمة جديدة: ${data.title.replace(/<[^>]*>?/gm, '')}`,
-                link: '#instructions'
+                message: `تمت إضافة تعليمة جديدة: ${data.title.replace(/<[^>]*>?/gm, '')}`, // Strip HTML for notification
+                link: '#instructions',
+                type: 'info',
+                icon: 'fa-file-alt'
             }));
             if (notifications.length > 0) await supabase.from('notifications').insert(notifications);
             sendEventToAll('notification_created');
@@ -1014,8 +1036,10 @@ app.put('/api/instructions/:id', verifyToken, verifyAdmin, async (req, res) => {
 
             const notifications = users.map(user => ({
                 user_id: user.id,
-                message: `تم تحديث تعليمة: ${data.title.replace(/<[^>]*>?/gm, '')}`,
-                link: '#instructions'
+                message: `تم تحديث تعليمة: ${data.title.replace(/<[^>]*>?/gm, '')}`, // Strip HTML for notification
+                link: '#instructions',
+                type: 'info',
+                icon: 'fa-edit'
             }));
             if (notifications.length > 0) await supabase.from('notifications').insert(notifications);
             sendEventToAll('notification_created');
@@ -1167,7 +1191,12 @@ app.post('/api/broadcast/custom', verifyToken, verifyAdmin, async (req, res) => 
         }
 
         const notificationMessage = `رسالة من ${senderUsername}: ${message}`;
-        const notifications = userIds.map(id => ({ user_id: id, message: notificationMessage, link: '#home' }));
+        const notifications = userIds.map(id => ({
+            user_id: id,
+            message: notificationMessage,
+            link: '#home',
+            icon: 'fa-bullhorn'
+        }));
 
         await supabase.from('notifications').insert(notifications);
         sendEventToAll('notification_created');
@@ -1282,7 +1311,9 @@ app.post('/api/users', verifyToken, verifyAdmin, upload.single('avatar'), async 
             const { error: notifError } = await supabase.from('notifications').insert({
                 user_id: 1, // Notify admin with ID 1
                 message: `تم إنشاء مستخدم جديد: ${finalUser.username}`,
-                link: '#users'
+                link: '#users',
+                type: 'info',
+                icon: 'fa-user-plus'
             });
             if (notifError) throw notifError;
             // Send event to clients
@@ -1528,8 +1559,10 @@ app.post('/api/system/update', verifyToken, (req, res) => {
 
             const notifications = users.map(user => ({
                 user_id: user.id,
-                message: 'تم تحديث النظام بنجاح. قد تحتاج لإعادة تحميل الصفحة.',
-                link: '#home'
+                message: 'تم تحديث النظام بنجاح. سيتم إعادة تحميل الصفحة.',
+                link: '#home',
+                type: 'success',
+                icon: 'fa-cloud-download-alt'
             }));
 
             if (notifications.length > 0) {

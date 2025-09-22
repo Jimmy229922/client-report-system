@@ -507,11 +507,18 @@ async function fetchAndRenderNotifications() {
 
         itemsContainer.innerHTML = notifications.map(n => {
             const adminDeleteBtn = isAdmin ? `<button class="delete-notification-btn" data-message="${n.message}" data-link="${n.link}" title="حذف هذا الإشعار للجميع">&times;</button>` : '';
+            // Use the new icon and type fields, with a fallback for older notifications
+            const iconHtml = n.icon ? `<i class="fas ${n.icon} notification-icon"></i>` : '<i class="fas fa-bell notification-icon"></i>';
+            const typeClass = n.type ? `notification-type-${n.type}` : ''; // e.g., notification-type-success
+
             return `
                 <div class="notification-item-wrapper">
-                    <a href="${n.link || '#'}" class="notification-item ${!n.is_read ? 'unread' : ''}" data-id="${n.id}">
-                        ${n.message}
-                        <span class="time">${timeAgo(n.created_at)}</span>
+                    <a href="${n.link || '#'}" class="notification-item ${!n.is_read ? 'unread' : ''} ${typeClass}" data-id="${n.id}">
+                        ${iconHtml}
+                        <div class="notification-content">
+                            <p class="notification-message">${n.message}</p>
+                            <span class="time">${timeAgo(n.created_at)}</span>
+                        </div>
                     </a>
                     ${adminDeleteBtn}
                 </div>`;
