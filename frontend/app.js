@@ -9,6 +9,8 @@ const notificationSound = new Audio('notification.mp3');
 const goldNotificationSound = new Audio('gold_notification.mp3');
 
 let hasInteracted = false;
+let stopUpdateAnimation = () => {}; // To hold the animation cleanup function
+
 document.body.addEventListener('click', () => { hasInteracted = true; }, { once: true });
 
 function playSound(soundElement) {
@@ -19,6 +21,64 @@ function playSound(soundElement) {
     soundElement.play().catch(error => {
         console.error(`Could not play notification sound. Name: ${error.name}, Message: ${error.message}. Ensure the audio file exists at the correct path.`);
     });
+}
+
+function startUpdateAnimation() {
+    const canvas = document.getElementById('update-animation-canvas');
+    if (!canvas) return () => {};
+
+    const ctx = canvas.getContext('2d');
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+
+    const shapes = [];
+    const shapeCount = 50;
+    const colors = ['#4D5BF9', '#FFD700', '#4CAF50', '#f44336', '#9C27B0'];
+
+    for (let i = 0; i < shapeCount; i++) {
+        shapes.push({
+            x: Math.random() * canvas.width,
+            y: Math.random() * canvas.height,
+            size: Math.random() * 15 + 5,
+            speed: Math.random() * 2 + 1,
+            color: colors[Math.floor(Math.random() * colors.length)],
+            type: Math.random() > 0.5 ? 'rect' : 'circle'
+        });
+    }
+
+    let animationFrameId = null;
+
+    function draw() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        shapes.forEach(shape => {
+            shape.y += shape.speed;
+            if (shape.y > canvas.height + shape.size) {
+                shape.y = -shape.size;
+                shape.x = Math.random() * canvas.width;
+            }
+            ctx.fillStyle = shape.color;
+            ctx.globalAlpha = 0.6;
+            if (shape.type === 'rect') {
+                ctx.fillRect(shape.x, shape.y, shape.size, shape.size);
+            } else {
+                ctx.beginPath();
+                ctx.arc(shape.x, shape.y, shape.size / 2, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        });
+        animationFrameId = requestAnimationFrame(draw);
+    }
+    draw();
+
+    const resizeHandler = () => { canvas.width = window.innerWidth; canvas.height = window.innerHeight; };
+    window.addEventListener('resize', resizeHandler);
+
+    return () => {
+        if (animationFrameId) { cancelAnimationFrame(animationFrameId); animationFrameId = null; }
+        window.removeEventListener('resize', resizeHandler);
+        if (ctx) { ctx.clearRect(0, 0, canvas.width, canvas.height); }
+    };
 }
 
 function handleImagePreviewModal() {
@@ -118,6 +178,7 @@ function showUpdateOverlay(initialMessage = 'جاري البحث عن تحديث
         document.body.appendChild(overlay);
     }
     overlay.innerHTML = `
+        <canvas id="update-animation-canvas" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: -1; opacity: 0.5;"></canvas>
         <div class="update-modal">
             <h3 id="update-status">${initialMessage}</h3>
             <div class="progress-bar-container hidden">
@@ -138,6 +199,7 @@ function showUpdateOverlay(initialMessage = 'جاري البحث عن تحديث
     setTimeout(() => overlay.style.opacity = 1, 10); // Fade in
  
     document.getElementById('close-update-overlay-btn').addEventListener('click', () => {
+        stopUpdateAnimation(); // Stop the animation
         overlay.style.opacity = 0;
         setTimeout(() => overlay.classList.add('hidden'), 300);
     });
@@ -208,6 +270,7 @@ function checkServerStatus(attempts = 0) {
                 const footerEl = document.getElementById('update-footer');
                 if (footerEl) footerEl.classList.add('hidden');
  
+                stopUpdateAnimation(); // Stop animation on success
                 showToast('تم إعادة تشغيل السيرفر بنجاح! سيتم تحديث الصفحة.');
                 setTimeout(() => location.reload(), 2000);
             } else { checkServerStatus(attempts + 1); }
@@ -229,6 +292,7 @@ async function handleAppUpdate() {
     }
 
     showUpdateOverlay();
+    stopUpdateAnimation = startUpdateAnimation(); // Start animation and store the stop function
     const statusEl = document.getElementById('update-status');
     const logEl = document.getElementById('update-log');
     const footerEl = document.getElementById('update-footer');
@@ -262,9 +326,11 @@ async function handleAppUpdate() {
             checkServerStatus();
         } else {
             // No restart needed, show close button
+            stopUpdateAnimation();
             closeBtn.classList.remove('hidden');
         }
     } catch (error) {
+        stopUpdateAnimation(); // Stop animation on error
         statusEl.textContent = 'حدث خطأ أثناء التحديث!';
         statusEl.style.color = 'var(--danger-color)';
         // The 'log' property is added to the error object in the backend for failed exec
