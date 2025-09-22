@@ -68,6 +68,7 @@ const corsOptions = {
   ],
   optionsSuccessStatus: 200 // For legacy browser support
 };
+app.set('trust proxy', 1); // Necessary to get the correct IP address from req.ip
 app.use(cors(corsOptions));
 app.use(express.json()); // لتحليل البيانات من نوع JSON
 app.use(express.urlencoded({ extended: true })); // لتحليل البيانات من النماذج
@@ -158,6 +159,25 @@ const verifyAdmin = (req, res, next) => {
     next();
 };
 
+// Helper function to log activities
+async function logActivity(req, userId, action, details = {}) {
+    // Use req.ip which correctly respects the 'trust proxy' setting in Express
+    const ipAddress = req.ip;
+    try {
+        const { error } = await supabase.from('activity_logs').insert({
+            user_id: userId,
+            action: action,
+            details: details,
+            ip_address: ipAddress,
+        });
+        if (error) {
+            console.error(`[Activity Log] Failed to log action '${action}' for user ${userId}:`, error.message);
+        }
+    } catch (e) {
+        console.error(`[Activity Log] Exception while logging action '${action}':`, e.message);
+    }
+}
+
 // 5. Authentication Endpoints & Middleware
 app.post('/api/login', async (req, res) => {
     const { email, password } = req.body;
@@ -167,20 +187,31 @@ app.post('/api/login', async (req, res) => {
         .eq('email', email.toLowerCase())
         .single();
 
-    if (error && error.code !== 'PGRST116') return res.status(500).json({ message: 'Server error.' });
-    if (!user) return res.status(404).json({ message: 'البريد الإلكتروني أو كلمة المرور غير صحيحة.' });
+    if (error && error.code !== 'PGRST116') {
+        await logActivity(req, null, 'login_failed', { reason: 'server_error', email: email.toLowerCase() });
+        return res.status(500).json({ message: 'Server error.' });
+    }
+    if (!user) {
+        await logActivity(req, null, 'login_failed', { reason: 'user_not_found', email: email.toLowerCase() });
+        return res.status(404).json({ message: 'البريد الإلكتروني أو كلمة المرور غير صحيحة.' });
+    }
 
     if (!user.is_active) {
+        await logActivity(req, user.id, 'login_failed', { reason: 'account_inactive' });
         return res.status(403).json({ auth: false, token: null, message: 'تم تعطيل هذا الحساب. يرجى التواصل مع المسؤول.' });
     }
 
     const passwordIsValid = bcrypt.compareSync(password, user.password);
-    if (!passwordIsValid) return res.status(401).json({ auth: false, token: null, message: 'البريد الإلكتروني أو كلمة المرور غير صحيحة.' });
+    if (!passwordIsValid) {
+        await logActivity(req, user.id, 'login_failed', { reason: 'invalid_password' });
+        return res.status(401).json({ auth: false, token: null, message: 'البريد الإلكتروني أو كلمة المرور غير صحيحة.' });
+    }
 
     const token = jwt.sign({ id: user.id, username: user.username, email: user.email }, config.JWT_SECRET, {
         expiresIn: 86400 // 24 hours
     });
 
+    await logActivity(req, user.id, 'login_success', {});
     res.status(200).json({ auth: true, token: token, user: { id: user.id, username: user.username, email: user.email, avatar_url: user.avatar_url, has_completed_tour: user.has_completed_tour } });
 });
 
@@ -415,6 +446,7 @@ app.post('/api/send-report', verifyToken, upload.array('images', 3), async (req,
         }
 
         const reportId = newReport.id;
+        await logActivity(req, req.userId, 'create_report', { reportId, reportType });
         console.log('[DB Save] Report ID created:', reportId);
         let imageUrls = [];
 
@@ -496,7 +528,8 @@ app.get('/api/reports', verifyToken, async (req, res) => {
         search = '',
         startDate,
         endDate,
-        userId: filterUserId
+        userId: filterUserId,
+        type: reportType
     } = req.query;
     const limit = limitStr ? parseInt(limitStr) : 0;
     const isAdmin = req.userId === 1;
@@ -531,6 +564,9 @@ app.get('/api/reports', verifyToken, async (req, res) => {
     }
     if (isAdmin && filterUserId && filterUserId !== 'all') {
         query = query.eq('user_id', filterUserId);
+    }
+    if (reportType && reportType !== 'all') {
+        query = query.eq('type', reportType);
     }
 
     query = query.order('timestamp', { ascending: false });
@@ -597,6 +633,7 @@ app.delete('/api/reports/:id', verifyToken, async (req, res) => { // verifyToken
     if (deleteError) {
         return res.status(500).json({ "error": deleteError.message });
     }
+    await logActivity(req, userId, 'delete_report', { reportId, ownerId: report.user_id });
     res.json({ "message": "deleted", changes: count });
 });
 
@@ -1241,7 +1278,7 @@ app.post('/api/users', verifyToken, verifyAdmin, upload.single('avatar'), async 
         }
     }
 
-    // Create a notification for the main admin (ID 1) about the new user
+    await logActivity(req, req.userId, 'create_user', { newUserId: finalUser.id, newUserEmail: finalUser.email });
     if (finalUser) {
         try {
             const { error: notifError } = await supabase.from('notifications').insert({
@@ -1341,6 +1378,7 @@ app.put('/api/users/:id', verifyToken, verifyAdmin, upload.single('avatar'), asy
     }
     if (!data) return res.status(404).json({ message: "المستخدم غير موجود." });
 
+    await logActivity(req, req.userId, 'update_user', { targetUserId: id, updatedFields: Object.keys(updateData) });
     res.json({ message: "تم تحديث بيانات المستخدم بنجاح.", user: data });
 });
 
@@ -1371,6 +1409,7 @@ app.put('/api/users/:id/status', verifyToken, verifyAdmin, async (req, res) => {
     if (error) return res.status(500).json({ error: error.message });
     if (!data) return res.status(404).json({ message: "المستخدم غير موجود." });
 
+    await logActivity(req, req.userId, 'toggle_user_status', { targetUserId: userIdToUpdate, newStatus: is_active });
     res.json({ message: `تم ${is_active ? 'تفعيل' : 'تعطيل'} المستخدم بنجاح.`, user: data });
 });
 
@@ -1390,6 +1429,7 @@ app.delete('/api/users/:id', verifyToken, verifyAdmin, async (req, res) => {
         return res.status(500).json({ error: error.message });
     }
     if (count === 0) { return res.status(404).json({ message: "المستخدم غير موجود." }); }
+    await logActivity(req, req.userId, 'delete_user', { deletedUserId: idToDelete });
     res.json({ message: "تم حذف المستخدم بنجاح." });
 });
 
@@ -1463,7 +1503,7 @@ app.put('/api/users/:id/avatar', verifyToken, verifyAdmin, upload.single('avatar
     }
 });
 // Endpoint for self-updating the application
-app.post('/api/system/update', verifyToken, (req, res) => {
+app.post('/api/system/update', verifyToken, verifyAdmin, (req, res) => {
     const projectRoot = path.join(__dirname, '..');
     const command = 'git pull && cd backend && npm install';
     console.log(`[Update] Executing command: ${command}`);

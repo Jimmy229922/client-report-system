@@ -379,7 +379,7 @@ export function renderArchivePage() {
                     </select>
                 </div>
             </div>
-            <div class="filter-item">
+            <div class="filter-actions">
                 <button id="reset-filters-btn" class="cancel-btn" style="width: auto; padding: 0.6rem 1.2rem;"><i class="fas fa-times"></i> مسح</button>
             </div>
         </div>

@@ -71,8 +71,6 @@ function setupUIForUser() {
         if (userStr && userStr !== 'undefined' && userStr !== 'null') {
             try {
                 const user = JSON.parse(userStr);
-                // Make the update button visible to all logged-in users
-                if (updateAppBtn) updateAppBtn.classList.remove('hidden');
                 // Show admin-only links
                 if (user && user.id === 1) { // Admin-only UI elements
                     if (userManagementLink) userManagementLink.classList.remove('hidden');
@@ -80,6 +78,7 @@ function setupUIForUser() {
                     if (analyticsLink) analyticsLink.classList.remove('hidden');
                     if (broadcastLink) broadcastLink.classList.remove('hidden');
                     if (adminSectionDivider) adminSectionDivider.classList.remove('hidden');
+                    if (updateAppBtn) updateAppBtn.classList.remove('hidden');
                 }
             } catch (error) {
                 console.error("Corrupted user data in localStorage (app.js). Clearing and reloading.", error);

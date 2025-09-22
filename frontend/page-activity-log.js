@@ -199,7 +199,6 @@ export function renderActivityLogPage() {
                         <option value="delete_report">حذف تقرير</option>
                         <option value="create_user">إنشاء مستخدم</option>
                         <option value="update_user">تحديث مستخدم</option>
-                        <option value="send_custom_notification">إرسال إشعار</option>
                     </select>
                 </div>
             </div>
