@@ -4,6 +4,9 @@ import { renderUsersPage } from './page-users.js';
 import { renderProfilePage } from './page-profile.js';
 import { renderComparatorPage } from './page-comparator.js';
 import { renderInstructionsPage } from './page-instructions.js';
+import { renderTemplatesPage } from './page-templates.js';
+import { renderActivityLogPage } from './page-activity-log.js';
+import { renderBroadcastPage } from './page-broadcast.js';
 import { createDepositReportPageHTML, createGeneralReportPageHTML, initCreateReportPage } from './page-report-form.js';
 import { showLoader, hideLoader, updateActiveLink } from './ui.js';
 
@@ -23,6 +26,9 @@ const routes = {
     '#users': renderUsersPage,
     '#comparator': renderComparatorPage,
     '#instructions': renderInstructionsPage,
+    '#templates': renderTemplatesPage,
+    '#activity-log': renderActivityLogPage,
+    '#broadcast': renderBroadcastPage,
     '#profile': renderProfilePage,
     '#reports/suspicious': () => createGeneralReportPageHTML('Suspicious Report'),
     '#reports/deposit': () => createDepositReportPageHTML('Deposit Report'),
@@ -59,7 +65,10 @@ export function navigate() {
         }
     }
 
-    if (window.location.hash === '#users' && (!user || user.id !== 1)) {
+    const adminOnlyPages = ['#users', '#activity-log', '#broadcast'];
+    const requestedPage = window.location.hash || '#home';
+
+    if (adminOnlyPages.includes(requestedPage.split('?')[0]) && (!user || user.id !== 1)) {
         console.warn('Access denied to user management page.');
         window.location.hash = '#home'; // Redirect to home
         return; // Stop navigation

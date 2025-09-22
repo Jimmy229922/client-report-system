@@ -13,6 +13,28 @@ function checkAdminStatus() {
     } catch (e) { return false; }
 }
 
+async function populateUserFilter() {
+    if (!IS_ADMIN) return;
+
+    const container = document.getElementById('user-filter-container');
+    const select = document.getElementById('user-filter');
+    if (!container || !select) return;
+
+    try {
+        const result = await fetchWithAuth('/api/users');
+        const users = result.data || [];
+        users.forEach(user => {
+            const option = document.createElement('option');
+            option.value = user.id;
+            option.textContent = user.username;
+            select.appendChild(option);
+        });
+        container.classList.remove('hidden');
+    } catch (error) {
+        console.error("Failed to populate user filter:", error);
+    }
+}
+
 function getReportType(report) { // Changed to accept the whole report object
     // Prioritize the new 'type' column if it exists
     if (report.type) {
@@ -92,19 +114,38 @@ function createReportCard(report) {
     `;
 }
 
-async function fetchAndRenderArchive(searchTerm = '') {
+async function fetchAndRenderArchive() {
     const archiveGrid = document.getElementById('archive-grid');
     if (!archiveGrid) return;
     archiveGrid.innerHTML = `<div class="spinner"></div>`;
     reportsByTypeCache = {}; // Clear cache on new fetch/search
-    IS_ADMIN = checkAdminStatus(); // Check admin status once per page load
-    try {
-        const result = await fetchWithAuth(`/api/reports?search=${encodeURIComponent(searchTerm)}`);
 
-        if (result.data && result.data.length > 0) {
+    // 1. Collect all filter values
+    const searchTerm = document.getElementById('archive-search').value;
+    const startDate = document.getElementById('start-date').value;
+    const endDate = document.getElementById('end-date').value;
+    const userFilter = document.getElementById('user-filter');
+    const userId = userFilter ? userFilter.value : 'all';
+    const typeFilter = document.getElementById('type-filter');
+    const reportType = typeFilter ? typeFilter.value : 'all';
+
+    // 2. Build query string
+    const params = new URLSearchParams();
+    if (searchTerm) params.append('search', searchTerm);
+    if (startDate) params.append('startDate', startDate);
+    if (endDate) params.append('endDate', endDate);
+    if (userId !== 'all' && IS_ADMIN) params.append('userId', userId);
+    if (reportType !== 'all') params.append('type', reportType);
+    const queryString = params.toString();
+
+    try {
+        const result = await fetchWithAuth(`/api/reports?${queryString}`);
+        const reports = result.data || [];
+
+        if (reports.length > 0) {
             // --- بداية التعديل: إضافة رسائل للكونسول ---
             console.log('--- فحص صور الأرشيف ---');
-            result.data.forEach(report => {
+            reports.forEach(report => {
                 if (report.image_urls && report.image_urls.length > 0) {
                     // Log success with the actual data for verification
                     console.log(`✅ تقرير #${report.id}: تم العثور على ${report.image_urls.length} صورة متاحة للمعاينة.`, report.image_urls);
@@ -115,7 +156,7 @@ async function fetchAndRenderArchive(searchTerm = '') {
             });
             // --- نهاية التعديل ---
 
-            const reportsByType = result.data.reduce((acc, report) => {
+            const reportsByType = reports.reduce((acc, report) => {
                 const type = getReportType(report);
                 if (!acc[type]) acc[type] = [];
                 acc[type].push(report);
@@ -305,22 +346,79 @@ export function renderArchivePage() {
             <h1 class="page-title">أرشيف التقارير</h1>
             ${backButtonHtml}
         </div>
-        <div class="search-container">
-            <i class="fas fa-search"></i>
-            <input type="text" id="archive-search" class="search-input" placeholder="ابحث في التقارير (رقم حساب، IP، ...)">
+        <div class="filter-bar">
+            <div class="filter-controls">
+                <div class="filter-item search-filter">
+                    <i class="fas fa-search"></i>
+                    <input type="text" id="archive-search" class="search-input" placeholder="ابحث في التقارير...">
+                </div>
+                <div class="filter-item date-filter">
+                    <label for="start-date">من</label>
+                    <input type="date" id="start-date">
+                </div>
+                <div class="filter-item date-filter">
+                    <label for="end-date">إلى</label>
+                    <input type="date" id="end-date">
+                </div>
+                <div class="filter-item user-filter hidden" id="user-filter-container">
+                    <label for="user-filter">الموظف</label>
+                    <select id="user-filter">
+                        <option value="all">الكل</option>
+                    </select>
+                </div>
+                <div class="filter-item">
+                    <label for="type-filter">النوع</label>
+                    <select id="type-filter">
+                        <option value="all">كل الأنواع</option>
+                        <option value="suspicious">Suspicious</option>
+                        <option value="deposit_percentages">Deposit</option>
+                        <option value="new-positions">New Position</option>
+                        <option value="credit-out">Credit Out</option>
+                        <option value="account_transfer">Account Transfer</option>
+                        <option value="payouts">PAYOUTS</option>
+                    </select>
+                </div>
+            </div>
+            <div class="filter-item">
+                <button id="reset-filters-btn" class="cancel-btn" style="width: auto; padding: 0.6rem 1.2rem;"><i class="fas fa-times"></i> مسح</button>
+            </div>
         </div>
         <div id="archive-grid" class="archive-grid">
             <div class="spinner"></div>
         </div>
     `;
 
+    IS_ADMIN = checkAdminStatus();
+    if (IS_ADMIN) {
+        populateUserFilter();
+    }
+
     const searchInput = document.getElementById('archive-search');
+    const startDateInput = document.getElementById('start-date');
+    const endDateInput = document.getElementById('end-date');
+    const userFilterSelect = document.getElementById('user-filter');
+    const typeFilterSelect = document.getElementById('type-filter');
+    const resetBtn = document.getElementById('reset-filters-btn');
+
     let debounceTimer;
-    searchInput.addEventListener('input', (e) => {
+    const debouncedFetch = () => {
         clearTimeout(debounceTimer);
-        debounceTimer = setTimeout(() => {
-            fetchAndRenderArchive(e.target.value);
-        }, 500);
+        debounceTimer = setTimeout(fetchAndRenderArchive, 500);
+    };
+
+    searchInput.addEventListener('input', debouncedFetch);
+    startDateInput.addEventListener('change', fetchAndRenderArchive);
+    endDateInput.addEventListener('change', fetchAndRenderArchive);
+    userFilterSelect.addEventListener('change', fetchAndRenderArchive);
+    typeFilterSelect.addEventListener('change', fetchAndRenderArchive);
+
+    resetBtn.addEventListener('click', () => {
+        searchInput.value = '';
+        startDateInput.value = '';
+        endDateInput.value = '';
+        userFilterSelect.value = 'all';
+        typeFilterSelect.value = 'all';
+        fetchAndRenderArchive();
     });
 
     // Check for a search query in the URL hash
@@ -330,7 +428,7 @@ export function renderArchivePage() {
 
     if (initialSearchTerm) {
         searchInput.value = initialSearchTerm;
-        fetchAndRenderArchive(initialSearchTerm);
+        fetchAndRenderArchive();
     } else {
         fetchAndRenderArchive();
     }

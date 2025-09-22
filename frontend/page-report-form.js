@@ -4,6 +4,28 @@ import { setFormDirty } from './router.js';
 
 let uploadedFiles = [];
 
+function createTemplatesFlyoutHTML() {
+    return `
+        <div id="templates-flyout" class="templates-flyout">
+            <div class="flyout-header">
+                <h3><i class="fas fa-bolt"></i> قوالب سريعة</h3>
+                <button id="close-flyout-btn" class="close-btn">&times;</button>
+            </div>
+            <div class="flyout-body">
+                <p>اضغط على قالب لإضافته إلى حقل الملاحظات.</p>
+                <ul class="templates-list">
+                    <div class="spinner-small" style="margin: 2rem auto;"></div> <!-- Placeholder -->
+                </ul>
+                <a href="#templates" class="manage-templates-link">إدارة القوالب</a>
+            </div>
+        </div>
+        <div id="templates-overlay" class="templates-overlay"></div>
+        <button id="open-templates-flyout-btn" class="floating-btn" title="فتح القوالب السريعة">
+            <i class="fas fa-bolt"></i>
+        </button>
+    `;
+}
+
 export function createDepositReportPageHTML(reportType) {
     return `
         <h1 class="page-title">إنشاء تقرير: ${reportType}</h1>
@@ -12,6 +34,7 @@ export function createDepositReportPageHTML(reportType) {
                 <!-- Form groups will be injected by init -->
             </form>
         </div>
+        ${createTemplatesFlyoutHTML()}
     `;
 }
 
@@ -23,6 +46,7 @@ export function createGeneralReportPageHTML(reportType) {
                 <!-- Form groups will be injected by init -->
             </form>
         </div>
+        ${createTemplatesFlyoutHTML()}
     `;
 }
 
@@ -240,6 +264,70 @@ export function initCreateReportPage() {
     const imagePreviews = form.querySelector('#image-previews');
     const copyBtn = form.querySelector('#copy-report-btn');
     uploadedFiles = [];
+
+    // --- Template Flyout Logic ---
+    const flyout = document.getElementById('templates-flyout');
+    const overlay = document.getElementById('templates-overlay');
+    const openBtn = document.getElementById('open-templates-flyout-btn');
+
+    if (flyout && openBtn) {
+        const closeBtn = flyout.querySelector('#close-flyout-btn');
+        const templatesList = flyout.querySelector('.templates-list');
+
+        const openFlyout = () => {
+            flyout.classList.add('open');
+            if (overlay) overlay.classList.add('open');
+        };
+        const closeFlyout = () => {
+            flyout.classList.remove('open');
+            if (overlay) overlay.classList.remove('open');
+        };
+
+        openBtn.addEventListener('click', openFlyout);
+        if (closeBtn) closeBtn.addEventListener('click', closeFlyout);
+        if (overlay) overlay.addEventListener('click', closeFlyout);
+
+        (async () => {
+            try {
+                const result = await fetchWithAuth('/api/templates');
+                const templates = result.data || [];
+                if (templates.length > 0) {
+                    templatesList.innerHTML = templates.map(t =>
+                        `<li><button type="button" class="template-btn" data-content="${t.content.replace(/"/g, '&quot;')}">${t.title}</button></li>`
+                    ).join('');
+                } else {
+                    templatesList.innerHTML = '<li><p class="no-templates-msg">لا توجد قوالب محفوظة.</p></li>';
+                }
+            } catch (error) {
+                console.error('Failed to load templates:', error);
+                templatesList.innerHTML = '<li><p class="no-templates-msg" style="color: var(--danger-color);">فشل تحميل القوالب.</p></li>';
+            }
+        })();
+
+        flyout.addEventListener('click', (e) => {
+            const templateBtn = e.target.closest('.template-btn');
+            if (!templateBtn) return;
+
+            const content = templateBtn.dataset.content;
+            const notesTextarea = form.querySelector('#notes') || form.querySelector('#additional-notes');
+
+            if (notesTextarea) {
+                // Strip HTML from the template content before inserting into the textarea
+                const tempDiv = document.createElement('div');
+                tempDiv.innerHTML = content;
+                const plainTextContent = tempDiv.textContent || tempDiv.innerText || "";
+
+                const currentValue = notesTextarea.value.trim();
+                notesTextarea.value = currentValue ? `${currentValue}\n${plainTextContent}` : plainTextContent;
+                notesTextarea.focus();
+                notesTextarea.dispatchEvent(new Event('input', { bubbles: true }));
+                showToast('تمت إضافة القالب.');
+                closeFlyout(); // Close flyout after applying
+            } else {
+                showToast('لم يتم العثور على حقل ملاحظات لإضافة القالب إليه.', true);
+            }
+        });
+    }
 
     const ipInput = form.querySelector('#ip-input');
     const clearIpBtn = form.querySelector('#clear-ip-btn');

@@ -1,4 +1,4 @@
-import { showToast } from './ui.js';
+import { showToast, showConfirmModal } from './ui.js';
 
 function parseOldData(accountsText, timestampsText) {
     const accountLines = accountsText.split('\n');
@@ -22,6 +22,7 @@ function parseOldData(accountsText, timestampsText) {
 }
 
 let comparisonResults = []; // Module-level variable to store results for copying
+let newAccountsForCopy = []; // Module-level variable for copying new accounts only
 const COMPARATOR_STATE_KEY = 'comparatorState'; // Key for sessionStorage
 
 function performComparison() {
@@ -32,6 +33,7 @@ function performComparison() {
 
     const resultsContainer = document.getElementById('comparator-results');
     const copyResultsBtn = document.getElementById('copy-results-btn');
+    const copyNewAccountsBtn = document.getElementById('copy-new-accounts-btn');
 
     if (!newAccountsText) {
         showToast('الرجاء إدخال قائمة الحسابات الجديدة للمقارنة.', true);
@@ -107,6 +109,12 @@ function performComparison() {
     } else {
         copyResultsBtn.classList.add('hidden');
     }
+
+    if (newAccountsForCopy.length > 0) {
+        copyNewAccountsBtn.classList.remove('hidden');
+    } else {
+        copyNewAccountsBtn.classList.add('hidden');
+    }
 }
 
 function renderResultsTable(results) {
@@ -119,6 +127,7 @@ function renderResultsTable(results) {
 
     // Re-categorize results as per the new request
     const newAndUnique = results.filter(r => r.type === 'with_timestamp' || (r.type === 'without_timestamp' && !r.isDuplicate));
+    newAccountsForCopy = newAndUnique; // Store for the new copy button
     const duplicates = results.filter(r => r.type === 'without_timestamp' && r.isDuplicate);
     const tainted = results.filter(r => r.type === 'tainted');
 
@@ -405,7 +414,8 @@ export function renderComparatorPage() {
         <div id="comparator-results" class="results-container hidden">
             <div class="results-header">
                 <h2><i class="fas fa-sparkles"></i> الحسابات الجديدة</h2>
-                <button id="copy-results-btn" class="copy-btn hidden"><i class="fas fa-copy"></i> نسخ النتائج</button>
+                <button id="copy-new-accounts-btn" class="copy-btn hidden" style="background-color: transparent; border-color: var(--success-color); color: var(--success-color);"><i class="fas fa-copy"></i> نسخ الحسابات الجديدة</button>
+                <button id="copy-results-btn" class="copy-btn hidden"><i class="fas fa-copy"></i> نسخ كل النتائج</button>
             </div>
             <div id="comparator-results-output" class="results-output-box"></div>
         </div>
@@ -470,6 +480,21 @@ export function renderComparatorPage() {
         }).catch(err => {
             showToast('فشل نسخ النتائج.', true);
             console.error('Copy failed:', err);
+        });
+    });
+
+    document.getElementById('copy-new-accounts-btn').addEventListener('click', () => {
+        if (!newAccountsForCopy || newAccountsForCopy.length === 0) {
+            showToast('لا توجد حسابات جديدة لنسخها.', true);
+            return;
+        }
+
+        const textToCopy = newAccountsForCopy.map(acc => acc.account).join('\n');
+
+        navigator.clipboard.writeText(textToCopy).then(() => {
+            showToast(`تم نسخ ${newAccountsForCopy.length} حساب جديد بنجاح.`);
+        }).catch(err => {
+            showToast('فشل نسخ الحسابات الجديدة.', true);
         });
     });
 

@@ -56,7 +56,19 @@ const supabase = createClient(config.SUPABASE_URL, config.SUPABASE_KEY);
 const upload = multer({ storage: multer.memoryStorage() });
 
 // 4. تفعيل الـ Middlewares
-app.use(cors()); // للسماح بالطلبات من الواجهة الأمامية
+// إعداد CORS للتعامل مع طلبات preflight والسماح بالهيدرز الضرورية لعميل Supabase.
+const corsOptions = {
+  origin: '*', // يمكنك تقييد هذا إلى نطاق الواجهة الأمامية في بيئة الإنتاج لمزيد من الأمان
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: [
+    'Authorization',
+    'x-client-info',
+    'apikey',
+    'Content-Type'
+  ],
+  optionsSuccessStatus: 200 // For legacy browser support
+};
+app.use(cors(corsOptions));
 app.use(express.json()); // لتحليل البيانات من نوع JSON
 app.use(express.urlencoded({ extended: true })); // لتحليل البيانات من النماذج
 // تقديم ملفات الواجهة الأمامية بشكل ثابت
@@ -479,8 +491,14 @@ app.post('/api/send-report', verifyToken, upload.array('images', 3), async (req,
 
 // Endpoint to get all reports
 app.get('/api/reports', verifyToken, async (req, res) => {
-    const limit = req.query.limit ? parseInt(req.query.limit) : 0;
-    const search = req.query.search || '';
+    const {
+        limit: limitStr,
+        search = '',
+        startDate,
+        endDate,
+        userId: filterUserId
+    } = req.query;
+    const limit = limitStr ? parseInt(limitStr) : 0;
     const isAdmin = req.userId === 1;
 
     let query;
@@ -503,6 +521,16 @@ app.get('/api/reports', verifyToken, async (req, res) => {
             // For other text (like IP, email, etc.), perform a general case-insensitive search
             query = query.ilike('report_text', `%${search}%`);
         }
+    }
+
+    if (startDate) {
+        query = query.gte('timestamp', startDate);
+    }
+    if (endDate) {
+        query = query.lte('timestamp', `${endDate}T23:59:59.999Z`);
+    }
+    if (isAdmin && filterUserId && filterUserId !== 'all') {
+        query = query.eq('user_id', filterUserId);
     }
 
     query = query.order('timestamp', { ascending: false });
@@ -570,6 +598,54 @@ app.delete('/api/reports/:id', verifyToken, async (req, res) => { // verifyToken
         return res.status(500).json({ "error": deleteError.message });
     }
     res.json({ "message": "deleted", changes: count });
+});
+
+// Endpoint to broadcast a "Gold Market Close" message WITH an image
+app.post('/api/broadcast/gold-market-close-with-image', verifyToken, upload.single('image'), async (req, res) => {
+    const username = req.username; // from verifyToken
+    const image = req.file;
+
+    if (!image) {
+        return res.status(400).json({ success: false, message: 'لم يتم رفع أي صورة.' });
+    }
+
+    const caption = `😱😱😱الذهبببببببببب ( اغلاق السوق )😱😱😱\n@Mudarballoul\n@batoulhassan`;
+
+    try {
+        await bot.telegram.sendPhoto(
+            config.CHAT_ID,
+            { source: image.buffer },
+            { caption: caption, disable_notification: true }
+        );
+        console.log(`[Broadcast] 'Gold Market Close' image sent by ${username}.`);
+
+        // After sending to Telegram, create notifications for all users
+        try {
+            const { data: users, error: usersError } = await supabase.from('users').select('id').eq('is_active', true);
+            if (usersError) throw usersError;
+
+            const notificationMessage = `تنبيه من ${username}: تم إيقاف سوق الذهب!`;
+            const notifications = users.map(user => ({
+                user_id: user.id,
+                message: notificationMessage,
+                link: '#home'
+            }));
+
+            if (notifications.length > 0) {
+                await supabase.from('notifications').insert(notifications);
+                sendEventToAll({ type: 'notification_created' });
+                console.log(`[Broadcast] Created ${notifications.length} 'Gold Market Close' notifications.`);
+            }
+        } catch (notificationError) {
+            // Log the error but don't fail the whole request, as the main action (Telegram message) was successful.
+            console.error('[Broadcast] Failed to create notifications for Gold Market Close event:', notificationError.message);
+        }
+
+        res.status(200).json({ success: true, message: 'تم إرسال رسالة إغلاق سوق الذهب بنجاح.' });
+    } catch (error) {
+        console.error(`[Broadcast] Failed to send 'Gold Market Close' image. Error:`, error.message);
+        res.status(500).json({ success: false, message: 'فشل إرسال الصورة إلى تليجرام.' });
+    }
 });
 
 // Endpoint to delete a single image from a report (Admin only)
@@ -925,6 +1001,109 @@ app.delete('/api/instructions/:id', verifyToken, verifyAdmin, async (req, res) =
     res.json({ message: 'تم حذف التعليمة بنجاح.' });
 });
 
+// --- Template Management Endpoints ---
+
+// GET all templates for the current user
+app.get('/api/templates', verifyToken, async (req, res) => {
+    const { data, error } = await supabase
+        .from('templates')
+        .select('*')
+        .eq('user_id', req.userId)
+        .order('created_at', { ascending: true });
+
+    if (error) return res.status(500).json({ error: error.message });
+    res.json({ data });
+});
+
+// POST a new template
+app.post('/api/templates', verifyToken, async (req, res) => {
+    const { title, content } = req.body;
+    if (!title || !content) {
+        return res.status(400).json({ message: 'العنوان والمحتوى مطلوبان.' });
+    }
+
+    const { data, error } = await supabase
+        .from('templates')
+        .insert({ title, content, user_id: req.userId })
+        .select()
+        .single();
+
+    if (error) return res.status(500).json({ error: error.message });
+    res.status(201).json({ message: 'تم إنشاء القالب بنجاح.', data });
+});
+
+// PUT (update) a template
+app.put('/api/templates/:id', verifyToken, async (req, res) => {
+    const { id } = req.params;
+    const { title, content } = req.body;
+
+    // RLS handles ownership, so we can update directly.
+    const { data, error } = await supabase
+        .from('templates')
+        .update({ title, content })
+        .eq('id', id)
+        .eq('user_id', req.userId) // Double-check ownership
+        .select()
+        .single();
+
+    if (error) return res.status(500).json({ error: error.message });
+    if (!data) return res.status(404).json({ message: 'القالب غير موجود أو لا تملك صلاحية تعديله.' });
+    res.json({ message: 'تم تحديث القالب بنجاح.', data });
+});
+
+// DELETE a template
+app.delete('/api/templates/:id', verifyToken, async (req, res) => {
+    const { id } = req.params;
+
+    const { error, count } = await supabase
+        .from('templates')
+        .delete({ count: 'exact' })
+        .eq('id', id)
+        .eq('user_id', req.userId);
+
+    if (error) return res.status(500).json({ error: error.message });
+    if (count === 0) return res.status(404).json({ message: 'القالب غير موجود أو لا تملك صلاحية حذفه.' });
+    res.json({ message: 'تم حذف القالب بنجاح.' });
+});
+
+// Endpoint to send a custom broadcast message
+app.post('/api/broadcast/custom', verifyToken, verifyAdmin, async (req, res) => {
+    const { message, target, userId } = req.body;
+    const senderUsername = req.username;
+
+    if (!message || !target) {
+        return res.status(400).json({ message: 'الرسالة والهدف مطلوبان.' });
+    }
+    if (target === 'specific' && !userId) {
+        return res.status(400).json({ message: 'يجب تحديد مستخدم عند اختيار "موظف معين".' });
+    }
+
+    try {
+        let userIds = [];
+        if (target === 'all') {
+            const { data: users, error } = await supabase.from('users').select('id').eq('is_active', true);
+            if (error) throw error;
+            userIds = users.map(u => u.id);
+        } else {
+            userIds.push(parseInt(userId, 10));
+        }
+
+        if (userIds.length === 0) {
+            return res.status(404).json({ message: 'لم يتم العثور على مستخدمين لإرسال الإشعار إليهم.' });
+        }
+
+        const notificationMessage = `رسالة من ${senderUsername}: ${message}`;
+        const notifications = userIds.map(id => ({ user_id: id, message: notificationMessage, link: '#home' }));
+
+        await supabase.from('notifications').insert(notifications);
+        sendEventToAll({ type: 'notification_created' });
+        await logActivity(req, req.userId, 'send_custom_notification', { target, count: notifications.length });
+        res.status(200).json({ success: true, message: `تم إرسال الإشعار إلى ${notifications.length} مستخدم بنجاح.` });
+    } catch (error) {
+        console.error(`[Broadcast] Failed to send custom message. Error:`, error.message);
+        res.status(500).json({ success: false, message: 'فشل إرسال الإشعار المخصص.' });
+    }
+});
 
 // --- User Management Endpoints ---
 

@@ -54,6 +54,9 @@ function handleImagePreviewModal() {
 
 function setupUIForUser() {
     const userManagementLink = document.getElementById('user-management-link');
+    const activityLogLink = document.getElementById('activity-log-link');
+    const broadcastLink = document.getElementById('broadcast-link');
+    const adminSectionDivider = document.getElementById('admin-section-divider');
     const updateAppBtn = document.getElementById('update-app-btn');
     updateNavbarUser(); // Update username and avatar
 
@@ -68,6 +71,9 @@ function setupUIForUser() {
                 // Show admin-only links
                 if (user && user.id === 1) { // Admin-only UI elements
                     if (userManagementLink) userManagementLink.classList.remove('hidden');
+                    if (activityLogLink) activityLogLink.classList.remove('hidden');
+                    if (broadcastLink) broadcastLink.classList.remove('hidden');
+                    if (adminSectionDivider) adminSectionDivider.classList.remove('hidden');
                 }
             } catch (error) {
                 console.error("Corrupted user data in localStorage (app.js). Clearing and reloading.", error);
@@ -245,6 +251,76 @@ async function handleAppUpdate() {
         closeBtn.classList.remove('hidden');
         console.error('Update failed:', error);
     }
+}
+
+async function handleGoldMarketUpload() {
+    // 1. Create and show a modal for uploading the image
+    const modal = document.createElement('div');
+    modal.id = 'gold-upload-modal';
+    modal.className = 'modal'; // Use existing modal styles
+    modal.innerHTML = `
+        <div class="modal-dialog" style="max-width: 500px; text-align: center;">
+            <div class="modal-header" style="justify-content: center; border-bottom: none; padding-bottom: 0;">
+                <h3><i class="fas fa-exclamation-triangle" style="color: #FFD700;"></i> إرسال تنبيه إغلاق الذهب</h3>
+            </div>
+            <div class="modal-body" style="padding-top: 1rem;">
+                <p style="margin-bottom: 1.5rem;">ارفع صورة إثبات إغلاق السوق. سيتم إرسالها تلقائياً.</p>
+                <div id="gold-upload-area" style="border: 2px dashed var(--border-color); border-radius: 8px; padding: 2rem; text-align: center; color: #aaa; cursor: pointer; transition: all 0.2s ease;">
+                    <i class="fas fa-cloud-upload-alt" style="font-size: 3rem; margin-bottom: 1rem; display: block;"></i>
+                    <p>الصق الصورة هنا أو انقر للاختيار</p>
+                </div>
+                <input type="file" id="gold-upload-input" accept="image/*" class="hidden">
+            </div>
+            <div class="modal-footer" style="justify-content: center; border-top: 1px solid var(--border-color); padding-top: 1rem; margin-top: 1.5rem;">
+                 <button id="gold-upload-cancel-btn" class="cancel-btn"><i class="fas fa-times"></i> إغلاق</button>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(modal);
+    setTimeout(() => modal.classList.add('show'), 10); // Fade in
+
+    const uploadArea = modal.querySelector('#gold-upload-area');
+    const fileInput = modal.querySelector('#gold-upload-input');
+
+    const handleFile = async (file) => {
+        if (!file || !file.type.startsWith('image/')) {
+            showToast('الرجاء رفع ملف صورة صالح.', true);
+            return;
+        }
+
+        // Cleanup before sending
+        document.removeEventListener('paste', pasteHandler);
+        modal.remove();
+        
+        showToast('جاري إرسال صورة إغلاق الذهب...');
+
+        const formData = new FormData();
+        formData.append('image', file);
+
+        try {
+            const result = await fetchWithAuth('/api/broadcast/gold-market-close-with-image', {
+                method: 'POST',
+                body: formData
+            });
+            showToast(result.message);
+        } catch (error) {
+            showToast(error.message, true);
+        }
+    };
+
+    const closeModal = () => {
+        document.removeEventListener('paste', pasteHandler);
+        modal.classList.remove('show');
+        modal.addEventListener('transitionend', () => modal.remove(), { once: true });
+    };
+
+    modal.querySelector('#gold-upload-cancel-btn').addEventListener('click', closeModal);
+    modal.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
+    uploadArea.addEventListener('click', () => fileInput.click());
+    fileInput.addEventListener('change', () => handleFile(fileInput.files[0]));
+    
+    const pasteHandler = (e) => { const items = (e.clipboardData || window.clipboardData).items; for (const item of items) { if (item.type.indexOf('image') !== -1) { e.preventDefault(); const file = item.getAsFile(); handleFile(file); return; } } };
+    document.addEventListener('paste', pasteHandler);
 }
 
 let healthCheckInterval = null;
@@ -587,6 +663,27 @@ function showChangelogModal(changelog) {
 
 export function initApp() {
     handleTheme();
+
+    // --- Add Gold Market Close Button ---
+    const navActions = document.querySelector('.nav-actions');
+    if (navActions) {
+        const goldButton = document.createElement('button');
+        goldButton.id = 'gold-market-close-btn';
+        goldButton.className = 'icon-btn';
+        goldButton.title = 'إرسال تنبيه إغلاق سوق الذهب';
+        // Using a gold-colored warning icon
+        goldButton.innerHTML = '<i class="fas fa-exclamation-triangle" style="color: #FFD700;"></i>';
+        
+        // Place it after the theme toggle button for consistent ordering
+        const themeToggleBtn = document.getElementById('theme-toggle-btn');
+        if (themeToggleBtn) {
+            themeToggleBtn.insertAdjacentElement('afterend', goldButton);
+        } else {
+            navActions.prepend(goldButton);
+        }
+
+        goldButton.addEventListener('click', handleGoldMarketUpload);
+    }
 
     // --- Move Notification Status Indicator to Navbar ---
     const notificationsBtn = document.getElementById('notifications-btn');

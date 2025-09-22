@@ -5,64 +5,54 @@ let weeklyChart = null; // To hold the chart instance
 let distributionChart = null; // To hold the distribution chart instance
 let healthCheckInterval = null;
 
-export async function fetchAndRenderHomePageData() {
+async function fetchPrimaryData() {
     try {
-        // Use Promise.allSettled to allow one to fail without breaking the other
-        const results = await Promise.allSettled([
+        const [stats, topContributor] = await Promise.all([
             fetchWithAuth('/api/stats'),
-            fetchWithAuth('/api/stats/weekly'),
-            fetchWithAuth('/api/reports/recent'),
             fetchWithAuth('/api/stats/top-contributor')
         ]);
-
-        const statsResult = results[0];
-        const weeklyStatsResult = results[1];
-
-        if (statsResult.status === 'fulfilled' && statsResult.value.data) {
-            renderStatCards(statsResult.value.data);
-            renderDistributionChart(statsResult.value.data);
-        } else {
-            console.error('Failed to fetch stats:', statsResult.reason);
-            const statsGrid = document.getElementById('stats-grid');
-            if (statsGrid) {
-                statsGrid.innerHTML = '<p>فشل تحميل الإحصائيات.</p>';
-            }
-        }
-
-        if (weeklyStatsResult.status === 'fulfilled' && weeklyStatsResult.value.data) {
-            renderWeeklyChart(weeklyStatsResult.value.data);
-        } else {
-            console.error('Failed to fetch weekly stats:', weeklyStatsResult.reason);
-            const chartCard = document.querySelector('.chart-card');
-            if (chartCard) {
-                chartCard.innerHTML = '<h3>النشاط الأسبوعي</h3><p>فشل تحميل بيانات الرسم البياني.</p>';
-            }
-        }
-
-        const recentReportsResult = results[2];
-        if (recentReportsResult.status === 'fulfilled' && recentReportsResult.value.data) {
-            renderRecentReports(recentReportsResult.value.data);
-        } else {
-            console.error('Failed to fetch recent reports:', recentReportsResult.reason);
-            const recentReportsContainer = document.getElementById('recent-reports-container');
-            if (recentReportsContainer) {
-                recentReportsContainer.innerHTML = `<p>فشل تحميل أحدث التقارير.</p><p class="error-details">${recentReportsResult.reason.message}</p>`;
-            }
-        }
-
-        const topContributorResult = results[3];
-        if (topContributorResult.status === 'fulfilled' && topContributorResult.value.data) {
-            renderTopContributor(topContributorResult.value.data);
-        } else {
-            console.error('Failed to fetch top contributor:', topContributorResult.reason);
-            const topContributorContainer = document.getElementById('top-contributor-container');
-            if (topContributorContainer) {
-                topContributorContainer.innerHTML = `<p>فشل تحميل المساهم الأعلى.</p><p class="error-details">${topContributorResult.reason.message}</p>`;
-            }
-        }
-    } catch (error) { // This catch is now for truly unexpected errors
-        console.error('An unexpected error occurred on the home page:', error);
+        renderStatCards(stats.data);
+        renderTopContributor(topContributor.data);
+        return stats.data; // Return stats for the secondary fetch
+    } catch (error) {
+        console.error('Failed to fetch primary home page data:', error);
+        showToast('فشل تحميل الإحصائيات الرئيسية.', true);
+        // Render error states for primary components
+        document.getElementById('stats-grid').innerHTML = '<p class="error-details">فشل تحميل الإحصائيات.</p>';
+        document.getElementById('top-contributor-container').innerHTML = '<p class="error-details">فشل تحميل المساهم الأعلى.</p>';
+        return null;
     }
+}
+
+async function fetchSecondaryData(statsData) {
+    try {
+        const [weeklyStats, recentReports] = await Promise.all([
+            fetchWithAuth('/api/stats/weekly'),
+            fetchWithAuth('/api/reports/recent')
+        ]);
+
+        renderWeeklyChart(weeklyStats.data);
+        renderRecentReports(recentReports.data);
+        
+        // The distribution chart depends on the main stats data fetched earlier
+        if (statsData) {
+            renderDistributionChart(statsData);
+        } else {
+            // If primary stats failed, we might need to fetch them again or show an error
+            const distContainer = document.getElementById('distribution-chart-container');
+            if (distContainer) distContainer.innerHTML = '<p class="chart-placeholder">بيانات التوزيع غير متاحة.</p>';
+        }
+
+    } catch (error) {
+        console.error('Failed to fetch secondary home page data:', error);
+        // Don't show a toast here to avoid being annoying, just log and show placeholders
+    }
+}
+
+// This function will be called for initial load and for refresh events
+async function refreshHomePageData() {
+    const statsData = await fetchPrimaryData();
+    await fetchSecondaryData(statsData);
 }
 
 function updateSystemHealth() {
@@ -470,25 +460,23 @@ export function renderHomePage() {
             <div class="home-sidebar-column">
                 <div class="sidebar-card">
                     <h2><i class="fas fa-history"></i> أحدث التقارير</h2>
-                    <div id="recent-reports-container" class="recent-reports-container">
-                        <div class="spinner"></div>
-                    </div>
+                    <div id="recent-reports-container" class="recent-reports-container"><div class="spinner"></div></div>
                 </div>
                 <div class="sidebar-card">
                     <h3 id="top-contributor-title"><i class="fas fa-trophy"></i> المساهم الأعلى</h3>
-                    <div id="top-contributor-container" class="top-contributor-container"></div>
+                    <div id="top-contributor-container" class="top-contributor-container"><div class="spinner"></div></div>
                 </div>
             </div>
         </div>
     `;
-    fetchAndRenderHomePageData();
+    refreshHomePageData();
 
     // Clear any existing interval before setting a new one
     if (healthCheckInterval) clearInterval(healthCheckInterval);
     healthCheckInterval = setInterval(updateSystemHealth, 30000); // every 30 seconds
 
     // Listen for the custom event to refresh data in real-time
-    document.addEventListener('reportSent', fetchAndRenderHomePageData);
+    document.addEventListener('reportSent', refreshHomePageData);
 }
 
 export function cleanupHomePage() {
@@ -496,5 +484,5 @@ export function cleanupHomePage() {
         clearInterval(healthCheckInterval);
         healthCheckInterval = null;
     }
-    document.removeEventListener('reportSent', fetchAndRenderHomePageData);
+    document.removeEventListener('reportSent', refreshHomePageData);
 }
