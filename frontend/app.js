@@ -568,6 +568,10 @@ function initRealtimeNotifications() {
                     });
                     fetchAndRenderNotifications();
                     break;
+                case 'notification_deleted':
+                    // Just refresh the list without a toast to avoid being intrusive.
+                    fetchAndRenderNotifications();
+                    break;
                 case 'connected':
                     console.log('[SSE] Successfully connected to event stream.');
                     updateIndicator(true);
