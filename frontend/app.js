@@ -71,14 +71,14 @@ function setupUIForUser() {
         if (userStr && userStr !== 'undefined' && userStr !== 'null') {
             try {
                 const user = JSON.parse(userStr);
+                // Make the update button visible to all logged-in users
+                if (updateAppBtn) updateAppBtn.classList.remove('hidden');
                 if (user && user.id === 1) { // Admin-only UI elements
                     if (userManagementLink) userManagementLink.classList.remove('hidden');
                     if (activityLogLink) activityLogLink.classList.remove('hidden');
                     if (analyticsLink) analyticsLink.classList.remove('hidden');
                     if (broadcastLink) broadcastLink.classList.remove('hidden');
                     if (adminSectionDivider) adminSectionDivider.classList.remove('hidden');
-                    // The update button is also admin-only
-                    if (updateAppBtn) updateAppBtn.classList.remove('hidden');
                 }
             } catch (error) {
                 console.error("Corrupted user data in localStorage (app.js). Clearing and reloading.", error);
@@ -566,10 +566,6 @@ function initRealtimeNotifications() {
                     notificationSound.play().catch(error => {
                         console.warn("Notification sound could not be played. This is often due to browser restrictions requiring user interaction first.", error);
                     });
-                    fetchAndRenderNotifications();
-                    break;
-                case 'notification_deleted':
-                    // Just refresh the list without a toast to avoid being intrusive.
                     fetchAndRenderNotifications();
                     break;
                 case 'connected':
