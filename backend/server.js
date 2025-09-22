@@ -918,15 +918,52 @@ app.get('/api/notifications/events', verifyTokenForSSE, (req, res) => {
 });
 
 app.get('/api/notifications', verifyToken, async (req, res) => {
-    const { data, error } = await supabase
-        .from('notifications')
-        .select('*')
-        .eq('user_id', req.userId)
-        .order('created_at', { ascending: false })
-        .limit(10);
+    const page = parseInt(req.query.page, 10);
+    const limit = parseInt(req.query.limit, 10) || 20; // Default limit for history page
 
-    if (error) return res.status(500).json({ error: error.message });
-    res.json({ data });
+    try {
+        if (page) { // Paginated request for the history page
+            const offset = (page - 1) * limit;
+
+            // Query for paginated data
+            const dataQuery = supabase
+                .from('notifications')
+                .select('*')
+                .eq('user_id', req.userId)
+                .order('created_at', { ascending: false })
+                .range(offset, offset + limit - 1);
+
+            // Query to get total count for pagination
+            const countQuery = supabase
+                .from('notifications')
+                .select('*', { count: 'exact', head: true })
+                .eq('user_id', req.userId);
+
+            const [{ data, error: dataError }, { count, error: countError }] = await Promise.all([dataQuery, countQuery]);
+
+            if (dataError || countError) throw dataError || countError;
+
+            const totalPages = Math.ceil(count / limit);
+            res.json({
+                data,
+                pagination: { total: count, page, totalPages, limit }
+            });
+
+        } else { // Original request for the dropdown (latest 10)
+            const { data, error } = await supabase
+                .from('notifications')
+                .select('*')
+                .eq('user_id', req.userId)
+                .order('created_at', { ascending: false })
+                .limit(10);
+
+            if (error) throw error;
+            res.json({ data });
+        }
+    } catch (error) {
+        console.error('[Notifications] Error fetching notifications:', error.message);
+        res.status(500).json({ error: 'Failed to fetch notifications.' });
+    }
 });
 
 app.post('/api/notifications/mark-as-read', verifyToken, async (req, res) => {
@@ -1481,6 +1518,62 @@ app.delete('/api/users/all-non-admins', verifyToken, verifyAdmin, async (req, re
     }
 
     res.json({ message: `تم حذف ${count} مستخدم بنجاح.` });
+});
+
+// --- Activity Log Endpoint ---
+app.get('/api/activity-logs', verifyToken, verifyAdmin, async (req, res) => {
+    const page = parseInt(req.query.page, 10) || 1;
+    const limit = parseInt(req.query.limit, 10) || 25;
+    const offset = (page - 1) * limit;
+
+    const { search, userId, action } = req.query;
+
+    try {
+        // Base query to count total records for pagination
+        let countQuery = supabase.from('activity_logs').select('*', { count: 'exact', head: true });
+
+        // Main query to fetch data
+        let dataQuery = supabase
+            .from('activity_logs')
+            .select('*, users(username, avatar_url)')
+            .order('timestamp', { ascending: false })
+            .range(offset, offset + limit - 1);
+
+        // Apply filters to both queries
+        if (search) {
+            // Search in IP address or the text representation of the JSON details
+            countQuery = countQuery.or(`ip_address.ilike.%${search}%,details::text.ilike.%${search}%`);
+            dataQuery = dataQuery.or(`ip_address.ilike.%${search}%,details::text.ilike.%${search}%`);
+        }
+        if (userId && userId !== 'all') {
+            countQuery = countQuery.eq('user_id', userId);
+            dataQuery = dataQuery.eq('user_id', userId);
+        }
+        if (action && action !== 'all') {
+            countQuery = countQuery.eq('action', action);
+            dataQuery = dataQuery.eq('action', action);
+        }
+
+        // Execute both queries in parallel
+        const [
+            { count, error: countError },
+            { data, error: dataError }
+        ] = await Promise.all([ countQuery, dataQuery ]);
+
+        if (countError || dataError) throw dataError || countError;
+
+        const totalPages = Math.ceil(count / limit);
+
+        res.json({
+            message: 'success',
+            data,
+            pagination: { total: count, page, totalPages, limit }
+        });
+
+    } catch (error) {
+        console.error('[Activity Log] Error fetching activity logs:', error.message);
+        res.status(500).json({ error: 'Failed to fetch activity logs.' });
+    }
 });
 
 // Update a specific user's avatar (Admin only)

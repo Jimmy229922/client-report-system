@@ -1881,11 +1881,71 @@ a.recent-report-item:hover {
     box-shadow: 0 10px 30px rgba(0,0,0,0.3);
 }
 
+.update-header {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+    margin-bottom: 0.5rem;
+}
+
+.update-header i {
+    font-size: 1.8rem;
+    color: var(--accent-color);
+}
+
 .update-modal h3 {
+    margin: 0;
+}
+
+#update-subtitle {
+    color: #aaa;
     text-align: center;
     margin-top: 0;
+    margin-bottom: 2rem;
+    max-width: 80%;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.progress-wrapper {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
     margin-bottom: 1.5rem;
 }
+
+.progress-wrapper .progress-bar-container {
+    flex-grow: 1;
+    margin: 0;
+}
+
+.progress-wrapper .progress-text {
+    font-size: 1rem;
+    font-weight: bold;
+    color: var(--accent-color);
+    margin: 0;
+    min-width: 40px; /* Reserve space */
+}
+
+.update-details {
+    margin-top: 1rem;
+}
+
+#toggle-log-btn {
+    background: none;
+    border: 1px solid var(--border-color);
+    color: #aaa;
+    cursor: pointer;
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+    width: 100%;
+    text-align: right;
+    margin-bottom: 1rem;
+    transition: background-color 0.2s;
+}
+#toggle-log-btn:hover { background-color: var(--input-bg); }
 
 .update-log-container {
     background-color: var(--input-bg);

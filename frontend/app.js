@@ -178,38 +178,58 @@ function showUpdateOverlay(initialMessage = 'جاري البحث عن تحديث
         document.body.appendChild(overlay);
     }
     overlay.innerHTML = `
-        <canvas id="update-animation-canvas" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: -1; opacity: 0.5;"></canvas>
+        <canvas id="update-animation-canvas" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: -1; opacity: 0.3;"></canvas>
         <div class="update-modal">
-            <h3 id="update-status">${initialMessage}</h3>
-            <div class="progress-bar-container hidden">
-                <div id="update-progress-bar" class="progress-bar"></div>
+            <div class="update-header">
+                <i id="update-icon" class="fas fa-sync-alt fa-spin"></i>
+                <h3 id="update-status">${initialMessage}</h3>
             </div>
-            <p id="update-progress-text" class="progress-text"></p>
-            <div class="update-log-container">
-                <pre id="update-log" class="update-log"></pre>
+            <p id="update-subtitle">نحن نقوم بتحديث النظام الآن. قد يستغرق هذا بضع دقائق. لا تغلق هذه النافذة.</p>
+            
+            <div id="update-progress-wrapper" class="progress-wrapper hidden">
+                <div class="progress-bar-container">
+                    <div id="update-progress-bar" class="progress-bar"></div>
+                </div>
+                <span id="update-progress-text" class="progress-text">0%</span>
             </div>
+
+            <div class="update-details">
+                <button id="toggle-log-btn">عرض التفاصيل الفنية <i class="fas fa-chevron-down"></i></button>
+                <div class="update-log-container hidden">
+                    <pre id="update-log" class="update-log"></pre>
+                </div>
+            </div>
+
             <div id="update-footer" class="update-footer hidden">
                 <div class="spinner"></div>
-                <p>جاري إعادة تشغيل الخادم... الرجاء الانتظار.</p>
+                <p>اكتمل التثبيت. جاري إعادة تشغيل الخادم للانتهاء...</p>
             </div>
             <button id="close-update-overlay-btn" class="submit-btn hidden" style="margin-top: 1.5rem; width: auto; padding: 0.5rem 1rem;">إغلاق</button>
         </div>
     `;
     overlay.classList.remove('hidden');
     setTimeout(() => overlay.style.opacity = 1, 10); // Fade in
- 
+
     document.getElementById('close-update-overlay-btn').addEventListener('click', () => {
         stopUpdateAnimation(); // Stop the animation
         overlay.style.opacity = 0;
         setTimeout(() => overlay.classList.add('hidden'), 300);
+    });
+
+    document.getElementById('toggle-log-btn').addEventListener('click', (e) => {
+        const logContainer = document.querySelector('.update-log-container');
+        const icon = e.currentTarget.querySelector('i');
+        logContainer.classList.toggle('hidden');
+        icon.classList.toggle('fa-chevron-down');
+        icon.classList.toggle('fa-chevron-up');
     });
 }
 
 function animateProgressBar(duration, onComplete) {
     const progressBar = document.getElementById('update-progress-bar');
     const progressText = document.getElementById('update-progress-text');
-    const container = progressBar.parentElement;
-    container.classList.remove('hidden');
+    const wrapper = document.getElementById('update-progress-wrapper');
+    if (wrapper) wrapper.classList.remove('hidden');
 
     let start = null;
     const step = (timestamp) => {
@@ -230,21 +250,28 @@ function animateProgressBar(duration, onComplete) {
 function checkServerStatus(attempts = 0) {
     const maxAttempts = 90; // Try for 90 seconds (90 * 1000ms)
     if (attempts >= maxAttempts) {
+        const updateIcon = document.getElementById('update-icon');
         const footerEl = document.getElementById('update-footer');
         const statusEl = document.getElementById('update-status');
         const closeBtn = document.getElementById('close-update-overlay-btn');
 
         if (footerEl) footerEl.classList.add('hidden');
         if (statusEl) {
-            statusEl.textContent = 'استغرقت عملية إعادة التشغيل وقتاً طويلاً.';
+            statusEl.textContent = 'فشل الاتصال بالخادم بعد التحديث.';
             statusEl.style.color = '#ff9800';
         }
         if (closeBtn) closeBtn.classList.remove('hidden');
 
         const logEl = document.getElementById('update-log');
         if (logEl) {
-            logEl.textContent += '\n\n--- \nفشل الاتصال بالسيرفر بعد التحديث. قد يكون لا يزال يعمل في الخلفية. حاول تحديث الصفحة يدوياً بعد قليل.';
+            logEl.textContent += '\n\n--- \nفشل الاتصال بالخادم بعد التحديث. قد يكون لا يزال يعمل في الخلفية. حاول تحديث الصفحة يدوياً بعد قليل.';
         }
+        if (updateIcon) {
+            updateIcon.classList.remove('fa-spin', 'fa-sync-alt');
+            updateIcon.classList.add('fa-exclamation-triangle');
+            updateIcon.style.color = '#ff9800';
+        }
+        stopUpdateAnimation();
         return;
     }
 
@@ -260,10 +287,16 @@ function checkServerStatus(attempts = 0) {
             // Use a cache-busting query parameter
             const response = await fetch(`/api/health?t=${Date.now()}`);
             if (response.ok) {
+                const updateIcon = document.getElementById('update-icon');
                 const statusEl = document.getElementById('update-status');
                 if (statusEl) {
                     statusEl.textContent = 'تم إعادة تشغيل السيرفر بنجاح!';
                     statusEl.style.color = 'var(--success-color)';
+                }
+                if (updateIcon) {
+                    updateIcon.classList.remove('fa-spin', 'fa-sync-alt');
+                    updateIcon.classList.add('fa-check-circle');
+                    updateIcon.style.color = 'var(--success-color)';
                 }
                 if (progressBar) progressBar.style.width = '100%';
                 if (progressText) progressText.textContent = 'اكتمل 100%';
@@ -297,6 +330,7 @@ async function handleAppUpdate() {
     const logEl = document.getElementById('update-log');
     const footerEl = document.getElementById('update-footer');
     const closeBtn = document.getElementById('close-update-overlay-btn');
+    const updateIcon = document.getElementById('update-icon');
  
     try {
         animateProgressBar(15000); // Simulate a 15-second update process
@@ -316,7 +350,7 @@ async function handleAppUpdate() {
         if (result.log && result.log.trim() !== '') {
             logEl.textContent = result.log;
         } else {
-            logEl.textContent = 'لم يتم إرجاع أي سجلات من السيرفر. قد يكون التحديث قد تم بصمت أو أن النظام محدث بالفعل.';
+            logEl.textContent = 'لم يتم إرجاع أي سجلات من الخادم. قد يكون التحديث قد تم بصمت أو أن النظام محدث بالفعل.';
         }
 
         if (result.needsRestart) {
@@ -328,9 +362,19 @@ async function handleAppUpdate() {
             // No restart needed, show close button
             stopUpdateAnimation();
             closeBtn.classList.remove('hidden');
+            if (updateIcon) {
+                updateIcon.classList.remove('fa-spin', 'fa-sync-alt');
+                updateIcon.classList.add('fa-check-circle');
+                updateIcon.style.color = 'var(--success-color)';
+            }
         }
     } catch (error) {
         stopUpdateAnimation(); // Stop animation on error
+        if (updateIcon) {
+            updateIcon.classList.remove('fa-spin', 'fa-sync-alt');
+            updateIcon.classList.add('fa-exclamation-triangle');
+            updateIcon.style.color = 'var(--danger-color)';
+        }
         statusEl.textContent = 'حدث خطأ أثناء التحديث!';
         statusEl.style.color = 'var(--danger-color)';
         // The 'log' property is added to the error object in the backend for failed exec
@@ -473,6 +517,9 @@ async function fetchAndRenderNotifications() {
                 <button id="refresh-notifications-btn" class="icon-btn" title="تحديث"><i class="fas fa-sync-alt"></i></button>
             </div>
             <div id="notification-items-container"></div>
+            <div class="notification-footer">
+                <a href="#notifications">عرض كل الإشعارات</a>
+            </div>
         `;
     }
     const itemsContainer = document.getElementById('notification-items-container');

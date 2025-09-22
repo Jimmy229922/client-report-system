@@ -7,6 +7,7 @@ import { renderInstructionsPage } from './page-instructions.js';
 import { renderTemplatesPage } from './page-templates.js';
 import { renderActivityLogPage } from './page-activity-log.js';
 import { renderBroadcastPage } from './page-broadcast.js';
+import { renderNotificationsHistoryPage } from './page-notifications.js';
 import { renderAnalyticsPage } from './page-analytics.js';
 import { createDepositReportPageHTML, createGeneralReportPageHTML, initCreateReportPage } from './page-report-form.js';
 import { showLoader, hideLoader, updateActiveLink } from './ui.js';
@@ -32,6 +33,7 @@ const routes = {
     '#broadcast': renderBroadcastPage,
     '#analytics': renderAnalyticsPage,
     '#profile': renderProfilePage,
+    '#notifications': renderNotificationsHistoryPage,
     '#reports/suspicious': () => createGeneralReportPageHTML('Suspicious Report'),
     '#reports/deposit': () => createDepositReportPageHTML('Deposit Report'),
     '#reports/new-position': () => createGeneralReportPageHTML('New Position Report'),

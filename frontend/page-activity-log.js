@@ -79,7 +79,12 @@ function renderPagination(pagination) {
     const container = document.getElementById('pagination-container');
     if (!container) return;
 
-    const { total, page, totalPages } = pagination;
+    // Defensive check to prevent crash if pagination object is missing
+    if (!pagination) {
+        container.innerHTML = '';
+        return;
+    }
+    const { page, totalPages } = pagination;
 
     if (totalPages <= 1) {
         container.innerHTML = '';
