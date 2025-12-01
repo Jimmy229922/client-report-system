@@ -1,5 +1,7 @@
 const express = require('express');
 const router = express.Router();
+const { exec } = require('child_process');
+const path = require('path');
 
 module.exports = (verifyToken) => {
     /**
@@ -55,6 +57,33 @@ module.exports = (verifyToken) => {
         } catch (error) {
             console.error('Error in /filter-data:', error);
             res.status(500).send('Server Error');
+        }
+    });
+
+    /**
+     * @route   POST /api/tools/update-system
+     * @desc    Triggers system update from GitHub
+     * @access  Private (Admin only recommended)
+     */
+    router.post('/update-system', verifyToken, (req, res) => {
+        try {
+            const projectRoot = path.resolve(__dirname, '..', '..');
+            const updateScript = path.join(projectRoot, 'update-system.bat');
+
+            // Execute the update script in detached mode
+            exec(`start "" "${updateScript}"`, { cwd: projectRoot }, (error) => {
+                if (error) {
+                    console.error('Failed to trigger update script:', error);
+                    return res.status(500).json({ message: 'فشل تشغيل سكربت التحديث.' });
+                }
+            });
+
+            // Respond immediately
+            res.json({ message: 'تم بدء عملية التحديث. سيتم إعادة تشغيل السيرفر تلقائياً.' });
+
+        } catch (error) {
+            console.error('Error in /update-system:', error);
+            res.status(500).json({ message: 'حدث خطأ أثناء التحديث.' });
         }
     });
 

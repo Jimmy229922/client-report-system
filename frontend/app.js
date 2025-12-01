@@ -1198,6 +1198,41 @@ function initApp() {
         restartTourBtn.addEventListener('click', () => checkAndStartTour(true));
     }
 
+    // System Update Button (Admin only)
+    const updateSystemBtn = document.getElementById('update-system-btn');
+    if (updateSystemBtn) {
+        updateSystemBtn.addEventListener('click', async () => {
+            const confirmed = await showConfirmModal(
+                'تحديث النظام',
+                'هل تريد تحديث النظام من GitHub؟ سيتم إعادة تشغيل السيرفر تلقائياً.',
+                {
+                    iconClass: 'fas fa-sync-alt',
+                    iconColor: 'var(--primary-color)',
+                    confirmText: 'نعم، تحديث الآن',
+                    confirmClass: 'submit-btn',
+                    cancelText: 'إلغاء'
+                }
+            );
+            if (confirmed) {
+                try {
+                    showToast('جاري تحديث النظام...', false);
+                    const result = await fetchWithAuth('/api/tools/update-system', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' }
+                    });
+                    showToast(result.message || 'تم بدء التحديث. انتظر إعادة التشغيل...', false);
+                    
+                    // Reload page after a delay to reconnect after server restart
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 10000);
+                } catch (error) {
+                    showToast(error.message || 'فشل تحديث النظام.', true);
+                }
+            }
+        });
+    }
+
     document.getElementById('logout-btn').addEventListener('click', async () => {
         const confirmed = await showConfirmModal(
             'تسجيل الخروج',
