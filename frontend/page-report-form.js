@@ -1,4 +1,4 @@
-﻿import imageCompression from 'https://cdn.jsdelivr.net/npm/browser-image-compression@2.0.2/dist/browser-image-compression.esm.js';
+﻿import imageCompression from 'https://esm.sh/browser-image-compression@2.0.2';
 import { fetchWithAuth } from './api.js';
 import { showToast, initTinyMCE } from './ui.js'; 
 import { checkSpecialIdentifier } from './special-identifiers.js';
