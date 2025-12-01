@@ -1,0 +1,298 @@
+/* --- User Management Page Specific Styles --- */
+
+.user-management-container {
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+/* --- Add User Section --- */
+.add-user-container {
+    background-color: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    margin-bottom: 2rem;
+    overflow: hidden;
+    transition: all 0.3s ease-in-out;
+}
+
+.add-user-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 1.5rem;
+    cursor: pointer;
+    background-color: var(--input-bg);
+}
+
+.add-user-header h3 {
+    margin: 0;
+    font-size: 1.2rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.add-user-header .icon-btn i {
+    transition: transform 0.3s ease;
+}
+
+.add-user-container.open .add-user-header .icon-btn i {
+    transform: rotate(180deg);
+}
+
+.add-user-container .collapsible-content {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.5s ease-out, padding 0.5s ease-out;
+    padding: 0 1.5rem;
+}
+
+.add-user-container.open .collapsible-content {
+    max-height: 500px; /* Adjust as needed */
+    padding: 1.5rem;
+}
+
+#add-user-form .form-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1rem;
+}
+
+/* --- User List Header --- */
+.list-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+.list-header h2 {
+    margin: 0;
+    font-size: 1.8rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.list-header .list-actions {
+    flex-grow: 1;
+    max-width: 400px;
+}
+
+/* --- User Cards Grid --- */
+.user-cards-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+    gap: 1.5rem;
+}
+
+.user-card {
+    background-color: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    transition: all 0.2s ease-in-out;
+    display: flex;
+    flex-direction: column;
+    padding: 1.5rem;
+    position: relative;
+}
+
+.user-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+    border-color: var(--accent-color);
+}
+
+.user-card.inactive {
+    opacity: 0.6;
+    background-color: var(--input-bg);
+}
+
+.user-card.admin-card {
+    border-left: 4px solid var(--accent-color);
+}
+
+.user-card-main {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.avatar-container {
+    position: relative;
+    flex-shrink: 0;
+}
+
+.avatar-container.admin-can-edit {
+    cursor: pointer;
+}
+
+.avatar-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0,0,0,0.5);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    opacity: 0;
+    transition: opacity 0.2s ease-in-out;
+}
+
+.avatar-container.admin-can-edit:hover .avatar-overlay {
+    opacity: 1;
+}
+
+.user-card-avatar,
+.user-card-avatar.no-avatar {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    background-color: var(--input-bg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2rem;
+    color: var(--accent-color);
+    border: 2px solid var(--border-color);
+    object-fit: cover;
+}
+
+.user-card-details {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    min-width: 0; /* Prevents overflow */
+}
+
+.user-name {
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: var(--text-color);
+    word-break: break-word;
+}
+
+.user-email {
+    font-size: 0.9rem;
+    color: #aaa;
+    word-break: break-all;
+}
+
+.user-card-meta {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-top: 0.75rem;
+}
+
+.user-card .badge {
+    font-size: 0.75rem;
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.badge.role-admin { background-color: rgba(77, 91, 249, 0.2); color: var(--accent-color); }
+.badge.role-editor { background-color: rgba(108, 117, 125, 0.2); color: #ccc; }
+.badge.role-shift-manager { background-color: rgba(255, 193, 7, 0.2); color: #ffc107; }
+
+.badge.status-active { background-color: rgba(40, 167, 69, 0.2); color: var(--success-color); }
+.badge.status-inactive { background-color: rgba(108, 117, 125, 0.2); color: #aaa; }
+.badge.status-disabled { background-color: rgba(220, 53, 69, 0.2); color: var(--danger-color); }
+
+.user-card-status-icon {
+    position: absolute;
+    top: 1rem;
+    left: 1rem;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    border: 2px solid var(--card-bg);
+}
+
+.user-card-status-icon.online {
+    background-color: var(--success-color);
+    box-shadow: 0 0 8px var(--success-color);
+}
+
+.user-card-status-icon.offline {
+    background-color: #6c757d;
+}
+
+.user-card-actions-inline {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.5rem;
+    padding-top: 1rem;
+    margin-top: 1rem;
+    border-top: 1px solid var(--border-color);
+    width: 100%;
+}
+
+.action-wrapper {
+    position: relative;
+}
+
+.action-icon-btn {
+    background-color: var(--input-bg);
+    border: 1px solid var(--border-color);
+    color: #aaa;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.action-icon-btn:hover {
+    background-color: var(--accent-color);
+    color: white;
+    border-color: var(--accent-color);
+}
+
+.action-icon-btn.warning:hover { background-color: #ff9800; border-color: #ff9800; }
+.action-icon-btn.success:hover { background-color: var(--success-color); border-color: var(--success-color); }
+.action-icon-btn.danger:hover { background-color: var(--danger-color); border-color: var(--danger-color); }
+
+.action-icon-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    background-color: var(--input-bg);
+    color: #666;
+    border-color: var(--border-color);
+}
+
+.action-tooltip {
+    visibility: hidden;
+    opacity: 0;
+    background-color: #333;
+    color: #fff;
+    text-align: center;
+    border-radius: 6px;
+    padding: 5px 10px;
+    position: absolute;
+    z-index: 1;
+    bottom: 125%;
+    left: 50%;
+    transform: translateX(-50%);
+    transition: opacity 0.2s;
+    white-space: nowrap;
+    font-size: 0.8rem;
+}
+
+.action-wrapper:hover .action-tooltip {
+    visibility: visible;
+    opacity: 1;
+}

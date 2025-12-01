@@ -1,0 +1,191 @@
+/*
+================================================================
+|                                                              |
+|      PAGE-SPECIFIC STYLESHEET FOR NOTIFICATIONS HISTORY      |
+|                                                              |
+================================================================
+
+This file contains all styles necessary for the notifications history page.
+It is designed to be self-contained and independent of the global style.css.
+
+*/
+
+.notifications-page-container {
+    max-width: 900px;
+    margin: 2rem auto;
+    padding: 2rem;
+    animation: fadeIn 0.5s ease-in-out;
+}
+
+.notifications-page-container .page-header {
+    text-align: center;
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 1.5rem;
+}
+
+.notifications-page-container .page-header p {
+    color: #aaa;
+    margin-top: 0.5rem;
+    font-size: 1rem;
+}
+
+
+
+.btn-danger {
+    background-color: var(--danger-color); color: white; border: none; padding: 0.6rem 1.2rem;
+    border-radius: 8px; cursor: pointer; font-weight: bold; display: inline-flex; align-items: center; gap: 0.5rem;
+}
+.btn-danger:hover { background-color: #c82333; }
+
+.notifications-timeline {
+    margin-top: 2rem;
+}
+
+.timeline-group {
+    position: relative;
+    padding-bottom: 2rem;
+}
+
+.timeline-marker {
+    position: absolute;
+    right: 0;
+    top: 0;
+    width: 2px;
+    height: 100%;
+    background-color: var(--border-color);
+}
+
+.timeline-date {
+    position: sticky;
+    top: 80px; /* Navbar height + some margin */
+    background-color: var(--accent-color);
+    color: white;
+    padding: 0.25rem 0.75rem;
+    border-radius: 15px;
+    font-size: 0.8rem;
+    font-weight: bold;
+    display: inline-block;
+    transform: translateX(50%);
+    z-index: 10;
+}
+
+.timeline-items {
+    padding-right: 30px; /* Space from the timeline bar */
+}
+
+.timeline-item-wrapper {
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.timeline-item-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background-color: var(--input-bg);
+    border: 2px solid var(--border-color);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+    color: var(--accent-color);
+    flex-shrink: 0;
+    transform: translateX(calc(-50% - 1px)); /* Center on the timeline bar */
+}
+
+.timeline-item-card {
+    background-color: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    flex-grow: 1;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: box-shadow 0.2s ease;
+}
+.timeline-item-card:hover {
+    box-shadow: 0 4px 15px rgba(77, 91, 249, 0.1);
+}
+
+.timeline-item-content {
+    padding: 1rem 1.5rem;
+    text-decoration: none;
+    color: var(--text-color);
+    flex-grow: 1;
+}
+
+.notification-message {
+    margin: 0;
+    line-height: 1.5;
+}
+
+.like-notification-btn {
+    background: none;
+    border: none;
+    color: #aaa;
+    cursor: pointer;
+    font-size: 1.2rem;
+    padding: 1rem;
+    align-self: stretch;
+    transition: color 0.2s ease;
+}
+
+.like-notification-btn:hover {
+    color: var(--danger-color);
+}
+
+.like-notification-btn.liked {
+    color: var(--danger-color);
+    cursor: default;
+}
+
+.like-notification-btn.liked i {
+    animation: heart-beat 0.5s ease-in-out;
+}
+
+.delete-notification-group-btn {
+    background: none;
+    border: none;
+    color: #aaa;
+    cursor: pointer;
+    font-size: 1.2rem;
+    padding: 0 1rem;
+    align-self: stretch;
+    display: flex;
+    align-items: center;
+    transition: color 0.2s ease, background-color 0.2s ease;
+}
+.delete-notification-group-btn:hover { color: white; background-color: var(--danger-color); }
+
+/* --- Pagination Styles --- */
+.pagination {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 2rem;
+}
+
+.page-btn {
+    background-color: var(--input-bg);
+    border: 1px solid var(--border-color);
+    color: var(--text-color);
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+.page-btn:hover:not(:disabled) {
+    background-color: var(--accent-color);
+    color: white;
+}
+.page-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.page-info { display: flex; align-items: center; gap: 0.5rem; font-size: 0.9rem; color: #aaa; }
+.page-info-current { background-color: var(--accent-color); color: white; border-radius: 50%; width: 30px; height: 30px; display: inline-flex; align-items: center; justify-content: center; font-weight: bold; }

@@ -1,0 +1,269 @@
+/*
+================================================================
+|                                                              |
+|        PAGE-SPECIFIC STYLESHEET FOR REPORT FORM PAGE         |
+|                                                              |
+================================================================
+
+This file contains all styles necessary for the report form page.
+It is designed to be self-contained and independent of the global style.css.
+
+*/ 
+
+/* --- Layout --- */
+.report-form-page-container {
+    max-width: 1000px;
+    margin: 2rem auto;
+    padding: 2rem;
+    animation: fadeIn 0.5s ease-in-out;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.report-form-page-container .page-header {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    margin-bottom: 2rem;
+    padding: 2rem;
+    border-radius: 16px;
+    background: linear-gradient(135deg, var(--card-bg) 0%, #1f1f4b 100%);
+    border: 1px solid var(--border-color);
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+}
+
+.report-form-page-container .page-header::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: radial-gradient(circle, rgba(255, 255, 255, 0.03) 0%, transparent 40%);
+    animation: rotateGradient 30s linear infinite;
+    z-index: 0;
+}
+
+.report-form-page-container .page-header .page-title,
+.report-form-page-container .page-header .page-subtitle {
+    position: relative;
+    z-index: 1;
+}
+
+.report-form-page-container .page-header .page-title {
+    font-size: 2.5rem;
+    margin-bottom: 0.5rem;
+}
+
+.report-form-page-container .report-layout-with-sidebar {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 2rem;
+}
+
+/* --- Form --- */
+.report-form-page-container .form-container {
+    background-color: var(--card-bg);
+    padding: 2rem;
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+}
+
+.report-form-page-container .form-group {
+    margin-bottom: 1.5rem;
+}
+
+.report-form-page-container .form-group label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+}
+
+.report-form-page-container .form-group input,
+.report-form-page-container .form-group textarea,
+.report-form-page-container .form-group select {
+    width: 100%;
+    padding: 0.75rem;
+    border-radius: 5px;
+    border: 1px solid var(--border-color);
+    background-color: var(--input-bg);
+    color: var(--text-color);
+    font-size: 1rem;
+}
+
+.report-highlight {
+    border: 1px dashed var(--border-color);
+    border-radius: 12px;
+    padding: 1rem;
+    background: rgba(255, 255, 255, 0.02);
+    margin-bottom: 1.5rem;
+}
+
+.report-highlight-copy {
+    margin: 0.5rem 0 0;
+    color: var(--text-secondary);
+}
+
+.tag-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.pill-tag {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.35rem 0.75rem;
+    border-radius: 999px;
+    border: 1px solid var(--border-color);
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+    background: var(--input-bg);
+}
+
+.pill-tag.pill-primary {
+    border-color: var(--accent-color);
+    color: var(--accent-color);
+    background: rgba(0, 0, 0, 0.1);
+}
+
+.metric-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 1rem;
+}
+
+.report-form-page-container .segmented-control {
+    display: flex;
+    width: 100%;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.report-form-page-container .segmented-control label {
+    flex: 1;
+    text-align: center;
+    padding: 0.75rem;
+    cursor: pointer;
+}
+
+.report-form-page-container .segmented-control input[type="radio"]:checked + label {
+    background-color: var(--accent-color);
+    color: white;
+}
+
+/* --- Buttons --- */
+.report-form-page-container .form-actions {
+    display: flex;
+    gap: 1rem;
+    margin-top: 1.5rem;
+}
+
+.report-form-page-container .submit-btn,
+.report-form-page-container .copy-btn {
+    flex-grow: 1;
+    padding: 1rem;
+    border-radius: 5px;
+    font-size: 1.1rem;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.report-form-page-container .submit-btn {
+    background-color: var(--accent-color);
+    color: white;
+    border: none;
+}
+
+.report-form-page-container .copy-btn {
+    background-color: transparent;
+    border: 2px solid var(--accent-color);
+    color: var(--accent-color);
+}
+
+/* --- Image Upload --- */
+.report-form-page-container #upload-area {
+    border: 2px dashed var(--border-color);
+    border-radius: 8px;
+    padding: 1rem;
+    text-align: center;
+    color: #aaa;
+    cursor: pointer;
+}
+
+.report-form-page-container #image-previews {
+    display: flex;
+    gap: 1rem;
+    margin-top: 1rem;
+}
+
+.report-form-page-container .img-preview-container {
+    position: relative;
+    width: 100px;
+    height: 100px;
+}
+
+.report-form-page-container .img-preview {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 8px;
+}
+
+.report-form-page-container .remove-img-btn {
+    position: absolute;
+    top: -5px;
+    right: -5px;
+    background: var(--danger-color);
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    font-size: 12px;
+    cursor: pointer;
+}
+
+.report-instruction-box {
+    background-color: var(--input-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 1.5rem;
+    height: 100%;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.report-instruction-box h4 {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    font-size: 1.2rem;
+    color: var(--accent-color);
+    margin-top: 0;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.report-instruction-box ul {
+    padding-right: 20px;
+    margin: 0;
+    line-height: 1.8;
+    color: #ccc;
+}
+
+.report-instruction-box ul li {
+    margin-bottom: 1rem;
+}
+
+.report-instruction-box ul ul {
+    margin-top: 0.5rem;
+}

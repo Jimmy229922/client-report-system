@@ -1,0 +1,324 @@
+/*
+================================================================
+|                                                              |
+|         PAGE-SPECIFIC STYLESHEET FOR COMPARATOR PAGE         |
+|                                                              |
+================================================================
+
+This file contains all styles necessary for the comparator page.
+It is designed to be self-contained and independent of the global style.css.
+
+*/
+
+/* --- Layout --- */
+.comparator-page-container {
+    max-width: 1400px;
+    margin: 2rem auto;
+    padding: 2rem;
+    animation: fadeIn 0.5s ease-in-out;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.comparator-page-container .page-header {
+    text-align: center;
+    margin-bottom: 2rem;
+}
+
+.comparator-page-container .page-header h1 {
+    font-size: 2.5rem;
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+}
+
+.comparator-page-container .page-header h1 i {
+    color: var(--accent-color);
+    font-size: 2.2rem;
+}
+
+.comparator-page-container .page-header p {
+    font-size: 1.1rem;
+    color: var(--text-color-secondary);
+    max-width: 500px;
+    margin: 0 auto;
+}
+
+.comparator-page-container .comparator-container {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+    margin-bottom: 2rem;
+}
+
+.comparator-page-container .comparator-column h2 {
+    font-size: 1.5rem;
+    margin-bottom: 1rem;
+}
+
+.comparator-page-container .textarea-group {
+    margin-bottom: 1rem;
+}
+
+.comparator-page-container .textarea-with-linenumbers {
+    display: flex;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    overflow: hidden; /* Ensures children stay within the rounded corners */
+    background-color: var(--input-bg);
+}
+
+.comparator-page-container .line-numbers {
+    font-family: monospace;
+    font-size: 1rem;
+    text-align: right;
+    color: var(--text-color-secondary);
+    padding: 10px 5px 10px 10px;
+    user-select: none;
+    background-color: var(--card-bg);
+    border-left: 1px solid var(--border-color); /* Separator for RTL */
+    line-height: 1.5; /* Match textarea line-height */
+    min-width: 40px; /* تثبيت عرض الحاوية لمنع تحركها */
+    height: 300px; /* تثبيت ارتفاع الحاوية ليتطابق مع مربع النص */
+    overflow-y: hidden; /* إخفاء شريط التمرير الخاص به والاعتماد على التزامن مع مربع النص */
+}
+
+.comparator-page-container textarea {
+    width: 100%;
+    height: 300px;
+    padding: 10px;
+    border-radius: 0;
+    border: none;
+    background-color: var(--input-bg);
+    color: var(--text-color);
+    font-size: 1rem;
+    resize: vertical;
+    line-height: 1.5;
+}
+
+.comparator-page-container .comparator-actions {
+    display: flex;
+    justify-content: center;
+    gap: 1rem;
+    margin-bottom: 2rem;
+}
+
+/* --- Results --- */
+.comparator-page-container .results-container {
+    background-color: var(--card-bg);
+    padding: 2rem;
+    border-radius: 12px;
+    border: 1px solid var(--border-color);
+    max-height: 80vh; /* تحديد أقصى ارتفاع للحاوية */
+    position: relative; /* لجعل زر الصعود يتمركز بالنسبة لهذه الحاوية */
+    overflow-y: auto; /* إضافة شريط تمرير عند الحاجة */
+}
+
+.comparator-page-container .results-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+}
+
+.comparator-page-container .results-header h2 {
+    font-size: 1.8rem;
+    margin: 0;
+    color: var(--text-color);
+}
+
+.comparator-page-container .results-output-box {
+    border: none;
+    background-color: transparent;
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+}
+
+.comparator-page-container .result-category {
+    background-color: var(--card-bg);
+    border-radius: 12px;
+    border: 1px solid var(--border-color);
+    overflow: hidden;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.comparator-page-container .result-category h3 {
+    font-size: 1.2rem;
+    padding: 1rem 1.5rem;
+    margin: 0;
+    background-color: var(--input-bg);
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.comparator-page-container .table-wrapper {
+    overflow-x: auto;
+}
+
+.comparator-page-container .results-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.95rem;
+}
+
+.comparator-page-container .results-table th,
+.comparator-page-container .results-table td {
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid var(--border-color);
+    text-align: right;
+    white-space: nowrap;
+}
+
+.comparator-page-container .results-table tr:last-child td {
+    border-bottom: none;
+}
+
+.comparator-page-container .results-table th {
+    background-color: transparent;
+    font-weight: 600;
+    color: var(--text-color-secondary);
+    text-transform: uppercase;
+    font-size: 0.8rem;
+}
+
+.comparator-page-container .results-table tbody tr:hover {
+    background-color: rgba(255, 255, 255, 0.08); /* More distinct hover color */
+}
+
+.comparator-page-container .account-cell-content {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.comparator-page-container .copyable-account {
+    cursor: pointer;
+    transition: color 0.2s;
+}
+.comparator-page-container .copyable-account:hover {
+    color: var(--accent-color);
+}
+
+.comparator-page-container .search-in-archive-btn {
+    color: var(--text-color-secondary);
+    text-decoration: none;
+    opacity: 0.5;
+    transition: opacity 0.2s;
+}
+.comparator-page-container .search-in-archive-btn:hover {
+    opacity: 1;
+}
+
+.comparator-page-container .focus-highlight {
+    position: relative; /* Needed for z-index to work */
+    z-index: 1001; /* Bring the row above the overlay */
+    animation: focus-highlight-anim 2.5s ease-out; /* Keep the color flash */
+}
+
+/* Spotlight Overlay for focus effect */
+.spotlight-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(2px);
+    z-index: 1000;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.5s ease, visibility 0.5s ease;
+}
+
+.spotlight-overlay.visible {
+    opacity: 1;
+    visibility: visible;
+}
+
+.comparator-page-container .new-account-result {
+    color: var(--success-color);
+}
+
+.comparator-page-container .missing-account-result {
+    color: var(--text-color-secondary);
+    opacity: 0.7;
+}
+
+.comparator-page-container .duplicate-account-result {
+    color: #ffc107; /* Yellow for duplicates */
+}
+
+.comparator-page-container .tainted-result {
+    color: var(--danger-color); /* Red for tainted data */
+    font-weight: bold;
+}
+
+@keyframes focus-highlight-anim {
+    0%, 100% { background-color: transparent; }
+    50% { background-color: var(--accent-color-translucent, rgba(77, 91, 249, 0.25)); }
+}
+
+/* --- Buttons --- */
+.comparator-page-container .btn,
+.comparator-page-container .submit-btn,
+.comparator-page-container .cancel-btn,
+.comparator-page-container .copy-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    text-decoration: none;
+    font-weight: 600;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    padding: 0.75rem 1.5rem;
+    border: 1px solid transparent;
+}
+
+.comparator-page-container .submit-btn {
+    background-color: var(--accent-color);
+    color: white;
+}
+
+.comparator-page-container .cancel-btn {
+    background-color: var(--danger-color);
+    color: white;
+}
+
+.comparator-page-container .copy-btn {
+    background-color: var(--success-color);
+    color: white;
+}
+
+/* Scroll to top button */
+.scroll-to-top-btn {
+    position: sticky; /* يثبت الزر بالنسبة لإطار العرض الخاص بالحاوية */
+    bottom: 20px;
+    left: 20px;
+    background-color: var(--accent-color);
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 45px;
+    height: 45px;
+    font-size: 1.2rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+    transition: opacity 0.3s, transform 0.3s;
+    z-index: 20; /* للتأكد من بقائه فوق جميع العناصر الأخرى */
+}
+.scroll-to-top-btn:hover {
+    transform: scale(1.1);
+}

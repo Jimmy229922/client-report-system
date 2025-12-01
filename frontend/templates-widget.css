@@ -1,0 +1,92 @@
+/* =============================================== */
+/* ===        Templates Flyout Widget          === */
+/* =============================================== */
+
+.templates-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.6);
+    z-index: 1500;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s ease, visibility 0.3s ease;
+}
+
+.templates-overlay.open {
+    opacity: 1;
+    visibility: visible;
+}
+
+.templates-flyout {
+    position: fixed;
+    top: 0;
+    left: 0; /* تم التغيير من اليمين إلى اليسار */
+    width: 100%;
+    max-width: 380px;
+    height: 100%;
+    background-color: var(--card-bg);
+    z-index: 1501;
+    transform: translateX(-100%); /* لجعلها تبدأ من خارج الشاشة إلى اليسار */
+    transition: transform 0.3s ease-in-out;
+    display: flex;
+    flex-direction: column;
+}
+
+.templates-flyout.open {
+    transform: translateX(0);
+}
+
+.flyout-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.flyout-header h3 {
+    margin: 0;
+    font-size: 1.2rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.flyout-body {
+    padding: 1.5rem;
+    flex-grow: 1;
+    overflow-y: auto;
+}
+
+.flyout-body > p {
+    color: #aaa;
+    font-size: 0.9rem;
+    margin-bottom: 1.5rem;
+}
+
+.templates-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.template-btn {
+    background-color: var(--input-bg);
+    border: 1px solid var(--border-color);
+    color: var(--text-color);
+    padding: 0.75rem 1rem;
+    border-radius: 8px;
+    text-align: right;
+    cursor: pointer;
+    transition: background-color 0.2s ease, border-color 0.2s ease;
+    font-weight: 500;
+}
+
+.template-btn:hover {
+    background-color: var(--accent-color);
+    border-color: var(--accent-color);
+    color: white;
+}

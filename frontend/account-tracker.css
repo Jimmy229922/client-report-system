@@ -1,0 +1,120 @@
+/* Account Tracker Widget */
+.account-tracker-widget {
+    position: fixed;
+    bottom: 25px;
+    right: 25px;
+    width: 350px;
+    max-width: 90vw;
+    background-color: var(--background-color);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+    z-index: 1050;
+    display: none; /* Hidden by default */
+    flex-direction: column;
+    overflow: hidden;
+    transition: transform 0.3s ease, opacity 0.3s ease;
+}
+
+.account-tracker-widget.show {
+    display: flex;
+    transform: translateY(0);
+    opacity: 1;
+}
+
+.account-tracker-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 15px;
+    background-color: var(--background-color-offset);
+    border-bottom: 1px solid var(--border-color);
+    cursor: move;
+}
+
+.account-tracker-header h3 {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 600;
+}
+
+.account-tracker-header .widget-actions .icon-btn {
+    background: none;
+    border: none;
+    color: var(--text-color-secondary);
+    font-size: 1.1rem;
+    cursor: pointer;
+    padding: 5px;
+    border-radius: 50%;
+    transition: background-color 0.2s ease;
+}
+
+.account-tracker-header .widget-actions .icon-btn:hover {
+    background-color: var(--hover-color);
+}
+
+.account-tracker-body {
+    padding: 15px;
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+#account-tracker-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+#account-tracker-list li {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px;
+    border-bottom: 1px solid var(--border-color);
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 1rem;
+}
+
+#account-tracker-list li:last-child {
+    border-bottom: none;
+}
+
+#account-tracker-list .account-number {
+    font-weight: bold;
+}
+
+#account-tracker-list .timestamp {
+    font-size: 0.8rem;
+    color: var(--text-color-secondary);
+}
+
+#account-tracker-list li.is-duplicate .account-number {
+    color: var(--danger-color);
+    text-shadow: 0 0 5px rgba(255, 82, 82, 0.5);
+}
+
+#account-tracker-list li.is-duplicate .timestamp {
+    color: var(--danger-color);
+}
+
+.account-tracker-footer {
+    padding: 10px 15px;
+    border-top: 1px solid var(--border-color);
+    display: flex;
+    justify-content: flex-end;
+}
+
+#clear-account-history-btn {
+    background-color: var(--danger-color);
+    color: white;
+    border: none;
+    padding: 5px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.8rem;
+    transition: background-color 0.2s ease;
+}
+
+#clear-account-history-btn:hover {
+    background-color: #c82333;
+}

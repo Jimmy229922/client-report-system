@@ -1,0 +1,136 @@
+/*
+================================================================
+|                                                              |
+|      PAGE-SPECIFIC STYLESHEET FOR ANALYTICS DASHBOARD        |
+|                                                              |
+================================================================
+*/
+
+.analytics-page-container {
+    animation: fadeIn 0.5s ease-in-out;
+}
+
+.analytics-page-container .page-header-actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin-bottom: 0.5rem;
+}
+
+.analytics-page-container .page-header-actions .filter-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    background-color: var(--card-bg);
+    padding: 0.5rem 1rem;
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+}
+
+.analytics-page-container .page-header-actions .filter-item label {
+    font-size: 0.9rem;
+    color: #aaa;
+}
+
+.analytics-page-container .page-header-actions .filter-item select {
+    background: none;
+    border: none;
+    color: var(--text-color);
+    font-weight: bold;
+    font-size: 1rem;
+    padding: 0.25rem;
+    cursor: pointer;
+}
+.analytics-page-container .page-header-actions .filter-item select:focus {
+    outline: none;
+}
+
+.analytics-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+    gap: 1.5rem;
+    margin-top: 2rem;
+}
+
+.analytics-grid .chart-card {
+    background-color: var(--card-bg);
+    padding: 1.5rem;
+    border-radius: 12px;
+    border: 1px solid var(--border-color);
+    display: flex;
+    flex-direction: column;
+    transition: all 0.2s ease-in-out;
+}
+
+.analytics-grid .chart-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+}
+
+.analytics-grid .chart-card h3 {
+    margin: 0 0 1.5rem 0;
+    font-size: 1.2rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    color: var(--text-color);
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.analytics-grid .chart-card h3 i {
+    color: var(--accent-color);
+}
+
+.analytics-grid .chart-container {
+    position: relative;
+    height: 350px;
+    flex-grow: 1;
+}
+
+.analytics-grid .full-width {
+    grid-column: 1 / -1;
+}
+
+.employee-performance-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.employee-performance-table th,
+.employee-performance-table td {
+    padding: 1rem;
+    text-align: right;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.employee-performance-table th {
+    font-size: 0.9rem;
+    color: #aaa;
+    text-transform: uppercase;
+}
+
+.employee-performance-table tbody tr:hover {
+    background-color: var(--input-bg);
+}
+
+.employee-performance-table .user-cell {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    font-weight: bold;
+}
+
+.employee-performance-table .user-avatar-placeholder {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background-color: var(--input-bg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+    color: var(--accent-color);
+}

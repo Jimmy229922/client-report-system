@@ -1,0 +1,150 @@
+/*
+================================================================
+|                                                              |
+|        PAGE-SPECIFIC STYLESHEET FOR ACTIVITY LOG PAGE        |
+|                                                              |
+================================================================
+*/
+
+.activity-log-page-container {
+    max-width: 1200px;
+    margin: 2rem auto;
+    padding: 2rem;
+    animation: fadeIn 0.5s ease-in-out;
+}
+
+.activity-log-page-container .page-header {
+    text-align: center;
+    margin-bottom: 2rem;
+}
+
+.activity-log-page-container .page-header p {
+    color: #aaa;
+    font-size: 1.1rem;
+}
+
+/* --- Filter Bar --- */
+.filter-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    background-color: var(--card-bg);
+    padding: 1rem;
+    border-radius: 12px;
+    margin-bottom: 2rem;
+    border: 1px solid var(--border-color);
+}
+
+.filter-controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    flex-grow: 1;
+}
+
+.filter-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.filter-item label {
+    font-weight: 600;
+    color: #aaa;
+    font-size: 0.9rem;
+}
+
+.filter-item input,
+.filter-item select {
+    padding: 0.6rem 1rem;
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+    background-color: var(--input-bg);
+    color: var(--text-color);
+}
+
+.filter-item.search-filter {
+    position: relative;
+    flex-grow: 1;
+}
+
+.filter-item.search-filter i {
+    position: absolute;
+    right: 1rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #aaa;
+}
+
+.filter-item.search-filter input {
+    padding-right: 2.5rem;
+    width: 100%;
+}
+
+.filter-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+/* --- Table Styles --- */
+.table-container {
+    background-color: var(--card-bg);
+    border-radius: 12px;
+    overflow: hidden;
+    border: 1px solid var(--border-color);
+}
+
+.activity-log-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.activity-log-table th,
+.activity-log-table td {
+    padding: 1rem 1.5rem;
+    text-align: right;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.activity-log-table thead th {
+    background-color: var(--input-bg);
+    font-weight: 600;
+    color: #aaa;
+    text-transform: uppercase;
+    font-size: 0.8rem;
+}
+
+.activity-log-table tbody tr:hover {
+    background-color: var(--input-bg);
+}
+
+.activity-log-table .user-cell {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    font-weight: bold;
+}
+
+.activity-log-table .user-avatar-placeholder {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background-color: var(--border-color);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+}
+
+.action-cell {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-weight: bold;
+}
+
+.action-details {
+    font-size: 0.8rem;
+    color: #aaa;
+    font-weight: normal;
+}

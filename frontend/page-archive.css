@@ -1,0 +1,157 @@
+/*
+================================================================
+|                                                              |
+|           PAGE-SPECIFIC STYLESHEET FOR ARCHIVE PAGE          |
+|                                                              |
+================================================================
+
+This file contains all styles necessary for the archive page.
+It is designed to be self-contained and independent of the global style.css.
+
+*/
+
+/* --- Layout --- */
+.archive-page-container {
+    max-width: 1200px;
+    margin: 2rem auto;
+    padding: 2rem;
+    animation: fadeIn 0.5s ease-in-out;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* --- Page Header --- */
+.archive-page-container .page-header {
+    margin-bottom: 2rem;
+}
+
+.archive-page-container .page-title {
+    font-size: 2.5rem;
+}
+
+/* --- Filter Bar --- */
+.archive-page-container .filter-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    background-color: var(--background-color-offset, var(--card-bg));
+    padding: 1rem;
+    border-radius: 8px;
+    margin-bottom: 2rem;
+}
+
+.archive-page-container .filter-controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    flex-grow: 1;
+}
+
+.archive-page-container .filter-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.archive-page-container .filter-item label {
+    font-weight: 600;
+}
+
+.archive-page-container .filter-item input,
+.archive-page-container .filter-item select {
+    padding: 0.5rem;
+    border-radius: 5px;
+    border: 1px solid var(--border-color);
+    background-color: var(--input-bg);
+    color: var(--text-color);
+}
+
+/* --- Archive Grid & Cards --- */
+.archive-page-container .archive-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.archive-page-container .accordion-group {
+    background-color: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.archive-page-container .accordion-header {
+    background-color: var(--input-bg);
+    padding: 1rem 1.5rem;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: background-color 0.2s;
+}
+
+.archive-page-container .accordion-header:hover {
+    background-color: var(--border-color);
+}
+
+.archive-page-container .accordion-header h3 {
+    margin: 0;
+    font-size: 1.5rem;
+    color: var(--accent-color);
+}
+
+.archive-page-container .accordion-content {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.5s ease-out;
+    padding: 0 1.5rem;
+}
+
+.archive-page-container .archive-section-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+    gap: 1.5rem;
+    padding: 1.5rem 0;
+}
+
+.archive-page-container .archive-card {
+    background-color: var(--background-color-offset, var(--card-bg));
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    display: flex;
+    flex-direction: column;
+}
+
+.archive-page-container .archive-card-header {
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.archive-page-container .archive-card-body {
+    padding: 1.5rem;
+    flex-grow: 1;
+}
+
+.archive-page-container .archive-card-footer {
+    padding: 1rem 1.5rem;
+    border-top: 1px solid var(--border-color);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+/* --- Spinner --- */
+.archive-page-container .spinner {
+    width: 50px;
+    height: 50px;
+    border: 5px solid var(--border-color);
+    border-top-color: var(--accent-color);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin: 2rem auto;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }

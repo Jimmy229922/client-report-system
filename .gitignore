@@ -1,0 +1,22 @@
+# Dependencies
+/backend/node_modules
+/frontend/node_modules
+/frontend/lib
+
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Secret configuration files
+backend/config.json
+backend/.env
+
+# User-uploaded files
+/backend/public/uploads/
+
+# Workspace temp files
+tmp.js
+quick-clipboard-extension/
+frontend/page-report-form.tmp
+*.tmp

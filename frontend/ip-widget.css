@@ -1,0 +1,174 @@
+/*
+================================================================
+|                                                              |
+|          PAGE-SPECIFIC STYLESHEET FOR IP WIDGET              |
+|                                                              |
+================================================================
+
+This file contains all styles necessary for the floating IP checker widget.
+It is designed to be self-contained and independent of the global style.css.
+
+*/
+
+.ip-widget {
+    position: fixed;
+    z-index: 2000;
+    top: 80px;
+    right: 20px;
+    width: 380px;
+    background-color: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    box-shadow: 0 5px 25px rgba(0,0,0,0.3);
+    transform: translateX(110%);
+    min-width: 380px;
+    min-height: 200px;
+    opacity: 0;
+    visibility: hidden;
+    transition: transform 0.4s ease-in-out, opacity 0.4s ease-in-out, visibility 0.4s;
+}
+
+.ip-widget.show {
+    visibility: visible;
+    opacity: 1;
+    transform: translateX(0);
+}
+
+.ip-widget.dragging {
+    cursor: grabbing;
+    user-select: none;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.4);
+}
+
+.widget-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid var(--border-color);
+    cursor: move;
+}
+
+.widget-header h3 {
+    margin: 0;
+    font-size: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.widget-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+#pin-widget-btn.pinned i {
+    color: var(--accent-color);
+}
+
+.widget-body {
+    padding: 1rem;
+}
+
+.widget-body input[readonly] {
+    background-color: var(--input-bg);
+    cursor: default;
+    opacity: 0.7;
+}
+
+.widget-input-container {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.widget-input-container i {
+    position: absolute;
+    right: 12px;
+    color: var(--accent-color);
+    animation: pulse-glow 2s infinite ease-in-out;
+}
+
+.widget-input-container input {
+    padding-right: 35px; /* Space for the icon */
+    width: 100%;
+    padding: 0.75rem;
+    padding-right: 35px;
+    border-radius: 5px;
+    border: 1px solid var(--border-color);
+}
+
+@keyframes pulse-glow {
+    0%, 100% { opacity: 0.5; transform: scale(1); }
+    50% { opacity: 1; transform: scale(1.1); }
+}
+
+.widget-resizer {
+    position: absolute;
+    bottom: 0;
+    left: 0; /* For RTL */
+    width: 15px;
+    height: 15px;
+    cursor: nwse-resize;
+}
+
+/* --- Widget Result --- */
+.widget-result {
+    margin-top: 1rem;
+    background-color: var(--input-bg);
+    border-radius: 8px;
+    min-height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    word-break: break-all;
+    text-align: center;
+    padding: 0.75rem;
+    border: 1px solid var(--border-color);
+    transition: all 0.2s ease;
+}
+
+.widget-ip-display {
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 1rem;
+    color: var(--accent-color);
+    letter-spacing: 1px;
+    margin-right: auto; /* Pushes it to the left in RTL */
+}
+
+.widget-location-display {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    font-size: 1rem;
+    width: 100%;
+}
+
+.widget-location-display .country-flag {
+    width: 24px;
+    height: auto;
+    border-radius: 3px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+}
+.widget-location-display .location-info {
+    font-weight: 600;
+}
+
+.widget-result .widget-placeholder {
+    font-size: 0.9rem;
+    color: #aaa;
+    font-weight: normal;
+    padding: 0 1rem;
+}
+
+/* --- Widget History --- */
+.history-header { display: flex; justify-content: space-between; align-items: center; }
+#widget-history-container { margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--border-color); }
+#widget-history-container h4 { font-size: 0.8rem; color: #aaa; margin-bottom: 0.5rem; text-align: right; display: flex; align-items: center; gap: 0.5rem; }
+#widget-history-list { list-style: none; padding: 0; margin: 0; max-height: 150px; overflow-y: auto; font-size: 0.9rem; }
+#widget-history-list li { display: flex; justify-content: space-between; padding: 0.35rem 0.25rem; cursor: pointer; border-radius: 4px; transition: background-color 0.2s ease; }
+#widget-history-list li:hover { background-color: var(--input-bg); }
+#widget-history-list .history-ip { font-family: 'Courier New', Courier, monospace; color: var(--accent-color); direction: ltr; }
+#widget-history-list .history-country { color: #ccc; }
+.clear-history-btn { background: none; border: none; color: #aaa; font-size: 0.8rem; cursor: pointer; }
+.clear-history-btn:hover { color: var(--danger-color); }

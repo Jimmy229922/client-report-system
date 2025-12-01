@@ -1,0 +1,428 @@
+/*
+================================================================
+|                                                              |
+|        PAGE-SPECIFIC STYLESHEET FOR DATA FILTER PAGE         |
+|                                                              |
+================================================================
+*/
+
+.data-filter-page-container {
+    max-width: 1400px;
+    margin: 2rem auto;
+    padding: 2rem;
+    animation: fadeIn 0.5s ease-in-out;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.data-filter-page-container .page-header {
+    text-align: center;
+    margin-bottom: 2rem;
+}
+
+.data-filter-page-container .page-header h1 {
+    font-size: 2.5rem;
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+}
+
+.data-filter-page-container .page-header h1 i {
+    color: var(--accent-color);
+    font-size: 2.2rem;
+}
+
+.data-filter-page-container .page-header p {
+    font-size: 1.1rem;
+    color: var(--text-color-secondary);
+    max-width: 500px;
+    margin: 0 auto;
+}
+
+.data-filter-page-container .form-container {
+    background-color: var(--card-bg);
+    padding: 2rem;
+    border-radius: 12px;
+    border: 1px solid var(--border-color);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+.data-filter-page-container .form-group {
+    margin-bottom: 1.5rem;
+}
+
+.data-filter-page-container .textarea-with-linenumbers {
+    display: flex;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    overflow: hidden;
+    background-color: var(--input-bg);
+    position: relative;
+}
+
+.data-filter-page-container .line-numbers {
+    font-family: monospace;
+    font-size: 1rem;
+    text-align: right;
+    color: var(--text-color-secondary);
+    padding: 10px 5px 10px 10px;
+    user-select: none;
+    background-color: var(--card-bg);
+    border-left: 1px solid var(--border-color);
+    line-height: 1.5;
+    min-width: 40px;
+    height: 300px;
+    overflow-y: hidden;
+}
+
+.data-filter-page-container textarea {
+    width: 100%;
+    height: 300px;
+    padding: 10px;
+    border-radius: 0;
+    border: none;
+    background-color: var(--input-bg);
+    color: var(--text-color);
+    font-size: 1rem;
+    resize: vertical;
+    line-height: 1.5;
+}
+
+.data-filter-page-container .clear-btn {
+    position: absolute;
+    left: 10px;
+    top: 10px;
+    background: none;
+    border: none;
+    color: var(--text-color-secondary);
+    cursor: pointer;
+    font-size: 1.8rem;
+    line-height: 1;
+    padding: 0 5px;
+    z-index: 2;
+}
+
+.data-filter-page-container .clear-btn:hover {
+    color: var(--text-color);
+}
+
+.data-filter-page-container .comparator-actions {
+    display: flex;
+    justify-content: center;
+    gap: 1rem;
+    margin-bottom: 2rem;
+}
+
+.data-filter-page-container .results-container {
+    background-color: var(--card-bg);
+    padding: 2rem;
+    border-radius: 12px;
+    border: 1px solid var(--border-color);
+    max-height: 80vh;
+    overflow-y: auto;
+    position: relative;
+}
+
+.data-filter-page-container .results-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+}
+
+.data-filter-page-container .results-header h2 {
+    font-size: 1.8rem;
+    margin: 0;
+    color: var(--text-color);
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.data-filter-page-container .results-output-box {
+    border: none;
+    background-color: transparent;
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+}
+
+.data-filter-page-container .result-category {
+    background-color: var(--card-bg);
+    border-radius: 12px;
+    border: 1px solid var(--border-color);
+    overflow: hidden;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.data-filter-page-container .result-category h3 {
+    font-size: 1.2rem;
+    padding: 1rem 1.5rem;
+    margin: 0;
+    background-color: var(--input-bg);
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.data-filter-page-container .table-wrapper {
+    overflow-x: auto;
+}
+
+.data-filter-page-container .results-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.95rem;
+}
+
+.data-filter-page-container .results-table th,
+.data-filter-page-container .results-table td {
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid var(--border-color);
+    text-align: right;
+    white-space: nowrap;
+}
+
+.data-filter-page-container .results-table tr:last-child td {
+    border-bottom: none;
+}
+
+.data-filter-page-container .results-table th {
+    background-color: transparent;
+    font-weight: 600;
+    color: var(--text-color-secondary);
+    text-transform: uppercase;
+    font-size: 0.8rem;
+}
+
+.data-filter-page-container .results-table tbody tr:hover {
+    background-color: rgba(255, 255, 255, 0.08);
+}
+
+.data-filter-page-container .account-cell-content {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.data-filter-page-container .copyable-account {
+    cursor: pointer;
+    transition: color 0.2s;
+}
+
+.data-filter-page-container .copyable-account:hover {
+    color: var(--accent-color);
+}
+
+.data-filter-page-container .search-in-archive-btn {
+    color: var(--text-color-secondary);
+    text-decoration: none;
+    opacity: 0.5;
+    transition: opacity 0.2s;
+}
+
+.data-filter-page-container .search-in-archive-btn:hover {
+    opacity: 1;
+}
+
+.data-filter-page-container .focus-highlight {
+    position: relative;
+    z-index: 1001;
+    animation: focus-highlight-anim 2.5s ease-out;
+}
+
+.spotlight-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(2px);
+    z-index: 1000;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.5s ease, visibility 0.5s ease;
+}
+
+.spotlight-overlay.visible {
+    opacity: 1;
+    visibility: visible;
+}
+
+@keyframes focus-highlight-anim {
+    0%, 100% { background-color: transparent; }
+    50% { background-color: var(--accent-color-translucent, rgba(77, 91, 249, 0.25)); }
+}
+
+.data-filter-page-container .btn,
+.data-filter-page-container .submit-btn,
+.data-filter-page-container .cancel-btn,
+.data-filter-page-container .copy-btn,
+.data-filter-page-container .submit-btn-secondary {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    text-decoration: none;
+    font-weight: 600;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    padding: 0.75rem 1.5rem;
+    border: 1px solid transparent;
+}
+
+.data-filter-page-container .submit-btn {
+    background-color: var(--accent-color);
+    color: white;
+}
+
+.data-filter-page-container .cancel-btn {
+    background-color: var(--danger-color);
+    color: white;
+}
+
+.data-filter-page-container .copy-btn {
+    background-color: var(--success-color);
+    color: white;
+}
+
+.data-filter-page-container .submit-btn-secondary {
+    background-color: transparent;
+    color: var(--accent-color);
+    border-color: var(--accent-color);
+}
+
+.data-filter-page-container .submit-btn-secondary:hover {
+    background-color: var(--accent-color);
+    color: white;
+}
+
+.data-filter-page-container .result-actions .submit-btn-secondary,
+.data-filter-page-container .result-actions .copy-btn {
+    padding: 0.5rem 1rem;
+    font-size: 0.9rem;
+}
+
+.data-filter-page-container .scroll-to-top-btn {
+    position: sticky;
+    bottom: 20px;
+    left: 20px;
+    background-color: var(--accent-color);
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 45px;
+    height: 45px;
+    font-size: 1.2rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+    transition: opacity 0.3s, transform 0.3s;
+    z-index: 20;
+}
+
+.data-filter-page-container .scroll-to-top-btn:hover {
+    transform: scale(1.1);
+}
+
+.data-filter-page-container .results-table th[data-sort-key] {
+    cursor: pointer;
+    position: relative;
+    user-select: none;
+}
+
+.data-filter-page-container .results-table th[data-sort-key]:hover {
+    background-color: rgba(255, 255, 255, 0.05);
+}
+
+.data-filter-page-container .results-table th[data-sort-key]::after {
+    content: ' \f0dc';
+    font-family: "Font Awesome 5 Free";
+    font-weight: 900;
+    opacity: 0.3;
+    margin-right: 0.5rem;
+}
+
+.data-filter-page-container .results-table th.sort-asc::after {
+    content: ' \f0de';
+    opacity: 1;
+}
+
+.data-filter-page-container .results-table th.sort-desc::after {
+    content: ' \f0dd';
+    opacity: 1;
+}
+
+.data-filter-page-container .results-table .account-cell,
+.data-filter-page-container .results-table .ip-cell {
+    font-family: 'Courier New', Courier, monospace;
+    direction: ltr;
+    text-align: left;
+}
+
+.data-filter-page-container .results-table td:first-child {
+    font-weight: bold;
+    color: var(--text-color-secondary);
+    text-align: center;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    direction: rtl;
+}
+
+.data-filter-page-container .empty-state {
+    text-align: center;
+    padding: 2rem;
+    color: var(--text-color-secondary);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+}
+
+.data-filter-page-container .empty-state i {
+    font-size: 2.5rem;
+    color: var(--accent-color);
+    opacity: 0.5;
+}
+
+@media (max-width: 768px) {
+    .data-filter-page-container .results-table th,
+    .data-filter-page-container .results-table td {
+        padding: 0.8rem;
+        font-size: 0.9rem;
+    }
+
+    .data-filter-page-container .page-header h1 {
+        font-size: 2rem;
+    }
+
+    .data-filter-page-container .form-container {
+        padding: 1.5rem;
+    }
+}
+
+@media (max-width: 600px) {
+    .data-filter-page-container .table-wrapper {
+        overflow-x: auto;
+    }
+
+    .data-filter-page-container .results-header {
+        flex-direction: column;
+        align-items: flex-end;
+    }
+
+    .data-filter-page-container .result-actions {
+        justify-content: flex-end;
+        width: 100%;
+    }
+}

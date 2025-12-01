@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl" data-theme="dark"> <!-- Default to Arabic -->
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>INZO Risk Management</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="navbar.css">
+    <link rel="stylesheet" href="trade-analyzer.css">
+    <link rel="stylesheet" href="page-templates.css">
+    <link rel="stylesheet" href="page-users.css">
+    <link rel="stylesheet" href="templates-widget.css">
+    <link rel="stylesheet" href="page-evaluations.css">
+    <link rel="stylesheet" href="page-notifications.css">
+    <link rel="stylesheet" href="page-home.css">
+    <link rel="stylesheet" href="page-archive.css">
+    <link rel="stylesheet" href="page-analytics.css">
+    <link rel="stylesheet" href="page-instructions.css">
+    <link rel="stylesheet" href="page-comparator.css">
+    <link rel="stylesheet" href="page-activity-log.css">
+    <link rel="stylesheet" href="ip-widget.css">
+    <link rel="stylesheet" href="page-report-form.css">
+    <link rel="stylesheet" href="page-payouts.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <!-- Favicon for the browser tab -->
+    <link rel="icon" type="image/png" href="assets/favicon.png">
+
+    <!-- Social Media Meta Tags for rich link previews -->
+    <meta property="og:title" content="INZO Risk Management">
+    <meta property="og:description" content="A system for managing client reports and team performance.">
+    <meta property="og:image" content="assets/logo.png">
+    <meta property="og:url" content="http://localhost:3001/"> <!-- Local-only default -->
+    <meta name="twitter:card" content="summary_large_image">
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+
+    <!-- شاشة التحميل -->
+    <div id="loader">
+        <div class="spinner"></div>
+    </div>
+
+    <!-- خلفية الفضاء المتحركة -->
+    <div id="galaxy-background">
+        <div id="stars"></div>
+        <div id="stars2"></div>
+        <div id="stars3"></div>
+        <!-- More shooting stars for a richer effect with varied delays and positions -->
+        <div class="shooting-star"></div>
+        <div class="shooting-star"></div>
+        <div class="shooting-star"></div>
+        <div class="shooting-star"></div>
+        <div class="shooting-star"></div>
+        <div class="shooting-star"></div>
+        <div class="shooting-star"></div>
+        <div class="shooting-star"></div>
+        <div class="shooting-star"></div>
+        <div class="shooting-star"></div>
+    </div>
+
+    <div id="login-container">
+        <div class="login-box">
+            <h1>تسجيل الدخول</h1>
+            <form id="login-form">
+                <div class="form-group">
+                    <label for="email">البريد الإلكتروني</label>
+                    <input type="email" id="email" name="email" required autocomplete="email">
+                </div>
+                <div class="form-group">
+                    <label for="password">كلمة المرور</label>
+                    <input type="password" id="password" name="password" required>
+                    <i class="fas fa-eye" id="toggle-password"></i>
+                </div>
+                <button type="submit" class="submit-btn">دخول</button>
+                <p id="login-error" class="login-error"></p>
+            </form>
+        </div>
+    </div>
+
+    <div id="app-container" class="hidden">
+        <button id="templates-fab-btn" class="fab-btn" title="قوالب سريعة" style="position: fixed; bottom: 25px; left: 25px; width: 56px; height: 56px; border-radius: 50%; font-size: 24px; background-color: #007bff; color: #fff; border: none; box-shadow: 0 4px 8px rgba(0,0,0,0.2); display: flex; align-items: center; justify-content: center; z-index: 1000;"><i class="fas fa-bolt"></i></button>
+        <!-- الشريط العلوي (Navbar) -->
+        <nav id="navbar">
+            <a href="#home" class="nav-brand">
+                <img src="assets/logo.png" alt="INZO Logo" style="height: 36px; width: auto;">
+                <div class="nav-brand-text">
+                    <span>INZO</span>
+                    <small>Risk Management</small>
+                </div>
+            </a>
+            <ul class="nav-links">
+                <li><a href="#home" class="nav-link active">الرئيسية</a></li>
+                <li class="dropdown">
+                    <a href="javascript:void(0)" class="nav-link">إنشاء تقرير <i class="fas fa-chevron-down"></i></a>
+                    <div class="dropdown-content">
+                        <a href="#reports/suspicious">Suspicious Report</a>
+                        <a href="#reports/deposit">Deposit Report</a>
+                        <a href="#reports/deposit-percentage">Deposit Percentage Tool</a>
+                        <a href="#reports/new-position">New Position Report</a>
+                        <a href="#reports/credit-out">Credit Out Report</a>
+                        <a href="#reports/payouts">PAYOUTS</a>
+                        <a href="#reports/profit-watching">PROFIT WATCHING</a>
+                        <a href="#reports/profit-summary">Profit Summary</a>
+                        <a href="#reports/3days-balance">3Days Balance</a>
+                        <a href="#reports/profit-leverage">Profit Leverage</a>
+                        <a href="#same-price-sl">Same Price and SL</a>
+                        <a href="#reports/same-price-sl">Same Price and SL (Report)</a>
+                        <a href="#reports/deals-no-profit">Deals with No profit (Report)</a>
+                        <hr class="dropdown-divider">
+                        <a href="#reports/account-transfer">تحويل الحسابات</a>
+                    </div>
+                </li>
+                <li><a href="#archive" class="nav-link">الأرشيف</a></li>
+                <li><a href="#instructions" class="nav-link">التعليمات</a></li>
+                <li><a href="#comparator" class="nav-link">مقارنة الحسابات</a></li>
+                <li class="admin-only hidden"><a href="#data-filter" class="nav-link">أداة الفلترة</a></li>
+                <li><a href="#templates" class="nav-link">القوالب</a></li>
+            </ul>
+            <div class="nav-actions">
+                <button id="theme-toggle-btn" aria-label="تبديل الوضع"><i class="fas fa-sun"></i></button>
+                <button id="quick-ip-check-btn" class="icon-btn" aria-label="فحص سريع للـ IP"><i class="fas fa-magnifying-glass-location"></i></button>
+                <!-- Notifications Dropdown -->
+                <div class="dropdown">
+                    <button id="notifications-btn" class="icon-btn" aria-label="الإشعارات">
+                        <i class="fas fa-bell"></i>
+                        <span id="notification-badge" class="badge hidden"></span>
+                    </button>
+                    <div id="notifications-list" class="dropdown-content">
+                        <!-- Notifications will be rendered here -->
+                    </div>
+                </div>
+                <div class="dropdown">
+                    <a href="javascript:void(0)" class="nav-link" id="user-profile-btn">
+                        <span id="navbar-avatar-container">
+                            <i class="fas fa-user-circle"></i> <!-- Default icon -->
+                        </span>
+                        <span id="navbar-username"></span> <i class="fas fa-chevron-down"></i>
+                    </a>
+                    <div class="dropdown-content">
+                        <a href="#profile" class="dropdown-item nav-link"><i class="fas fa-user-circle fa-fw"></i> الملف الشخصي</a>
+                        <a href="#notifications" class="dropdown-item nav-link"><i class="fas fa-list-alt fa-fw"></i> سجل الإشعارات</a>
+                        <a href="#users" class="admin-only hidden"><i class="fas fa-users-cog"></i> إدارة المستخدمين</a>
+                        <a href="#evaluations" class="shift-manager-only admin-only hidden"><i class="fas fa-clipboard-check"></i> تقييم الموظفين</a>
+                        <a href="#transfer-rules" class="nav-link"><i class="fas fa-random fa-fw"></i> قواعد التحويل</a>
+                        <a href="#analytics" class="admin-only hidden"><i class="fas fa-chart-pie"></i> التحليليلات</a>
+                        <a href="#broadcast" class="admin-only hidden"><i class="fas fa-bullhorn"></i> إرسال إشعار</a>
+                        <a href="#activity-log" class="admin-only hidden"><i class="fas fa-history"></i> سجل النشاط</a>
+                        <hr class="dropdown-divider admin-only hidden">
+                        <a href="#" id="restart-tour-btn" class="dropdown-item"><i class="fas fa-route fa-fw"></i> إعادة الجولة التعريفية</a>
+                    </div>
+                </div>
+                <button id="logout-btn" class="icon-btn" title="تسجيل الخروج"><i class="fas fa-sign-out-alt"></i></button>
+            </div>
+        </nav>
+
+        <!-- المحتوى الرئيسي الديناميكي للصفحات -->
+        <main id="main-content">
+            <!-- سيتم تحميل محتوى الصفحات هنا -->
+        </main>
+
+        <!-- App Footer with System Health -->
+        <footer id="app-footer">
+            <div class="system-health-bar">
+                <div class="health-bar-content">
+                    <div id="system-health-container"></div>
+                </div>
+            </div>
+        </footer>
+    </div>
+
+    <!-- حاوية الإشعار -->
+    <div id="toast-notification"></div>
+
+    <!-- Modal for Image Preview -->
+    <div id="image-preview-modal" class="modal">
+        <span class="close-btn" id="image-modal-close-btn">&times;</span>
+        <button class="modal-nav-btn prev" id="modal-prev-btn" title="السابق">&#10094;</button>
+        <img class="modal-content" id="modal-image-content">
+        <button class="modal-nav-btn next" id="modal-next-btn" title="التالي">&#10095;</button>
+        <div id="image-caption"></div>
+    </div>
+
+    
+    <!-- Evaluation Details Modal -->
+    <div id="evaluation-details-modal" class="modal">
+        <div class="modal-dialog" style="max-width: 600px;">
+            <div class="modal-header">
+                <h2 class="modal-title">تفاصيل التقييم</h2>
+                <button class="close-btn" id="evaluation-details-close-btn">&times;</button>
+            </div>
+            <div class="modal-body">
+                <h4 style="margin-bottom: 1rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.5rem;">تفاصيل الخطأ:</h4>
+                <pre id="evaluation-details-content"></pre>
+                <div id="evaluation-images-toggle-container" class="hidden" style="margin-top: 1.5rem; text-align: center;">
+                    <button id="show-evaluation-images-btn" class="submit-btn" style="width: auto; padding: 0.5rem 1.5rem;">
+                        <i class="fas fa-images"></i> عرض الصور المرفقة
+                    </button>
+                </div>
+                <div id="evaluation-details-images" class="hidden" style="margin-top: 1.5rem; border-top: 1px solid var(--border-color); padding-top: 1rem; display: flex; gap: 10px; flex-wrap: wrap;">
+                    <!-- Image thumbnails will be injected here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Generic Confirmation Modal -->
+    <div id="confirm-modal" class="modal">
+        <div id="confirm-modal-dialog" class="modal-dialog">
+            <div class="modal-body">
+                <div id="confirm-modal-icon"></div>
+                <h3 id="confirm-modal-title"></h3>
+                <p id="confirm-modal-text"></p>
+            </div>
+            <div class="modal-footer">
+                <button id="confirm-modal-cancel-btn"></button>
+                <button id="confirm-modal-ok-btn"></button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Generic Modal for User Edit -->
+    <div id="user-edit-modal" class="modal">
+        <div class="modal-dialog form-container">
+            <div class="modal-header">
+                <h2 id="user-edit-modal-title" class="page-title" style="margin-bottom: 0; font-size: 1.8rem;">تعديل بيانات المستخدم</h2>
+                <button class="close-btn" id="user-edit-modal-close-btn">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="user-edit-form">
+
+                    <input type="hidden" id="edit-user-id">
+                    <div class="form-group">
+                        <label for="edit-username">اسم المستخدم</label>
+                        <input type="text" id="edit-username" name="username" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="edit-email">البريد الإلكتروني</label>
+                        <input type="email" id="edit-email" name="email" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="edit-role">الدور</label>
+                        <select id="edit-role" name="role" required>
+                            <option value="editor">موظف (Editor)</option>
+                            <option value="shift-manager">مسؤول الشفت (Shift Manager)</option>
+                            <option value="admin">مسؤول (Admin)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="edit-password">كلمة مرور جديدة (اختياري)</label>
+                        <input type="password" id="edit-password" name="password" placeholder="اتركه فارغاً لعدم التغيير">
+                        <div class="password-strength-meter"><div class="strength-bar"></div><div class="strength-bar"></div><div class="strength-bar"></div><div class="strength-bar"></div></div>
+                        <small id="edit-password-strength-text" class="strength-text"></small>
+                    </div>
+                    <button type="submit" class="submit-btn">حفظ التغييرات</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Changelog Modal -->
+    <div id="changelog-modal" class="modal">
+        <div class="modal-dialog" style="max-width: 600px;">
+            <div class="modal-header">
+                <h2 id="changelog-title" class="page-title" style="margin-bottom: 0;">ما الجديد في الإصدار؟</h2>
+                <button class="close-btn" id="changelog-modal-close-btn">&times;</button>
+            </div>
+            <div id="changelog-body" class="modal-body" style="max-height: 60vh; overflow-y: auto; padding-top: 0;">
+                <!-- Changelog content will be injected here -->
+            </div>
+            <div class="modal-footer" style="justify-content: flex-end; border-top: 1px solid var(--border-color);">
+                <button id="changelog-modal-ok-btn" class="submit-btn" style="width: auto; padding: 0.5rem 1.5rem;">فهمت</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Profit Leverage Output Modal -->
+    <div id="profit-leverage-output-modal" class="modal">
+        <div class="modal-dialog" style="max-width: 800px;">
+            <div class="modal-header">
+                <h2 class="modal-title">تقارير Profit Leverage</h2>
+                <button class="close-btn" id="profit-leverage-modal-close-btn">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div id="profit-leverage-modal-content" class="profit-leverage-grid"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Templates Inserter Modal -->
+    <div id="templates-inserter-modal" class="modal">
+        <div class="modal-dialog">
+            <div class="modal-header">
+                <h3>اختر قالبًا</h3>
+                <button id="templates-inserter-close-btn" class="close-btn">&times;</button>
+            </div>
+            <div class="modal-body">
+                <input type="text" id="template-inserter-search" placeholder="ابحث عن قالب..." class="search-input" style="margin-bottom: 1rem;">
+                <div id="templates-inserter-list" class="templates-inserter-list">
+                    <!-- Templates will be rendered here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Floating IP Widget -->
+    <div id="ip-widget" class="ip-widget">
+        <div class="widget-header">
+            <h3><i class="fas fa-magnifying-glass-location"></i> فاحص الـ IP</h3>
+            <div class="widget-actions">
+                <button id="pin-widget-btn" class="icon-btn" title="تثبيت الأداة"><i class="fas fa-thumbtack"></i></button>
+                <button id="widget-close-btn" class="icon-btn" title="إغلاق">&times;</button>
+            </div>
+        </div>
+        <div class="widget-body">
+            <div class="widget-input-container">
+                <i class="fas fa-satellite-dish"></i>
+                <input type="text" id="widget-ip-input" placeholder="جاري مراقبة الحافظة..." autocomplete="off" readonly>
+            </div>
+            <div id="widget-ip-result" class="widget-result">
+                <div class="widget-placeholder">الصق عنوان IP أو ابدأ الكتابة...</div>
+            </div>
+            <div id="widget-history-container" class="hidden">
+                <div class="history-header">
+                    <h4><i class="fas fa-history"></i> السجل</h4>
+                    <button id="widget-clear-history-btn" class="clear-history-btn" title="مسح السجل"><i class="fas fa-trash-alt"></i></button>
+                </div>
+                <ul id="widget-history-list"></ul>
+            </div>
+        </div>
+        <div class="widget-resizer"></div>
+    </div>
+
+    <!-- Templates Flyout Panel -->
+    <div id="templates-overlay" class="templates-overlay"></div>
+    <div id="templates-flyout" class="templates-flyout">
+        <div class="flyout-header">
+            <h3><i class="fas fa-layer-group"></i> القوالب السريعة</h3>
+            <div class="flyout-actions">                
+                <button id="templates-flyout-close-btn" class="close-btn" title="إغلاق">&times;</button>
+            </div>
+        </div>
+        <div class="flyout-body">
+            <p>اختر قالبًا لإضافته إلى ملاحظات التقرير.</p>
+            <div class="search-container" style="margin-bottom: 1.5rem;">
+                <i class="fas fa-search"></i>
+                <input type="text" id="templates-flyout-search" class="search-input" placeholder="ابحث عن قالب...">
+            </div>
+            <div id="templates-flyout-list" class="templates-list">
+                <!-- Templates will be rendered here -->
+            </div>
+            <a href="#templates" id="manage-templates-link" style="display: block; text-align: center; padding: 12px; background-color: var(--input-bg); border: 1px solid var(--border-color); border-radius: 8px; text-decoration: none; color: var(--accent-color); font-weight: bold; margin-top: 1.5rem; transition: all 0.2s ease;"><i class="fas fa-cog fa-fw"></i> إدارة القوالب</a>
+        </div>
+    </div>
+
+    </div>
+
+    <!-- TinyMCE Rich Text Editor -->
+    <!-- Self-hosted TinyMCE. No API key needed. -->
+    <script>
+        // This prevents TinyMCE's initial script-load telemetry call, which is often
+        // blocked by ad-blockers and causes a console error.
+        window.TINYMCE_TELEMETRY = false;
+    </script>
+    <script src="node_modules/tinymce/tinymce.min.js" referrerpolicy="origin"></script>
+    <script src="main.js" type="module"></script>
+    <script src="ip-widget.js" type="module"></script>
+    <script src="page-trade-analyzer.js" type="module"></script>
+    <!-- IP-to-Country Library for fast, local lookups -->
+    <script src="https://cdn.jsdelivr.net/npm/ip-to-country-lite/ip-to-country-lite.min.js"></script>
+    <!-- SheetJS for Excel Export -->
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
+</body>
+</html>
