@@ -172,8 +172,49 @@ mongoose.connect(config.MONGODB_URI)
         const { verifyTokenForSSE } = require('./middleware/sse.js')(config);
         // --- End moved imports ---
 
+        // Ensure an admin user exists on first run
+        async function ensureAdminUser() {
+            try {
+                const existingAdmin = await User.findOne({ role: 'admin' });
+                const targetEmail = String(config.ADMIN_EMAIL || '').toLowerCase();
+                if (existingAdmin) {
+                    return; // Admin already present
+                }
+
+                // If a user with ADMIN_EMAIL exists, promote to admin
+                if (targetEmail) {
+                    const existingByEmail = await User.findOne({ email: targetEmail });
+                    if (existingByEmail) {
+                        existingByEmail.role = 'admin';
+                        existingByEmail.is_active = true;
+                        await existingByEmail.save();
+                        console.log(`✓ Promoted existing user ${targetEmail} to admin.`);
+                        return;
+                    }
+                }
+
+                // Otherwise, create a new admin using config credentials
+                const username = 'Admin';
+                const email = targetEmail || 'admin@example.com';
+                const rawPassword = String(config.ADMIN_PASSWORD || 'admin123');
+                const salt = bcrypt.genSaltSync(10);
+                const hash = bcrypt.hashSync(rawPassword, salt);
+                await User.create({
+                    username,
+                    email,
+                    password: hash,
+                    role: 'admin',
+                    is_active: true
+                });
+                console.log(`✓ Created default admin user ${email}.`);
+            } catch (e) {
+                console.error('Failed to ensure admin user exists:', e.message);
+            }
+        }
+
 
         // Define routes
+        await ensureAdminUser();
         function defineApiRoutes() {
             // Routes for additional tools
             const toolsRoutes = require('./routes/tools')(verifyToken);
