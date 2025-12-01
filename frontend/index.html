@@ -363,7 +363,8 @@
         // blocked by ad-blockers and causes a console error.
         window.TINYMCE_TELEMETRY = false;
     </script>
-    <script src="node_modules/tinymce/tinymce.min.js" referrerpolicy="origin"></script>
+    <!-- Load TinyMCE from CDN to avoid local node_modules dependency -->
+    <script src="https://cdn.jsdelivr.net/npm/tinymce@8.1.2/tinymce.min.js" referrerpolicy="origin"></script>
     <script src="main.js" type="module"></script>
     <script src="ip-widget.js" type="module"></script>
     <script src="page-trade-analyzer.js" type="module"></script>

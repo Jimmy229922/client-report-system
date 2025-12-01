@@ -1,4 +1,4 @@
-﻿import imageCompression from './node_modules/browser-image-compression/dist/browser-image-compression.mjs';
+﻿import imageCompression from 'https://cdn.jsdelivr.net/npm/browser-image-compression@2.0.2/dist/browser-image-compression.esm.js';
 import { fetchWithAuth } from './api.js';
 import { showToast, initTinyMCE } from './ui.js'; 
 import { checkSpecialIdentifier } from './special-identifiers.js';
