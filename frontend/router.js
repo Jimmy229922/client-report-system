@@ -12,6 +12,7 @@ import { renderUsersPage } from './page-users.js'; // Keep this line
 import { renderTemplatesPage } from './page-templates.js'; // Keep this line
 import { renderTransferRulesGuidePage } from './page-transfer-rules-guide.js';
 import { renderEvaluationsPage, initEvaluationsPage } from './page-evaluations.js';
+import { renderSystemUpdatePage, initSystemUpdatePage } from './page-system-update.js';
 import { createDepositReportPageHTML, createGeneralReportPageHTML, initCreateReportPage, cleanupReportPage, initBulkDepositReportPage, renderBulkDepositReportPage } from './page-report-form.js';
 import { renderPayoutsPage, cleanupPayoutsPage } from './page-payouts.js';
 import { renderSamePriceSLPage } from './page-same-price-sl.js';
@@ -57,6 +58,7 @@ const routes = {
     '#reports/same-price-sl': () => createGeneralReportPageHTML('Same Price and SL'),
     '#same-price-sl': renderSamePriceSLPage,
     '#reports/deals-no-profit': () => createGeneralReportPageHTML('Deals with No profit'),
+    '#system-update': { render: renderSystemUpdatePage, init: initSystemUpdatePage },
 };
 
 
