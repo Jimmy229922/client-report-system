@@ -91,6 +91,9 @@ REM Launch the frontend in the default browser
 echo [INFO] Opening the application in your browser...
 start "" "http://localhost:3001"
 
+REM Give server a moment to initialize before logs flood the window
+timeout /t 2 /nobreak >nul
+
 REM Start the Node.js server in the current window. This is a blocking call.
 node server.js
 
