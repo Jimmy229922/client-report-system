@@ -2583,6 +2583,7 @@ async function sendAllBulkReports(reportsData) {
             const introFormData = new FormData();
             introFormData.append('report_text', introText);
             introFormData.append('type', 'bulk_deposit_percentages');
+            introFormData.append('skip_archive', 'true');
             await fetchWithAuth('/api/reports', { method: 'POST', body: introFormData });
             // Small delay before starting to send reports
             await new Promise(resolve => setTimeout(resolve, delayMs));

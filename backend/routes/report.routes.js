@@ -12,7 +12,7 @@ module.exports = (verifyToken, verifyAdmin, handleUploadErrors, upload, telegram
 
     router.post('/', verifyToken, handleUploadErrors(upload.array('images', 10)), async (req, res) => {
         const userId = req.userId;
-        const { report_text, type } = req.body;
+        const { report_text, type, skip_archive } = req.body;
 
         if (!report_text || !type) {
             return res.status(400).json({ message: 'يرجى ملء جميع الحقول المطلوبة' });
@@ -38,10 +38,12 @@ module.exports = (verifyToken, verifyAdmin, handleUploadErrors, upload, telegram
                 }
             }
 
-            const newReport = await Report.create({ report_text, user_id: userId, type, image_urls: imageUrls });
-
-            await logActivity(req, req.userId, 'create_report', { reportId: newReport._id, type: newReport.type });
-            sendEventToAll('new_report', { reportId: newReport._id, type: newReport.type });
+            let newReport = null;
+            if (skip_archive !== 'true') {
+                newReport = await Report.create({ report_text, user_id: userId, type, image_urls: imageUrls });
+                await logActivity(req, req.userId, 'create_report', { reportId: newReport._id, type: newReport.type });
+                sendEventToAll('new_report', { reportId: newReport._id, type: newReport.type });
+            }
 
             // Send Telegram notification asynchronously to avoid blocking the response
             (async () => {
@@ -62,14 +64,15 @@ module.exports = (verifyToken, verifyAdmin, handleUploadErrors, upload, telegram
                     } else {
                         await telegramHelper.sendMessage(config.CHAT_ID, fullCaption, { parse_mode: 'HTML' });
                     }
-                    if (newReport.telegram_failed) {
+                    
+                    if (newReport && newReport.telegram_failed) {
                         newReport.telegram_failed = false;
                         newReport.telegram_error_message = null;
                         await newReport.save();
                     }
                 } catch (telegramError) {
                     console.error('═══════════════════════════════════════════════════');
-                    console.error('[TELEGRAM ERROR] Report ID:', newReport._id);
+                    console.error('[TELEGRAM ERROR] Report ID:', newReport ? newReport._id : 'NOT_SAVED');
                     console.error('[TELEGRAM ERROR] Error Type:', telegramError.name);
                     console.error('[TELEGRAM ERROR] Error Message:', telegramError.message);
                     console.error('[TELEGRAM ERROR] Error Code:', telegramError.code);
@@ -81,17 +84,19 @@ module.exports = (verifyToken, verifyAdmin, handleUploadErrors, upload, telegram
                     console.error('[TELEGRAM ERROR] Chat ID:', config.CHAT_ID);
                     console.error('═══════════════════════════════════════════════════');
                     
-                    const admin = await User.findOne({ role: 'admin' });
-                    if (admin) {
-                        const errorDetails = telegramError.response?.description || telegramError.message || 'Unknown error';
-                        const notificationMessage = `فشل إرسال تنبيه تليجرام للتقرير رقم ${newReport._id}\nالسبب: ${errorDetails}`;
-                        const newNotification = { user_id: admin._id, message: notificationMessage, link: `#archive?search=${newReport._id}`, type: 'error', icon: 'fab fa-telegram-plane' };
-                        await Notification.create(newNotification);
-                        sendEventToUser(admin._id, 'notification_created', newNotification);
+                    if (newReport) {
+                        const admin = await User.findOne({ role: 'admin' });
+                        if (admin) {
+                            const errorDetails = telegramError.response?.description || telegramError.message || 'Unknown error';
+                            const notificationMessage = `فشل إرسال تنبيه تليجرام للتقرير رقم ${newReport._id}\nالسبب: ${errorDetails}`;
+                            const newNotification = { user_id: admin._id, message: notificationMessage, link: `#archive?search=${newReport._id}`, type: 'error', icon: 'fab fa-telegram-plane' };
+                            await Notification.create(newNotification);
+                            sendEventToUser(admin._id, 'notification_created', newNotification);
+                        }
+                        newReport.telegram_failed = true;
+                        newReport.telegram_error_message = telegramError.response?.description || telegramError.message;
+                        await newReport.save();
                     }
-                    newReport.telegram_failed = true;
-                    newReport.telegram_error_message = telegramError.response?.description || telegramError.message;
-                    await newReport.save();
                 }
             })();
 
