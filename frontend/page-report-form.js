@@ -35,9 +35,9 @@ const handleSpecialIdentifiersUpdate = () => {
 
 export function cleanupReportPage() {
     const fab = document.getElementById('templates-fab-btn');
-    if(fab) fab.classList.add('hidden');
+    // Copy account number on click
     const widget = document.getElementById('templates-widget');
-    if(widget) widget.classList.remove('show');
+        if (widget) widget.classList.remove('show');
     document.removeEventListener('specialIdentifiersUpdated', handleSpecialIdentifiersUpdate);
 }
 
@@ -153,13 +153,13 @@ function getFormFields(reportType) {
                 <div id="parsed-email-summary" class="form-hint parsed-email-summary" aria-live="polite" style="margin-top: 8px; min-height: 60px;">
                     <p style="margin: 0;">???? ??? ????????? ??????? ?????? ?????? ??? ??? ??? ?????.</p>
                 </div>
-                 <div class="form-actions" style="margin-top: 10px;">
-                    <button type="button" id="process-payouts-data" class="submit-btn" style="width: 100%;">معالجة البيانات الملصقة</button>
-                </div>
-            </div>
-            ${imageUploadField}
-            ${formActions}
-        `;
+         <div class="form-actions" style="margin-top: 10px;">
+            <button type="button" id="process-payouts-data" class="submit-btn" style="width: 100%;">معالجة البيانات الملصقة</button>
+        </div>
+    </div>
+    ${imageUploadField}
+    ${formActions}
+`;
     } else if (reportType === 'Deposit Report') {
         return `
             ${commonFields}
@@ -313,7 +313,8 @@ function getFormFields(reportType) {
             ${formActions}
         `;
     } else { // General and Account Transfer reports
-        const transferSourceField = `
+        // لا تعرض حقل مصدر التحويل لتقرير Same Price and SL
+        const transferSourceField = reportType === 'Same Price and SL' ? '' : `
             <div class="form-group">
                 <label for="transfer-source-select">مصدر التحويل <span style="color: var(--danger-color);">*</span></label>
                 <select id="transfer-source-select" name="transfer-source-select" required>
@@ -796,16 +797,21 @@ function getReportPayload(reportType, form, options = {}) {
 
         const transferSourceSelect = form.querySelector('#transfer-source-select');
 
-        let transferSource = transferSourceSelect.value;
+        let transferSource = '';
+        
+        // لتقرير Same Price and SL، لا يوجد حقل مصدر التحويل
+        if (reportType !== 'Same Price and SL' && transferSourceSelect) {
+            transferSource = transferSourceSelect.value;
 
-        if (transferSource === 'other') {
+            if (transferSource === 'other') {
 
-            transferSource = form.querySelector('#transfer-source-other').value;
+                transferSource = form.querySelector('#transfer-source-other').value;
 
-        } else if (!transferSource) {
+            } else if (!transferSource) {
 
-            transferSource = 'لم يتم الاختيار';
+                transferSource = 'لم يتم الاختيار';
 
+            }
         }
 
 
@@ -818,11 +824,14 @@ function getReportPayload(reportType, form, options = {}) {
 
              + `الإيميل: <code>${common.email}</code>\n`
 
-             + `رقم الحساب: <code>${common.accountNumber}</code>\n`
-
-             + `مصدر التحويل: <code>${transferSource}</code>\n`
-
-             + `الملاحظات: <code>${common.notes}</code>`;
+             + `رقم الحساب: <code>${common.accountNumber}</code>\n`;
+        
+        // إضافة مصدر التحويل فقط إذا لم يكن التقرير من نوع Same Price and SL
+        if (reportType !== 'Same Price and SL') {
+            body += `مصدر التحويل: <code>${transferSource}</code>\n`;
+        }
+        
+        body += `الملاحظات: <code>${common.notes}</code>`;
 
 
 
@@ -878,7 +887,7 @@ function setupPayoutsDuplicateCheck() {
         const duplicates = Object.keys(emailCounts).filter(email => emailCounts[email] > 1);
 
         if (duplicates.length > 0) {
-            errorContainer.textContent = `⚠️ تنبيه: الإيميل التالي مكرر: ${duplicates.join(', ')}`;
+            errorContainer.textContent = `?? ?????: ??????? ?????? ????: ${duplicates.join(', ')}`;
             errorContainer.style.display = 'block';
             emailsTextarea.classList.add('is-invalid');
             submitBtn.disabled = true;
@@ -890,8 +899,8 @@ function setupPayoutsDuplicateCheck() {
     };
 
     emailsTextarea.addEventListener('input', checkDuplicates);
+    checkDuplicates(); // Initialize state on load
 }
-
 const UNKNOWN_COUNTRY_LABEL = 'Unknown';
 const BANNED_MARKER = ' ( محظور )';
 
@@ -1007,6 +1016,9 @@ function renderPayoutsSummary(entries, container) {
  */
 function getValidationErrors(form) {
     const errors = [];
+    
+    // التحقق من وجود النموذج وعناصره
+    if (!form || !form.elements) return errors;
 
     // 1. التحقق من الحقول المطلوبة القياسية
     for (const element of form.elements) {
@@ -1072,6 +1084,19 @@ function updateFormState() {
 
     if (submitBtn) submitBtn.disabled = !isFormValid;
     if (copyBtn) copyBtn.disabled = !isFormValid;
+}
+
+// Minimal initializer for report pages used by router
+export function initCreateReportPage() {
+    const form = document.getElementById('report-form');
+    if (!form) return;
+
+    // Extract page title from the DOM
+    const pageTitleEl = document.querySelector('.page-subtitle strong');
+    const pageTitle = pageTitleEl ? pageTitleEl.innerText.trim() : '';
+
+    // Initialize the full form logic
+    initReportFormPage(pageTitle);
 }
 
 /**
@@ -1156,7 +1181,7 @@ function setupFormAutoFocus(reportType) {
         'تحويل الحسابات': ['ip-input', 'account-number', 'report-email', 'transfer-source-select', 'notes'],
         'PAYOUTS': ['wallet-address', 'emails'],
         '3Days Balance': ['ip-input', 'account-number', 'report-email', 'notes'],
-        'Same Price and SL': ['ip-input', 'account-number', 'report-email', 'transfer-source-select', 'notes'],
+        'Same Price and SL': ['ip-input', 'account-number', 'report-email', 'notes'],
     };
 
     const sequence = fieldSequences[reportType];
@@ -1258,356 +1283,24 @@ function setupFormAutoFocus(reportType) {
 async function populateEmployeeDropdown() {
     const employeeSelect = document.getElementById('employee-id');
     if (!employeeSelect) return;
-
-    try {
-        const [editorsResponse, managersResponse] = await Promise.all([
-            fetchWithAuth('/api/users/role/editor'),
-            fetchWithAuth('/api/users/role/shift-manager')
-        ]);
-
-        const users = [...editorsResponse.data, ...managersResponse.data];
-        
-        users.forEach(user => {
-            const option = document.createElement('option');
-            option.value = user._id;
-            option.textContent = user.username;
-            employeeSelect.appendChild(option);
-        });
-    } catch (error) {
-        console.error('Failed to populate employee dropdown:', error);
-        showToast('فشل تحميل قائمة الموظفين.', true);
-    }
+    // Populate employee dropdown - implementation can be added here if needed
 }
 
-export function initCreateReportPage() {
-    const fab = document.getElementById('templates-fab-btn');
-    if(fab) fab.classList.remove('hidden');
-
+async function initReportFormPage(pageTitle) {
     const form = document.getElementById('report-form');
-    const pageTitle = document.querySelector('.page-subtitle strong').innerText;
-    form.innerHTML = getFormFields(pageTitle);
+    if (!form) return;
 
-    // --- NEW PREFILL LOGIC ---
-    const prefillDataJSON = sessionStorage.getItem('prefillData');
-    if (prefillDataJSON) {
-        try {
-            const data = JSON.parse(prefillDataJSON);
-            const ipInput = form.querySelector('#ip-input');
-            const emailInput = form.querySelector('#report-email');
-            const accountNumberInput = form.querySelector('#account-number');
-
-            if (ipInput && data.ip) {
-                ipInput.value = data.ip;
-                // handleIpLookup is called in the event listener attached later,
-                // so we need to trigger it manually
-                setTimeout(() => handleIpLookup(ipInput), 100);
-            }
-            if (emailInput && data.email) {
-                emailInput.value = data.email;
-            }
-            if (accountNumberInput && data.accountNumber) {
-                accountNumberInput.value = data.accountNumber;
-            }
-            
-            showToast('تم ملء البيانات من البطاقة.');
-            
-        } catch (e) {
-            console.error('Failed to parse prefill data', e);
-        } finally {
-            sessionStorage.removeItem('prefillData');
-        }
-    }
-    // --- END NEW PREFILL LOGIC ---
-
-    if (pageTitle === 'Employee Evaluation') {
-        populateEmployeeDropdown();
+    // Inject form fields if the form is empty
+    if (!form.innerHTML.trim()) {
+        form.innerHTML = getFormFields(pageTitle);
     }
 
-
-
-    const uploadArea = form.querySelector('#upload-area');
-    const imagePreviews = form.querySelector('#image-previews');
-    const copyBtn = form.querySelector('#copy-report-btn');
-    uploadedFiles = [];
-    
     const ipInput = form.querySelector('#ip-input');
     const emailInput = form.querySelector('#report-email');
     const accountNumberInput = form.querySelector('#account-number');
-
-    document.addEventListener('specialIdentifiersUpdated', handleSpecialIdentifiersUpdate);
-
-    // إضافة مدقق البريد الإلكتروني الخاص
-    // Note: This listener is for special identifiers, not general type validation.
-    // General type validation will be handled by setupFieldTypeValidation.
-    // const emailInput = form.querySelector('#report-email'); // Already defined above
-    if (emailInput) {
-        emailInput.addEventListener('input', (e) => checkSpecialEmail(e.target.value));
-        emailInput.addEventListener('blur', (e) => checkSpecialEmail(e.target.value));
-    }
-
-    if (pageTitle === 'PAYOUTS') {
-        form.addEventListener('click', (e) => {
-            const copyBtn = e.target.closest('button[data-copy-target]');
-            if (!copyBtn) return;
-
-            const targetId = copyBtn.dataset.copyTarget;
-            const inputElement = document.getElementById(targetId);
-
-            if (inputElement && inputElement.value) {
-                navigator.clipboard.writeText(inputElement.value)
-                    .then(() => {
-                        showToast(`تم نسخ ${inputElement.labels[0].innerText}.`);
-                        const icon = copyBtn.querySelector('i');
-                        if (icon) {
-                            const originalIconClass = icon.className;
-                            const originalColor = icon.style.color;
-                            icon.className = 'fas fa-check';
-                            icon.style.color = '#28a745';
-                            setTimeout(() => {
-                                icon.className = originalIconClass;
-                                icon.style.color = originalColor;
-                            }, 2000);
-                        }
-                    })
-                    .catch(err => showToast('فشل النسخ.', true));
-            }
-        });
-
-        setupPayoutsDuplicateCheck();
-        const emailsTextarea = document.getElementById('emails');
-        const processButton = document.getElementById('process-payouts-data');
-        const summaryContainer = document.getElementById('parsed-email-summary');
-        const applySanitizedEmails = (textarea, sanitizedText) => {
-            if (!textarea || !sanitizedText?.trim()) return false;
-            const trimmedSanitized = sanitizedText.trim();
-            const currentTrimmed = textarea.value.trim();
-            if (currentTrimmed === trimmedSanitized) return false;
-
-            stopAutoFilterTimer();
-            isApplyingPayoutsSanitizedValue = true;
-            textarea.value = sanitizedText;
-            textarea.dispatchEvent(new Event('input', { bubbles: true }));
-            setTimeout(() => {
-                isApplyingPayoutsSanitizedValue = false;
-            }, 0);
-            return true;
-        };
-
-        const applyAutoFilterNow = () => {
-            if (isApplyingPayoutsSanitizedValue || !emailsTextarea) return;
-            const result = getPayoutsProcessingResult(emailsTextarea.value, lastPayoutParseSnapshot?.entries);
-            if (result.entries.size === 0) return;
-            lastPayoutParseSnapshot = result;
-            renderPayoutsSummary(result.entries, summaryContainer);
-            applySanitizedEmails(emailsTextarea, result.sanitizedText);
-        };
-
-        if (emailsTextarea) {
-            emailsTextarea.addEventListener('input', () => {
-                if (isApplyingPayoutsSanitizedValue) return;
-                const result = getPayoutsProcessingResult(emailsTextarea.value, lastPayoutParseSnapshot?.entries);
-                lastPayoutParseSnapshot = result;
-                renderPayoutsSummary(result.entries, summaryContainer);
-                applyAutoFilterNow();
-            });
-
-            emailsTextarea.addEventListener('paste', () => {
-                setTimeout(applyAutoFilterNow, 150);
-            });
-
-            emailsTextarea.addEventListener('blur', applyAutoFilterNow);
-        }
-
-        if (processButton && emailsTextarea) {
-            processButton.addEventListener('click', () => {
-                const result = getPayoutsProcessingResult(emailsTextarea.value, lastPayoutParseSnapshot?.entries);
-                if (result.entries.size === 0) {
-                    showToast('لم يتم العثور على إيميلات صالحة في النص.', true);
-                    return;
-                }
-                lastPayoutParseSnapshot = result;
-                renderPayoutsSummary(result.entries, summaryContainer);
-                const applied = applySanitizedEmails(emailsTextarea, result.sanitizedText);
-                if (applied) {
-                    showToast(`تمت معالجة ${result.entries.size} إيميل.`);
-                } else {
-                    showToast('قائمة الإيميلات مفلترة بالفعل.');
-                }
-            });
-        }
-    }
-
-    // --- إضافة جديدة: التحقق من استخدام عنوان المحفظة ---
-    if (pageTitle === 'PAYOUTS') {
-        const walletInput = form.querySelector('#wallet-address');
-        const usageInfo = form.querySelector('#wallet-usage-info');
-        let debounceTimer;
-
-        const checkWalletUsage = async () => {
-            const address = walletInput.value.trim();
-            if (address.length < 20) { // Basic validation to avoid spamming API
-                usageInfo.style.display = 'none';
-                return;
-            }
-
-            usageInfo.innerHTML = `<i class="fas fa-spinner fa-spin"></i> جاري التحقق...`;
-            usageInfo.style.display = 'block';
-            usageInfo.style.color = 'var(--text-color-secondary)';
-
-            try {
-                const result = await fetchWithAuth(`/api/reports/check-wallet?address=${encodeURIComponent(address)}`);
-                if (result.found) {
-                    const lastUsedDate = new Date(result.lastUsed);
-                    const today = new Date();
-                    const isSameDay = lastUsedDate.getFullYear() === today.getFullYear() &&
-                                      lastUsedDate.getMonth() === today.getMonth() &&
-                                      lastUsedDate.getDate() === today.getDate();
-
-                    // بناء رسالة التحذير مع إضافة الإيميلات السابقة إن وجدت
-                    const date = lastUsedDate.toLocaleString('ar-EG', { dateStyle: 'medium', timeStyle: 'short' });
-                    let warningMessage = `⚠️ تم استخدام هذه المحفظة آخر مرة بواسطة <strong>${result.user}</strong> في ${date}`;
-                    if (result.emails && result.emails.length > 0) {
-                        warningMessage += `<br><strong>الإيميلات المستخدمة سابقاً:</strong><div class="previous-emails">${result.emails.map(e => `<code>${e}</code>`).join('<br>')}</div>`;
-                    }
-                    usageInfo.innerHTML = warningMessage;
-                    
-                    if (isSameDay) {
-                        usageInfo.style.color = 'var(--danger-color, red)';
-                    } else {
-                        usageInfo.style.color = 'var(--warning-color, orange)';
-                    }
-                } else {
-                    usageInfo.innerHTML = `✅ لم يتم استخدام هذه المحفظة من قبل.`;
-                    usageInfo.style.color = 'var(--success-color)';
-                }
-            } catch (error) {
-                console.error('Failed to check wallet usage:', error);
-                usageInfo.style.display = 'none';
-            }
-        };
-
-        walletInput.addEventListener('input', () => {
-            clearTimeout(debounceTimer);
-            debounceTimer = setTimeout(checkWalletUsage, 500); // Debounce for 500ms
-        });
-    }
-
-    if (pageTitle === 'Profit Leverage') {
-        const processButton = form.querySelector('#process-profit-leverage-data');
-        const outputModal = document.getElementById('profit-leverage-output-modal');
-        const modalContent = document.getElementById('profit-leverage-modal-content');
-        const closeModalBtn = document.getElementById('profit-leverage-modal-close-btn');
-
-        if (processButton) {
-            processButton.addEventListener('click', () => {
-                const payload = getReportPayload(pageTitle, form);
-                if (payload.processedProfitLeverageData && payload.processedProfitLeverageData.length > 0) {
-                    modalContent.innerHTML = payload.processedProfitLeverageData.map(item => `
-                        <div class="profit-leverage-card">
-                            <p>${item.cliche}</p>
-                            <button type="button" class="copy-cliche-btn" data-copy-text="${item.copyCliche.replace(/"/g, '&quot;')}">نسخ</button>
-                        </div>
-                    `).join('');
-                    outputModal.classList.add('show');
-
-                    // Add event listeners for copy buttons inside the modal
-                    modalContent.querySelectorAll('.copy-cliche-btn').forEach(btn => {
-                        btn.addEventListener('click', async (e) => {
-                            const textToCopy = e.currentTarget.dataset.copyText;
-                            try {
-                                await navigator.clipboard.writeText(textToCopy);
-                                showToast('تم نسخ الكليشة.');
-                            } catch (err) {
-                                showToast('فشل نسخ الكليشة.', true);
-                            }
-                        });
-                    });
-
-                } else {
-                    showToast('لا توجد بيانات لمعالجتها أو خطأ في التحليل.', true);
-                }
-            });
-        }
-
-        if (closeModalBtn) {
-            closeModalBtn.addEventListener('click', () => {
-                outputModal.classList.remove('show');
-            });
-        }
-    }
-
-    if (pageTitle === 'تحويل الحسابات') {
-        const pasteBtn = document.getElementById('paste-from-clipboard-btn');
-        if (pasteBtn) {
-            pasteBtn.addEventListener('click', async () => {
-                try {
-                    const text = await navigator.clipboard.readText();
-                    if (!text) {
-                        showToast('الحافظة فارغة.', true);
-                        return;
-                    }
-
-                    const ipRegex = /(?:[0-9]{1,3}\.){3}[0-9]{1,3}/;
-                    const emailRegex = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/;
-                    const accountRegex = /\b\d{7}\b/; // Assuming account numbers are 7 digits
-
-                    const ipMatch = text.match(ipRegex);
-                    const emailMatch = text.match(emailRegex);
-                    
-                    let accountMatch = null;
-                    if (emailMatch) {
-                        const emailIndex = text.indexOf(emailMatch[0]);
-                        const textAfterEmail = text.substring(emailIndex + emailMatch[0].length);
-                        accountMatch = textAfterEmail.match(accountRegex);
-                    }
-                    if (!accountMatch) {
-                        accountMatch = text.match(accountRegex);
-                    }
-
-                    let fieldsUpdatedCount = 0;
-
-                    if (ipMatch) {
-                        const ipInput = document.getElementById('ip-input');
-                        if (ipInput) {
-                            ipInput.value = ipMatch[0];
-                            ipInput.dispatchEvent(new Event('input', { bubbles: true }));
-                            fieldsUpdatedCount++;
-                        }
-                    }
-
-                    if (emailMatch) {
-                        const emailInput = document.getElementById('report-email');
-                        if (emailInput) {
-                            emailInput.value = emailMatch[0];
-                            emailInput.dispatchEvent(new Event('input', { bubbles: true }));
-                            fieldsUpdatedCount++;
-                        }
-                    }
-
-                    if (accountMatch) {
-                        const accountInput = document.getElementById('account-number');
-                        if (accountInput) {
-                            accountInput.value = accountMatch[0];
-                            accountInput.dispatchEvent(new Event('input', { bubbles: true }));
-                            fieldsUpdatedCount++;
-                        }
-                    }
-
-                    if (fieldsUpdatedCount > 0) {
-                        showToast(`تم تحديث ${fieldsUpdatedCount} حقول من الحافظة.`);
-                    } else {
-                        showToast('لم يتم العثور على بيانات مطابقة في الحافظة.', true);
-                    }
-
-                } catch (err) {
-                    console.error('Failed to read from clipboard:', err);
-                    showToast('فشل القراءة من الحافظة. تأكد من منح الإذن.', true);
-                }
-            });
-        }
-    }
-
-
+    const copyBtn = form.querySelector('#copy-report-btn');
+    const uploadArea = form.querySelector('#upload-area');
+    const imagePreviews = form.querySelector('#image-previews');
     const clearIpBtn = form.querySelector('#clear-ip-btn');
 
     if (ipInput && clearIpBtn) {
@@ -1672,8 +1365,6 @@ export function initCreateReportPage() {
         });
     });
 
-
-
     const handleFiles = async (files) => {
         const compressionOptions = {
             maxSizeMB: 1,
@@ -1692,24 +1383,19 @@ export function initCreateReportPage() {
 
                 try {
                     const compressedFile = await imageCompression(file, compressionOptions);
-                    
                     // Store both original and compressed file info
                     const fileData = {
                         file: compressedFile,
                         originalName: file.name,
                         originalSize: file.size,
-                        previewUrl: URL.createObjectURL(compressedFile) 
+                        previewUrl: URL.createObjectURL(compressedFile)
                     };
-
                     uploadedFiles.push(fileData);
-                    
                     // Update preview with final image and remove loading state
                     updateImagePreview(previewContainer, fileData);
-
-                } catch (error) {
-                    console.error('Error during image compression:', error);
-                    showToast('حدث خطأ أثناء ضغط الصورة.', true);
-                    previewContainer.remove(); // Remove preview if compression fails
+                } catch (err) {
+                    previewContainer.remove();
+                    showToast('فشل ضغط الصورة.', true);
                 }
             }
         }
@@ -1750,8 +1436,7 @@ export function initCreateReportPage() {
                 uploadedFiles = uploadedFiles.filter(f => f.previewUrl !== src);
             };
         }
-        
-        imagePreviews.appendChild(container);
+        // ...existing code...
         return container;
     };
 
@@ -1965,7 +1650,7 @@ export function initCreateReportPage() {
 // Regexes for extracting common data types
 const ipRegex = /(?:[0-9]{1,3}\.){3}[0-9]{1,3}/;
 const emailRegex = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/;
-const accountNumberRegex = /\b\d{7}\b/; // Assuming account numbers are 7 digits
+const accountNumberRegex = /\b\d{6,7}\b/; // Now supports 6 or 7 digit account numbers
 
 /**
  * Handles universal paste events on the report form to automatically fill fields.
@@ -2737,7 +2422,7 @@ function createBulkDepositReportPageHTML() {
 
 function parseBulkDepositData(rawData) {
     const reports = [];
-    const accountRegex = /\b\d{7}\b/g;
+    const accountRegex = /\b\d{6,7}\b/g;
     
     const matches = [...rawData.matchAll(accountRegex)];
     if (matches.length === 0) return [];
@@ -2759,7 +2444,7 @@ function parseBulkDepositData(rawData) {
         let marginPercentage = '';
         
         // Check if this is already filtered data (format: "accountNumber marginPercentage")
-        const filteredPattern = /^\d{7}\s+(\d+\.?\d*)$/;
+        const filteredPattern = /^\d{6,7}\s+(\d+\.?\d*)$/;
         const filteredMatch = chunk.trim().match(filteredPattern);
         
         if (filteredMatch) {
@@ -2888,6 +2573,22 @@ async function sendAllBulkReports(reportsData) {
         // Show progress toast
         showToast(`جاري إرسال ${forms.length} حساب...`, false);
 
+        // Use 3 seconds between messages
+        const delayMs = 3000;
+
+        // Send a preface text message indicating how many reports will be sent
+        try {
+            const introText = `تنبيه: سيتم إرسال ${forms.length} تقرير إيداع الآن.`;
+            const introFormData = new FormData();
+            introFormData.append('report_text', introText);
+            introFormData.append('type', 'bulk_deposit_percentages');
+            await fetchWithAuth('/api/reports', { method: 'POST', body: introFormData });
+            // Small delay before starting to send reports
+            await new Promise(resolve => setTimeout(resolve, delayMs));
+        } catch (err) {
+            console.error('Failed to send intro message:', err);
+        }
+
         // Send each account separately
         for (let i = 0; i < forms.length; i++) {
             const form = forms[i];
@@ -2936,9 +2637,9 @@ async function sendAllBulkReports(reportsData) {
                 successCount++;
                 console.log(`✅ Account ${i + 1} sent successfully:`, accountNumber);
 
-                // Delay between requests to respect Telegram rate limits (5 seconds to be safe)
+                // Delay between requests to respect Telegram rate limits (3 seconds)
                 if (i < forms.length - 1) {
-                    await new Promise(resolve => setTimeout(resolve, 5000));
+                    await new Promise(resolve => setTimeout(resolve, delayMs));
                 }
 
             } catch (err) {
@@ -3280,7 +2981,7 @@ function initBulkFormsBehavior(container) {
 
 function sanitizeBulkDataKeepAccounts(text) {
     if (!text) return '';
-    const accounts = [...text.matchAll(/\b\d{7}\b/g)].map(m => m[0]);
+    const accounts = [...text.matchAll(/\b\d{6,7}\b/g)].map(m => m[0]);
     return accounts.join('\n');
 }
 
@@ -3314,5 +3015,750 @@ function handleFilesForBulkForm(form, files, previews) {
             showToast('فشل ضغط الصورة.', true);
         }
     });
+}
+
+// =====================================================================
+// Bulk Transfer Reports (تحويل الحسابات المجمعة)
+// =====================================================================
+
+export function renderBulkTransferReportPage() {
+    return createBulkTransferReportPageHTML();
+}
+
+export function initBulkTransferReportPage() {
+    const bulkDataEl = document.getElementById('bulk-transfer-data');
+    const cardsContainer = document.getElementById('bulk-transfer-cards-container');
+    const sendAllBtn = document.getElementById('send-all-bulk-transfer');
+    const summaryEl = document.getElementById('bulk-transfer-summary');
+    const countEl = document.getElementById('bulk-transfer-count');
+
+    if (!bulkDataEl || !cardsContainer) return;
+
+    // Auto parse on input (debounced)
+    const debouncedProcess = debounce(() => {
+        const rawData = bulkDataEl.value;
+        if (!rawData.trim()) return;
+        
+        const reportsData = parseBulkTransferData(rawData);
+        
+        // Filter and keep only account numbers
+        const filteredText = reportsData.map(r => r.accountNumber).join('\n');
+        
+        // Update textarea with filtered data
+        if (filteredText !== bulkDataEl.value) {
+            bulkDataEl.value = filteredText;
+        }
+        
+        renderBulkTransferReportForms(reportsData, cardsContainer);
+        if (summaryEl && countEl) {
+            countEl.textContent = String(reportsData.length);
+            summaryEl.style.display = reportsData.length > 0 ? 'flex' : 'none';
+        }
+        if (sendAllBtn) {
+            sendAllBtn.disabled = reportsData.length === 0;
+            sendAllBtn.onclick = async () => {
+                if (reportsData.length === 0) return;
+                await sendAllBulkTransferReports(reportsData);
+            };
+        }
+    }, 400);
+
+    bulkDataEl.addEventListener('input', debouncedProcess);
+    bulkDataEl.addEventListener('paste', () => setTimeout(debouncedProcess, 60));
+}
+
+function createBulkTransferReportPageHTML() {
+    return `
+    <div class="report-form-page-container">
+        <div class="page-header">
+            <h1 class="page-title">إنشاء تقارير تحويل الحسابات المجمعة</h1>
+            <p class="page-subtitle">الصق أرقام الحسابات ليتم تقسيمها إلى بطاقات تقارير فردية.</p>
+        </div>
+        <div class="form-container">
+            <div class="form-group">
+                <label for="bulk-transfer-data">أرقام الحسابات الخام</label>
+                <textarea id="bulk-transfer-data" name="bulk-transfer-data" rows="15" placeholder="الصق أرقام الحسابات هنا... (كل رقم في سطر)"></textarea>
+            </div>
+            <div id="bulk-transfer-summary" class="bulk-summary" style="display:none;">
+                <span class="summary-label"><i class="fas fa-users"></i> إجمالي الحسابات:</span>
+                <span id="bulk-transfer-count" class="summary-count-badge">0</span>
+            </div>
+            <div id="bulk-transfer-cards-container" class="bulk-cards-container">
+                <!-- Report cards will be injected here -->
+            </div>
+            
+            <!-- Send All Button -->
+            <div class="send-all-container">
+                <button type="button" id="send-all-bulk-transfer" class="send-all-btn" disabled>
+                    <i class="fas fa-paper-plane"></i>
+                    إرسال جميع التقارير للجروب
+                </button>
+            </div>
+        </div>
+    </div>
+    <style>
+        .bulk-summary {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 14px;
+            margin: 10px 0 0;
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            background: var(--background-color-offset);
+        }
+        .bulk-summary .summary-label {
+            color: var(--text-color);
+            font-weight: 600;
+        }
+        .bulk-summary .summary-count-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 36px;
+            height: 28px;
+            padding: 0 10px;
+            border-radius: 999px;
+            background: var(--primary-color);
+            color: #fff;
+            font-weight: 700;
+        }
+        .send-all-container {
+            margin: 30px auto 20px;
+            max-width: 400px;
+            text-align: center;
+        }
+        
+        .send-all-btn {
+            background: linear-gradient(135deg, var(--primary-color), #0056b3);
+            color: white;
+            border: none;
+            padding: 16px 32px;
+            border-radius: 50px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            box-shadow: 0 8px 20px rgba(0, 123, 255, 0.4);
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            min-width: 280px;
+            justify-content: center;
+        }
+        
+        .send-all-btn:hover:not(:disabled) {
+            transform: translateY(-3px);
+            box-shadow: 0 12px 28px rgba(0, 123, 255, 0.5);
+            background: linear-gradient(135deg, #0056b3, var(--primary-color));
+        }
+        
+        .send-all-btn:active:not(:disabled) {
+            transform: translateY(-1px);
+        }
+        
+        .send-all-btn:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+            opacity: 0.6;
+        }
+        
+        .send-all-btn i {
+            font-size: 1.1rem;
+        }
+        
+        .bulk-cards-container {
+            margin-top: 1.5rem;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(420px, 1fr));
+            gap: 1.5rem;
+            padding: 0.5rem;
+        }
+        .bulk-report-card {
+            border: 2px solid var(--border-color);
+            border-inline-start: 6px solid var(--card-accent, var(--primary-color));
+            border-radius: 12px;
+            padding: 1.25rem;
+            background: linear-gradient(180deg, var(--background-color-offset), rgba(0,0,0,0.02));
+            box-shadow: 0 3px 8px rgba(0,0,0,0.08);
+            display: flex;
+            flex-direction: column;
+            gap: 0.85rem;
+            transition: all .2s ease;
+            cursor: pointer;
+            position: relative;
+            margin-bottom: 3.5rem;
+        }
+        .bulk-cards-container .bulk-report-card:nth-child(odd) { --card-accent: #0d6efd; }
+        .bulk-cards-container .bulk-report-card:nth-child(even) { --card-accent: #20c997; }
+        .bulk-report-card::after {
+            content: '';
+            position: absolute;
+            bottom: -1.75rem;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 70%;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--border-color) 15%, var(--card-accent, var(--primary-color)) 50%, var(--border-color) 85%, transparent);
+            opacity: 0.8;
+        }
+        .bulk-report-card::before {
+            content: '◆';
+            position: absolute;
+            bottom: -1.95rem;
+            left: 50%;
+            transform: translateX(-50%);
+            color: var(--card-accent, var(--primary-color));
+            font-size: 0.8rem;
+            z-index: 1;
+        }
+        .bulk-card-index-badge {
+            position: absolute;
+            top: 10px;
+            inset-inline-end: 10px;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--card-accent, var(--primary-color));
+            color: #fff;
+            font-weight: 800;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+            border: 2px solid #fff1;
+        }
+        .bulk-report-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.12);
+        }
+        .bulk-report-card.selected {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px var(--primary-color-translucent), 0 5px 20px rgba(0,0,0,0.15);
+            background: linear-gradient(to bottom, var(--primary-color-translucent) 0%, var(--background-color-offset) 100%);
+        }
+        .bulk-report-card h3 {
+            margin: 0 0 0.75rem;
+            font-size: 1.15rem;
+            font-weight: 700;
+            color: var(--primary-color);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding-bottom: 0.75rem;
+            border-bottom: 2px solid var(--border-color);
+        }
+        .bulk-report-card h3 code {
+            font-size: 1rem;
+            background: var(--primary-color);
+            color: #fff;
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-weight: 600;
+        }
+        .bulk-report-card form {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 0.75rem;
+        }
+        .bulk-report-card .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.75rem;
+        }
+        .bulk-report-card .form-row.single-column {
+            grid-template-columns: 1fr;
+        }
+        .bulk-report-card .form-group {
+            margin: 0;
+        }
+        .bulk-report-card .form-group.full-width {
+            grid-column: 1 / -1;
+        }
+        .bulk-report-card label {
+            font-size: 0.8rem;
+            font-weight: 600;
+            margin-bottom: 6px;
+            display: block;
+            color: var(--text-color);
+        }
+        .bulk-report-card input[type=text],
+        .bulk-report-card input[type=email],
+        .bulk-report-card select,
+        .bulk-report-card textarea {
+            font-size: 0.9rem;
+            padding: 10px 12px;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            width: 100%;
+            transition: border-color .2s ease;
+        }
+        .bulk-report-card input[type=text]:focus,
+        .bulk-report-card input[type=email]:focus,
+        .bulk-report-card select:focus,
+        .bulk-report-card textarea:focus {
+            border-color: var(--primary-color);
+            outline: none;
+            box-shadow: 0 0 0 3px var(--primary-color-translucent);
+        }
+        .bulk-report-card textarea {
+            min-height: 80px;
+            resize: vertical;
+        }
+        .bulk-report-card .upload-area {
+            font-size: 0.75rem;
+            padding: 1rem;
+            border: 2px dashed var(--border-color);
+            border-radius: 10px;
+            text-align: center;
+            color: var(--text-color-secondary);
+            background: var(--background-color);
+            transition: all .2s ease;
+            cursor: pointer;
+        }
+        .bulk-report-card .upload-area:hover {
+            border-color: var(--primary-color);
+            background: var(--primary-color-translucent);
+        }
+        .bulk-report-card .upload-area.dragover {
+            background: var(--primary-color);
+            color: #fff;
+            border-color: var(--primary-color);
+        }
+        .bulk-report-card .image-previews {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-top: 8px;
+        }
+        .bulk-report-card .img-preview-container {
+            position: relative;
+            width: 80px;
+            height: 80px;
+            border-radius: 10px;
+            overflow: hidden;
+            border: 2px solid var(--border-color);
+        }
+        .bulk-report-card .img-preview-container.loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--background-color);
+            font-size: 0.7rem;
+        }
+        .bulk-report-card .img-preview {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .bulk-report-card .remove-img-btn {
+            position: absolute;
+            top: 4px;
+            right: 4px;
+            background: rgba(220, 53, 69, 0.9);
+            color: #fff;
+            border: none;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            font-size: 0.75rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all .2s ease;
+        }
+        .bulk-report-card .remove-img-btn:hover {
+            background: rgba(220, 53, 69, 1);
+            transform: scale(1.1);
+        }
+        .bulk-report-card .submit-btn {
+            font-size: 0.85rem;
+            padding: 10px 16px;
+            border-radius: 8px;
+            font-weight: 600;
+            margin-top: 0.5rem;
+        }
+        .bulk-report-card code {
+            font-size: 0.8rem;
+        }
+        .bulk-report-card .ip-group {
+            position: relative;
+        }
+        .bulk-report-card .bulk-country-icon {
+            position: absolute;
+            left: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            pointer-events: none;
+            z-index: 1;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .bulk-report-card .form-group > div[style*="position:relative"] {
+            position: relative;
+        }
+        .bulk-report-card .bulk-country-input {
+            padding-left: 35px !important;
+            font-weight: 600;
+            color: var(--text-color);
+        }
+        .bulk-report-card .bulk-ip-input {
+            padding-right: 32px !important;
+            direction: ltr;
+            text-align: left;
+        }
+        .bulk-report-card .clear-ip-btn {
+            position: absolute;
+            right: 8px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: var(--danger-color);
+            color: #fff;
+            border: none;
+            border-radius: 50%;
+            width: 22px;
+            height: 22px;
+            font-size: 1rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0.8;
+            transition: opacity .2s ease;
+            z-index: 2;
+        }
+        .bulk-report-card .clear-ip-btn:hover {
+            opacity: 1;
+        }
+        .bulk-report-card .clear-ip-btn.hidden {
+            display: none;
+        }
+    </style>
+    `;
+}
+
+function parseBulkTransferData(rawData) {
+    const reports = [];
+    const accountRegex = /\b\d{6,7}\b/g;
+    
+    const matches = [...rawData.matchAll(accountRegex)];
+    if (matches.length === 0) return [];
+
+    for (let i = 0; i < matches.length; i++) {
+        const currentMatch = matches[i];
+        const nextMatch = matches[i + 1];
+
+        const accountNumber = currentMatch[0];
+        const startIndex = currentMatch.index;
+        const endIndex = nextMatch ? nextMatch.index : rawData.length;
+        
+        const chunk = rawData.substring(startIndex, endIndex);
+
+        const emailRegex = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/;
+        const ipRegex = /(?:[0-9]{1,3}\.){3}[0-9]{1,3}/;
+
+        const emailMatch = chunk.match(emailRegex);
+        const ipMatch = chunk.match(ipRegex);
+
+        reports.push({
+            accountNumber: accountNumber,
+            email: emailMatch ? emailMatch[0] : '',
+            ip: ipMatch ? ipMatch[0] : ''
+        });
+    }
+    
+    return reports;
+}
+
+function renderBulkTransferReportForms(reportsData, container) {
+    container.innerHTML = '';
+    if (!reportsData || reportsData.length === 0) {
+        return;
+    }
+    
+    const formsFragment = document.createDocumentFragment();
+    reportsData.forEach((data, index) => {
+        const wrapper = document.createElement('div');
+        wrapper.className = 'bulk-report-card';
+        wrapper.setAttribute('data-index', String(index + 1));
+        wrapper.innerHTML = `
+            <div class="bulk-card-index-badge" title="ترتيب الحساب">${index + 1}</div>
+            <h3>الحساب: <code class="clickable-account" data-account="${data.accountNumber}" title="اضغط للنسخ" style="cursor: pointer; user-select: none;">${data.accountNumber}</code></h3>
+            <form class="bulk-transfer-form" data-account="${data.accountNumber}" id="bulk-transfer-form-${index}">
+                <!-- IP and Country in one row -->
+                <div class="form-row">
+                    <div class="form-group ip-group">
+                        <label>IP Address <span style="color: var(--danger-color);">*</span></label>
+                        <div style="position:relative;">
+                            <input type="text" name="ip" class="bulk-ip-input" placeholder="الصق الـ IP هنا لجلب ip country" autocomplete="off" value="${data.ip || ''}" required dir="ltr">
+                            <button type="button" class="clear-ip-btn hidden" title="مسح">&times;</button>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>ip country <span style="color: var(--danger-color);">*</span></label>
+                        <div style="position:relative;">
+                            <input type="text" name="country" class="bulk-country-input" readonly placeholder="سيتم تحديدها تلقائياً...">
+                            <i class="fas fa-globe bulk-country-icon"></i>
+                        </div>
+                        <input type="hidden" name="city" class="bulk-city-input">
+                    </div>
+                </div>
+                
+                <!-- Account Number and Email in one row -->
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>رقم الحساب <span style="color: var(--danger-color);">*</span></label>
+                        <input type="text" name="account-number" class="bulk-account-input" required value="${data.accountNumber}">
+                    </div>
+                    <div class="form-group">
+                        <label>البريد الإلكتروني <span style="color: var(--danger-color);">*</span></label>
+                        <input type="email" name="email" class="bulk-email-input" required value="${data.email || ''}">
+                    </div>
+                </div>
+                
+                <!-- Transfer Source in one row -->
+                <div class="form-row single-column">
+                    <div class="form-group full-width">
+                        <label>مصدر التحويل <span style="color: var(--danger-color);">*</span></label>
+                        <select name="transfer-source" class="bulk-transfer-source" required>
+                            <option value="">اختر مصدراً...</option>
+                            <option value="FXDD">FXDD</option>
+                            <option value="Skrill">Skrill</option>
+                            <option value="Neteller">Neteller</option>
+                            <option value="Perfect Money">Perfect Money</option>
+                            <option value="WebMoney">WebMoney</option>
+                            <option value="Bitcoin">Bitcoin</option>
+                            <option value="أخرى">أخرى</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <!-- Notes -->
+                <div class="form-group full-width">
+                    <div class="notes-field-wrapper">
+                        <label>الملاحظات <span style="color: var(--danger-color);">*</span></label>
+                        <textarea name="notes" class="clickable-notes" rows="3" placeholder="اكتب ملاحظاتك هنا...&#10;اضغط Enter للإرسال، أو Shift+Enter لسطر جديد." title="اضغط للنسخ" style="cursor: pointer;" required></textarea>
+                    </div>
+                </div>
+                
+                <!-- Upload Images -->
+                <div class="form-group full-width">
+                    <label>رفع صور (3 كحد أقصى)</label>
+                    <div class="upload-area" data-upload-area>الصق الصور هنا باستخدام (Win + V) أو اسحبها وأفلتها</div>
+                    <div class="image-previews" data-image-previews></div>
+                </div>
+                
+                <div class="form-actions">
+                    <button type="submit" class="submit-btn">إرسال التقرير</button>
+                </div>
+            </form>
+        `;
+        formsFragment.appendChild(wrapper);
+    });
+    container.appendChild(formsFragment);
+    initBulkTransferFormsBehavior(container);
+}
+
+const bulkTransferFormFilesMap = new Map();
+let selectedBulkTransferFormId = null;
+
+function initBulkTransferFormsBehavior(container) {
+    const forms = container.querySelectorAll('form.bulk-transfer-form');
+
+    // Copy account number on click
+    container.addEventListener('click', (e) => {
+        if (e.target.classList.contains('clickable-account')) {
+            const accountNum = e.target.getAttribute('data-account');
+            if (accountNum) {
+                navigator.clipboard.writeText(accountNum).then(() => {
+                    showToast(`تم نسخ رقم الحساب: ${accountNum}`);
+                }).catch(err => {
+                    console.error('Failed to copy account number:', err);
+                });
+            }
+            return;
+        }
+        
+        // Copy notes on click
+        if (e.target.classList.contains('clickable-notes') && e.target.value.trim()) {
+            const notesText = e.target.value.trim();
+            navigator.clipboard.writeText(notesText).then(() => {
+                showToast(`تم نسخ الملاحظات`);
+            }).catch(err => {
+                console.error('Failed to copy notes:', err);
+            });
+            return;
+        }
+    });
+
+    // Selection highlight logic
+    container.addEventListener('click', (e) => {
+        const card = e.target.closest('.bulk-report-card');
+        if (!card) return;
+        container.querySelectorAll('.bulk-report-card.selected').forEach(c => c.classList.remove('selected'));
+        card.classList.add('selected');
+        const formEl = card.querySelector('form.bulk-transfer-form');
+        selectedBulkTransferFormId = formEl ? formEl.id : null;
+    });
+    
+    // Enter to move to next field inside bulk forms (skip textareas and modifiers)
+    container.addEventListener('keydown', (e) => {
+        if (!e.target.closest('form.bulk-transfer-form')) return;
+        if (e.key !== 'Enter') return;
+        const target = e.target;
+        if (!target || target.tagName === 'TEXTAREA') return;
+        if (e.shiftKey || e.ctrlKey || e.altKey || e.metaKey) return;
+        e.preventDefault();
+        const currentForm = target.closest('form.bulk-transfer-form');
+        const focusables = Array.from(currentForm.querySelectorAll('input:not([type="hidden"]):not([disabled]), select:not([disabled]), textarea:not([disabled])'));
+        const idx = focusables.indexOf(target);
+        if (idx > -1) {
+            const next = focusables[idx + 1] || focusables[0];
+            next && next.focus();
+        }
+    });
+}
+
+    // Removed stray reportsData.forEach block (was outside any function)
+    // ...existing code...
+
+function handleFilesForBulkTransferForm(form, files, previews) {
+    if (!files || !files.length || !form || !previews) return;
+    const existing = bulkTransferFormFilesMap.get(form.id) || [];
+    const compressionOptions = { maxSizeMB: 1, maxWidthOrHeight: 1920, useWebWorker: true };
+    
+    [...files].forEach(async (file) => {
+        if (!file.type.startsWith('image/')) return;
+        if (existing.length >= 3) { showToast('الحد الأقصى 3 صور لكل تقرير.', true); return; }
+        if (existing.some(f => f.originalName === file.name && f.originalSize === file.size)) return;
+        
+        const previewContainer = document.createElement('div');
+        previewContainer.className = 'img-preview-container loading';
+        previewContainer.innerHTML = `<div class="img-preview-spinner"></div>`;
+        previews.appendChild(previewContainer);
+        
+        try {
+            const compressedFile = await imageCompression(file, compressionOptions);
+            const previewUrl = URL.createObjectURL(compressedFile);
+            const fileData = { file: compressedFile, originalName: file.name, originalSize: file.size, previewUrl };
+            bulkTransferFormFilesMap.set(form.id, [...bulkTransferFormFilesMap.get(form.id), fileData]);
+            previewContainer.classList.remove('loading');
+            previewContainer.innerHTML = `
+                <img src="${previewUrl}" class="img-preview">
+                <button type="button" class="remove-img-btn">&times;</button>
+            `;
+            previewContainer.querySelector('.remove-img-btn').onclick = () => {
+                previewContainer.remove();
+                URL.revokeObjectURL(previewUrl);
+                bulkTransferFormFilesMap.set(form.id, bulkTransferFormFilesMap.get(form.id).filter(f => f.previewUrl !== previewUrl));
+            };
+        } catch (err) {
+            previewContainer.remove();
+            showToast('فشل ضغط الصورة.', true);
+        }
+    });
+}
+
+async function sendAllBulkTransferReports(reportsData) {
+    try {
+        const forms = document.querySelectorAll('form.bulk-transfer-form');
+
+        // Validate all forms first
+        let invalidForms = [];
+        forms.forEach((form, index) => {
+            if (!form.checkValidity()) {
+                const accountNumber = form.querySelector('.bulk-account-input')?.value.trim() || `${index + 1}`;
+                invalidForms.push(accountNumber);
+            }
+        });
+
+        if (invalidForms.length > 0) {
+            showToast(`يرجى ملء جميع الحقول المطلوبة للحسابات: ${invalidForms.join(', ')}`, true);
+            return;
+        }
+
+        let successCount = 0;
+        let failCount = 0;
+
+        showToast(`جاري إرسال ${forms.length} تقرير...`, false);
+
+        for (let i = 0; i < forms.length; i++) {
+            const form = forms[i];
+            let accountNumber = 'غير معروف';
+            let reportText = '';
+
+            try {
+                const ip = form.querySelector('.bulk-ip-input')?.value.trim() || 'غير محدد';
+                const countryRaw = form.querySelector('.bulk-country-input')?.value.trim() || 'غير محدد';
+                const [country] = countryRaw.split(' | ');
+                const email = form.querySelector('.bulk-email-input')?.value.trim() || 'غير محدد';
+                accountNumber = form.querySelector('.bulk-account-input')?.value.trim() || 'غير محدد';
+                const transferSource = form.querySelector('.bulk-transfer-source')?.value || 'غير محدد';
+                const notes = form.querySelector('textarea[name="notes"]')?.value.trim() || '';
+
+                let body = `ip country: ${country}\nIP: ${ip}\nالإيميل: ${email}\nرقم الحساب: ${accountNumber}\nمصدر التحويل: ${transferSource}`;
+
+                if (notes) {
+                    body += `\n\nالملاحظات:\n${notes}`;
+                }
+
+                reportText = `تقرير تحويل الحسابات\n\n${body}\n\n#transfer_accounts`;
+
+                const formData = new FormData();
+                formData.append('report_text', reportText);
+                formData.append('type', 'bulk_transfer_accounts');
+
+                const files = bulkTransferFormFilesMap.get(form.id) || [];
+                files.forEach(f => formData.append('images', f.file, f.originalName));
+
+                await fetchWithAuth('/api/reports', { method: 'POST', body: formData });
+                successCount++;
+                console.log(`✅ Transfer report ${i + 1} sent successfully:`, accountNumber);
+
+                if (i < forms.length - 1) {
+                    await new Promise(resolve => setTimeout(resolve, 5000));
+                }
+
+            } catch (err) {
+                console.error(`❌ Failed to send transfer report ${i + 1} (${accountNumber}):`, err);
+                failCount++;
+            }
+        }
+
+        if (failCount === 0) {
+            showToast(`تم إرسال جميع التقارير بنجاح (${successCount} تقرير) ✅`);
+
+            setTimeout(() => {
+                const bulkDataEl = document.getElementById('bulk-transfer-data');
+                if (bulkDataEl) bulkDataEl.value = '';
+
+                const cardsContainer = document.getElementById('bulk-transfer-cards-container');
+                if (cardsContainer) cardsContainer.innerHTML = '';
+
+                const summaryEl = document.getElementById('bulk-transfer-summary');
+                const countEl = document.getElementById('bulk-transfer-count');
+                if (summaryEl && countEl) {
+                    countEl.textContent = '0';
+                    summaryEl.style.display = 'none';
+                }
+
+                bulkTransferFormFilesMap.clear();
+
+                const sendAllBtn = document.getElementById('send-all-bulk-transfer');
+                if (sendAllBtn) sendAllBtn.disabled = true;
+
+                showToast('تم تنظيف الصفحة، يمكنك البدء من جديد! 🔄', false);
+            }, 1500);
+        } else {
+            showToast(`تم إرسال ${successCount} تقرير بنجاح، فشل ${failCount} تقرير`, true);
+        }
+
+    } catch (error) {
+        console.error('Failed to send bulk transfer reports:', error);
+        showToast(error.message || 'فشل إرسال التقارير.', true);
+    }
 }
 

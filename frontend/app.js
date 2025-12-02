@@ -1246,6 +1246,19 @@ function initApp() {
 
     window.addEventListener('hashchange', navigate);
     
+    // Hide the reports dropdown after clicking any item to avoid lingering open state
+    const reportsDropdown = document.querySelector('.nav-links .dropdown');
+    if (reportsDropdown) {
+        reportsDropdown.addEventListener('click', (e) => {
+            const link = e.target.closest('.dropdown-content a');
+            if (!link) return;
+            // Add a temporary class to force-close hover dropdowns
+            document.body.classList.add('hide-dropdowns');
+            // Remove after a short delay; navigation will also occur
+            setTimeout(() => document.body.classList.remove('hide-dropdowns'), 400);
+        });
+    }
+    
     setupUIForUser();
     navigate();
 

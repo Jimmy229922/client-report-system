@@ -91,10 +91,28 @@
     box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
     z-index: 1;
     border-radius: 8px;
-    overflow: hidden;
+    /* Allow scrolling when content grows */
+    max-height: min(70vh, 520px);
+    overflow-y: auto;
+    overflow-x: hidden;
     border: 1px solid var(--border-color);
     animation: dropdown-fade-in 0.2s ease-out;
     padding: 0.5rem;
+}
+
+/* Smooth, subtle scrollbars for dropdowns */
+.dropdown-content::-webkit-scrollbar {
+    width: 8px;
+}
+.dropdown-content::-webkit-scrollbar-track {
+    background: transparent;
+}
+.dropdown-content::-webkit-scrollbar-thumb {
+    background: rgba(0,0,0,0.2);
+    border-radius: 8px;
+}
+.dropdown-content::-webkit-scrollbar-thumb:hover {
+    background: rgba(0,0,0,0.3);
 }
 
 .dropdown-content a {
@@ -125,6 +143,11 @@
 
 .dropdown:hover > .dropdown-content {
     display: block;
+}
+
+/* Force-close any hover-based dropdowns when body has .hide-dropdowns */
+.hide-dropdowns .dropdown:hover > .dropdown-content {
+    display: none !important;
 }
 
 .dropdown .nav-link i {

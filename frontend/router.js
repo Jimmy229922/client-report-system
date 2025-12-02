@@ -13,9 +13,11 @@ import { renderTemplatesPage } from './page-templates.js'; // Keep this line
 import { renderTransferRulesGuidePage } from './page-transfer-rules-guide.js';
 import { renderEvaluationsPage, initEvaluationsPage } from './page-evaluations.js';
 import { renderSystemUpdatePage, initSystemUpdatePage } from './page-system-update.js';
-import { createDepositReportPageHTML, createGeneralReportPageHTML, initCreateReportPage, cleanupReportPage, initBulkDepositReportPage, renderBulkDepositReportPage } from './page-report-form.js';
+import { createDepositReportPageHTML, createGeneralReportPageHTML, initCreateReportPage, cleanupReportPage, initBulkDepositReportPage, renderBulkDepositReportPage, renderBulkTransferReportPage, initBulkTransferReportPage } from './page-report-form.js';
 import { renderPayoutsPage, cleanupPayoutsPage } from './page-payouts.js';
 import { renderSamePriceSLPage } from './page-same-price-sl.js';
+import { renderAccountTransferPage, initAccountTransferPage } from './page-account-transfer.js';
+import { renderDepositReportPage, initDepositReportPage } from './page-deposit-report.js';
 import { showLoader, hideLoader, updateActiveLink, showConfirmModal } from './ui.js';
 
 let isFormDirty = false;
@@ -44,11 +46,12 @@ const routes = {
     '#notifications': renderNotificationsHistoryPage,
     '#evaluations': { render: renderEvaluationsPage, init: initEvaluationsPage },
     '#reports/suspicious': () => createGeneralReportPageHTML('Suspicious Report'),
-    '#reports/deposit': () => createDepositReportPageHTML('Deposit Report'),
+    '#reports/deposit': { render: renderDepositReportPage, init: initDepositReportPage },
     '#reports/deposit-percentage': { render: renderBulkDepositReportPage, init: initBulkDepositReportPage },
+    '#reports/bulk-transfer': { render: renderBulkTransferReportPage, init: initBulkTransferReportPage },
     '#reports/new-position': () => createGeneralReportPageHTML('New Position Report'),
     '#reports/credit-out': () => createGeneralReportPageHTML('Credit Out Report'),
-    '#reports/account-transfer': () => createGeneralReportPageHTML('تحويل الحسابات'),
+    '#reports/account-transfer': { render: renderAccountTransferPage, init: initAccountTransferPage },
     '#reports/payouts': renderPayoutsPage,
     '#reports/profit-watching': () => createGeneralReportPageHTML('PROFIT WATCHING'),
     '#reports/profit-summary': () => createGeneralReportPageHTML('Profit Summary'),
@@ -158,7 +161,10 @@ export async function navigate() {
             // Post-render initialization for specific pages
             if (path.startsWith('#reports/') &&
                 path !== '#reports/payouts' &&
-                path !== '#reports/deposit-percentage') {
+                path !== '#reports/deposit-percentage' &&
+                path !== '#reports/bulk-transfer' &&
+                path !== '#reports/account-transfer' &&
+                path !== '#reports/deposit') {
                 initCreateReportPage();
             }
 
