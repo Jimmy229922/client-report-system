@@ -3,6 +3,7 @@ import { showToast } from './ui.js';
 import { checkSpecialIdentifier } from './special-identifiers.js';
 import { refreshHomePageData } from './page-home.js';
 import { setFormDirty } from './router.js';
+import { openTemplatesWidget } from './templates-widget.js';
 import imageCompression from 'https://esm.sh/browser-image-compression@2.0.2';
 
 let uploadedFiles = [];
@@ -19,7 +20,7 @@ export function renderAccountTransferPage() {
             <form id="report-form">
                 <div class="form-group ip-group">
                     <label for="ip-input">IP Address <span style="color: var(--danger-color);">*</span></label>
-                    <input type="text" id="ip-input" name="ip" placeholder="الصق الـ IP هنا لجلب ip country" autocomplete="off" required>
+                    <input type="text" id="ip-input" name="ip" placeholder="IP Address" autocomplete="off" required>
                     <i id="country-icon" class="fas fa-globe"></i>
                     <button type="button" id="clear-ip-btn" class="clear-btn hidden" title="مسح">&times;</button>
                 </div>
@@ -41,12 +42,14 @@ export function renderAccountTransferPage() {
                 <div class="form-group">
                     <label for="transfer-source-select">مصدر التحويل <span style="color: var(--danger-color);">*</span></label>
                     <select id="transfer-source-select" name="transfer-source-select" required>
-                        <option value="" disabled selected>اختر مصدراً...</option>
+                        <option value="" disabled>اختر مصدراً...</option>
                         <option value="2 ACTIONS">2 ACTIONS</option>
                         <option value="PROFIT SUMMARY">PROFIT SUMMARY</option>
-                        <option value="suspicious traders">suspicious traders</option>
+                        <option value="suspicious traders" selected>suspicious traders</option>
                         <option value="NEW POSITIONS">NEW POSITIONS</option>
-                        <option value="other">أخرى:</option>
+                        <option value="Deals with No profit">Deals with No profit</option>
+                        <option value="Same Price">Same Price</option>
+                        <option value="other">Other:</option>
                     </select>
                 </div>
                 <div class="form-group" id="transfer-source-other-container" style="display: none;">
@@ -96,6 +99,13 @@ export function initAccountTransferPage() {
     const submitBtn = form.querySelector('.submit-btn');
     const copyBtn = form.querySelector('#copy-report-btn');
 
+    const focusAndScroll = (element) => {
+        if (element) {
+            element.focus();
+            element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+    };
+
     // IP Lookup Logic
     const handleIpLookup = async () => {
         if (isIpLookupInProgress) return;
@@ -117,6 +127,12 @@ export function initAccountTransferPage() {
             countryIcon.className = 'fas fa-exclamation-triangle';
             countryIcon.innerHTML = '';
             return;
+        }
+
+        if (ip !== extractedIp) {
+            ipInput.value = extractedIp;
+            const accountNumberInput = document.getElementById('account-number');
+            focusAndScroll(accountNumberInput);
         }
 
         countryInput.value = "جاري البحث...";
@@ -256,6 +272,134 @@ export function initAccountTransferPage() {
         };
     }
 
+    // Auto-Focus & Navigation Logic
+    const openDropdown = (select) => {
+        try {
+            // Simulate opening by expanding the size
+            select.size = select.options.length;
+            
+            const close = () => {
+                select.size = 1;
+                select.removeEventListener('change', close);
+                select.removeEventListener('blur', close);
+                select.removeEventListener('keydown', handleKey);
+                select.removeEventListener('click', handleClick);
+            };
+            
+            const handleKey = (e) => {
+                if (e.key === 'Enter' || e.key === 'Escape' || e.key === 'Tab') {
+                    close();
+                }
+            };
+            
+            const handleClick = () => {
+                 close();
+            };
+            
+            select.addEventListener('change', close);
+            select.addEventListener('blur', close);
+            select.addEventListener('keydown', handleKey);
+            select.addEventListener('click', handleClick);
+        } catch (e) {
+            console.error("Cannot expand select", e);
+        }
+    };
+
+    const goToNotesAndOpenTemplates = () => {
+        const notes = form.querySelector('#notes');
+        focusAndScroll(notes);
+        openTemplatesWidget(notes);
+    };
+
+    const setupEnterNavigation = (currentId, nextId, actionCallback) => {
+        const current = form.querySelector(`#${currentId}`);
+        const next = form.querySelector(`#${nextId}`);
+        if (current && next) {
+            current.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    focusAndScroll(next);
+                    if (actionCallback) actionCallback(next);
+                }
+            });
+        }
+    };
+
+    setupEnterNavigation('ip-input', 'account-number');
+    setupEnterNavigation('account-number', 'report-email');
+    setupEnterNavigation('report-email', 'transfer-source-select', openDropdown);
+    
+    // Navigation from Transfer Source
+    if (transferSourceSelect) {
+        // Handle Enter key on the select itself
+        transferSourceSelect.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                if (transferSourceSelect.value === 'other') {
+                    const otherInput = form.querySelector('#transfer-source-other');
+                    focusAndScroll(otherInput);
+                } else {
+                    goToNotesAndOpenTemplates();
+                }
+            }
+        });
+
+        // Handle selection change (mouse click or keyboard selection)
+        transferSourceSelect.addEventListener('change', () => {
+            if (transferSourceSelect.value === 'other') {
+                const otherInput = form.querySelector('#transfer-source-other');
+                focusAndScroll(otherInput);
+            } else {
+                goToNotesAndOpenTemplates();
+            }
+        });
+    }
+
+    // Navigation from Other Input
+    if (otherInput) {
+        otherInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                goToNotesAndOpenTemplates();
+            }
+        });
+    }
+
+    // Auto-focus on paste
+    if (ipInput) {
+        ipInput.addEventListener('paste', () => {
+            setTimeout(() => {
+                const ip = ipInput.value.trim();
+                const ipRegex = /(?:[0-9]{1,3}\.){3}[0-9]{1,3}/;
+                if (ipRegex.test(ip)) {
+                    const accNum = form.querySelector('#account-number');
+                    focusAndScroll(accNum);
+                }
+            }, 50);
+        });
+    }
+
+    const accountNumberInput = form.querySelector('#account-number');
+    if (accountNumberInput) {
+        accountNumberInput.addEventListener('paste', () => {
+            setTimeout(() => {
+                const emailInput = form.querySelector('#report-email');
+                focusAndScroll(emailInput);
+            }, 50);
+        });
+    }
+
+    const emailInput = form.querySelector('#report-email');
+    if (emailInput) {
+        emailInput.addEventListener('paste', () => {
+            setTimeout(() => {
+                const transferSelect = form.querySelector('#transfer-source-select');
+                focusAndScroll(transferSelect);
+                openDropdown(transferSelect);
+            }, 50);
+        });
+    }
+
     // Submit Logic
     form.addEventListener('submit', async (e) => {
         e.preventDefault();
@@ -269,13 +413,13 @@ export function initAccountTransferPage() {
 
         const payload = {
             reportText: `تقرير تحويل الحسابات\n\n` +
-                `IP Address: ${ipInput.value}\n` +
-                `Country: ${countryInput.value}\n` +
-                `Account Number: ${form.querySelector('#account-number').value}\n` +
-                `Email: ${form.querySelector('#report-email').value}\n` +
-                `Source: ${transferSourceSelect.value === 'other' ? otherInput.value : transferSourceSelect.value}\n` +
-                `Notes: ${form.querySelector('#notes').value}\n\n` +
-                `#account_transfer\n@ahmedelgma\n@batoulhassan`,
+                `ip country: ${countryInput.value}\n` +
+                `IP: ${ipInput.value}\n` +
+                `الإيميل: ${form.querySelector('#report-email').value}\n` +
+                `رقم الحساب: ${form.querySelector('#account-number').value}\n` +
+                `مصدر التحويل: ${transferSourceSelect.value === 'other' ? otherInput.value : transferSourceSelect.value}\n` +
+                `الملاحظات: ${form.querySelector('#notes').value}\n\n` +
+                `#account_transfer`,
             reportType: 'account_transfer'
         };
 
@@ -309,13 +453,13 @@ export function initAccountTransferPage() {
                 return;
             }
             const copyText = `تقرير تحويل الحسابات\n\n` +
-                `IP Address: ${ipInput.value}\n` +
-                `Country: ${countryInput.value}\n` +
-                `Account Number: ${form.querySelector('#account-number').value}\n` +
-                `Email: ${form.querySelector('#report-email').value}\n` +
-                `Source: ${transferSourceSelect.value === 'other' ? otherInput.value : transferSourceSelect.value}\n` +
-                `Notes: ${form.querySelector('#notes').value}\n\n` +
-                `#account_transfer\n@ahmedelgma\n@batoulhassan`;
+                `ip country: ${countryInput.value}\n` +
+                `IP: ${ipInput.value}\n` +
+                `الإيميل: ${form.querySelector('#report-email').value}\n` +
+                `رقم الحساب: ${form.querySelector('#account-number').value}\n` +
+                `مصدر التحويل: ${transferSourceSelect.value === 'other' ? otherInput.value : transferSourceSelect.value}\n` +
+                `الملاحظات: ${form.querySelector('#notes').value}\n\n` +
+                `#account_transfer`;
             
             await navigator.clipboard.writeText(copyText);
             showToast('تم النسخ!');

@@ -4,6 +4,7 @@ import { showToast, initTinyMCE } from './ui.js';
 import { checkSpecialIdentifier } from './special-identifiers.js';
 import { refreshHomePageData } from './page-home.js';
 import { setFormDirty } from './router.js';
+import { openTemplatesWidget } from './templates-widget.js';
  
 let uploadedFiles = [];
 let isApplyingPayoutsSanitizedValue = false;
@@ -3480,6 +3481,8 @@ function renderBulkTransferReportForms(reportsData, container) {
     }
     
     const formsFragment = document.createDocumentFragment();
+    const ipInputsToTrigger = [];
+
     reportsData.forEach((data, index) => {
         const wrapper = document.createElement('div');
         wrapper.className = 'bulk-report-card';
@@ -3524,14 +3527,14 @@ function renderBulkTransferReportForms(reportsData, container) {
                     <div class="form-group full-width">
                         <label>مصدر التحويل <span style="color: var(--danger-color);">*</span></label>
                         <select name="transfer-source" class="bulk-transfer-source" required>
-                            <option value="">اختر مصدراً...</option>
-                            <option value="FXDD">FXDD</option>
-                            <option value="Skrill">Skrill</option>
-                            <option value="Neteller">Neteller</option>
-                            <option value="Perfect Money">Perfect Money</option>
-                            <option value="WebMoney">WebMoney</option>
-                            <option value="Bitcoin">Bitcoin</option>
-                            <option value="أخرى">أخرى</option>
+                            <option value="" disabled>اختر مصدراً...</option>
+                            <option value="2 ACTIONS">2 ACTIONS</option>
+                            <option value="PROFIT SUMMARY">PROFIT SUMMARY</option>
+                            <option value="suspicious traders" selected>suspicious traders</option>
+                            <option value="NEW POSITIONS">NEW POSITIONS</option>
+                            <option value="Deals with No profit">Deals with No profit</option>
+                            <option value="Same Price">Same Price</option>
+                            <option value="other">Other:</option>
                         </select>
                     </div>
                 </div>
@@ -3556,10 +3559,77 @@ function renderBulkTransferReportForms(reportsData, container) {
                 </div>
             </form>
         `;
+        
+        // Attach individual debounce listener
+        const ipInput = wrapper.querySelector('.bulk-ip-input');
+        if (ipInput) {
+            ipInput.addEventListener('input', debounce(() => performBulkIpLookup(ipInput), 300));
+            if (data.ip) {
+                ipInputsToTrigger.push(ipInput);
+            }
+        }
+
         formsFragment.appendChild(wrapper);
     });
     container.appendChild(formsFragment);
     initBulkTransferFormsBehavior(container);
+
+    // Trigger initial lookups sequentially
+    (async () => {
+        for (const input of ipInputsToTrigger) {
+            await performBulkIpLookup(input);
+            await new Promise(r => setTimeout(r, 200)); // Small delay to be nice to API
+        }
+    })();
+}
+
+async function performBulkIpLookup(ipInput) {
+    const form = ipInput.closest('form');
+    const countryInput = form.querySelector('.bulk-country-input');
+    const countryIcon = form.querySelector('.bulk-country-icon');
+    const clearIpBtn = form.querySelector('.clear-ip-btn');
+
+    if (clearIpBtn) clearIpBtn.classList.toggle('hidden', ipInput.value.length === 0);
+
+    const ip = ipInput.value.trim();
+    if (!ip) {
+        countryInput.value = '';
+        countryIcon.className = 'fas fa-globe bulk-country-icon';
+        countryIcon.innerHTML = '';
+        return;
+    }
+
+    const ipRegex = /(?:[0-9]{1,3}\.){3}[0-9]{1,3}/;
+    const match = ip.match(ipRegex);
+    const extractedIp = match ? match[0] : null;
+
+    if (!extractedIp) {
+        countryIcon.className = 'fas fa-exclamation-triangle bulk-country-icon';
+        countryIcon.innerHTML = '';
+        return;
+    }
+
+    if (ip !== extractedIp) {
+        ipInput.value = extractedIp;
+    }
+
+    countryIcon.className = 'fas fa-spinner fa-spin bulk-country-icon';
+    countryIcon.innerHTML = '';
+
+    try {
+        const response = await fetch(`https://ipwhois.app/json/${extractedIp}`);
+        const data = await response.json();
+        if (data.success) {
+            countryInput.value = data.country;
+            countryIcon.className = 'fas fa-globe bulk-country-icon';
+            countryIcon.innerHTML = `<img src="${data.country_flag}" alt="${data.country_code}" style="width: 20px; height: auto;">`;
+        } else {
+            throw new Error(data.message || 'Invalid IP address');
+        }
+    } catch (error) {
+        countryIcon.className = 'fas fa-exclamation-triangle bulk-country-icon';
+        countryIcon.innerHTML = '';
+    }
 }
 
 const bulkTransferFormFilesMap = new Map();
@@ -3567,6 +3637,25 @@ let selectedBulkTransferFormId = null;
 
 function initBulkTransferFormsBehavior(container) {
     const forms = container.querySelectorAll('form.bulk-transfer-form');
+
+    // Clear IP Button Logic (Delegated)
+    container.addEventListener('click', (e) => {
+        if (e.target.classList.contains('clear-ip-btn')) {
+            const btn = e.target;
+            const form = btn.closest('form');
+            const ipInput = form.querySelector('.bulk-ip-input');
+            const countryInput = form.querySelector('.bulk-country-input');
+            const countryIcon = form.querySelector('.bulk-country-icon');
+
+            ipInput.value = '';
+            countryInput.value = '';
+            countryIcon.className = 'fas fa-globe bulk-country-icon';
+            countryIcon.innerHTML = '';
+            btn.classList.add('hidden');
+            ipInput.focus();
+            return;
+        }
+    });
 
     // Copy account number on click
     container.addEventListener('click', (e) => {
@@ -3582,14 +3671,9 @@ function initBulkTransferFormsBehavior(container) {
             return;
         }
         
-        // Copy notes on click
-        if (e.target.classList.contains('clickable-notes') && e.target.value.trim()) {
-            const notesText = e.target.value.trim();
-            navigator.clipboard.writeText(notesText).then(() => {
-                showToast(`تم نسخ الملاحظات`);
-            }).catch(err => {
-                console.error('Failed to copy notes:', err);
-            });
+        // Open templates on click for notes
+        if (e.target.classList.contains('clickable-notes')) {
+            openTemplatesWidget(e.target);
             return;
         }
     });
@@ -3699,10 +3783,10 @@ async function sendAllBulkTransferReports(reportsData) {
                 const transferSource = form.querySelector('.bulk-transfer-source')?.value || 'غير محدد';
                 const notes = form.querySelector('textarea[name="notes"]')?.value.trim() || '';
 
-                let body = `ip country: ${country}\nIP: ${ip}\nالإيميل: ${email}\nرقم الحساب: ${accountNumber}\nمصدر التحويل: ${transferSource}`;
+                let body = `ip country: ${country}\nIP: ${ip}\nEmail: ${email}\nAccount Number: ${accountNumber}\nSource: ${transferSource}`;
 
                 if (notes) {
-                    body += `\n\nالملاحظات:\n${notes}`;
+                    body += `\n\nNotes:\n${notes}`;
                 }
 
                 reportText = `تقرير تحويل الحسابات\n\n${body}\n\n#transfer_accounts`;
