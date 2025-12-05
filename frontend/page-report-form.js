@@ -4105,10 +4105,9 @@ async function sendAllBulkTransferReports(reportsData) {
             return;
         }
 
-        // Show warning message before sending
-        // Note: Individual Telegram warnings are sent automatically by backend for each report
         let successCount = 0;
         let failCount = 0;
+        const failedAccounts = []; // Track failed accounts for retry
 
         // Send warning message to Telegram before starting bulk send
         try {
@@ -4193,14 +4192,126 @@ async function sendAllBulkTransferReports(reportsData) {
                     } catch (retryErr) {
                         console.error(`❌ Retry failed for transfer report ${i + 1} (${accountNumber}):`, retryErr);
                         failCount++;
+                        failedAccounts.push(accountNumber);
                     }
                 } else {
                     failCount++;
+                    failedAccounts.push(accountNumber);
                 }
             }
         }
 
+        // If there are failed accounts, send notification and retry
+        if (failedAccounts.length > 0) {
+            console.log(`⚠️ ${failedAccounts.length} reports failed. Sending notification and retrying...`);
+            
+            // Send notification about failed accounts
+            try {
+                const failureMessage = `🚨 فشل إرسال ${failedAccounts.length} تقرير تحويل حسابات:\n${failedAccounts.join('\n')}\n\n🔄 جاري إعادة المحاولة...`;
+                const failureFormData = new FormData();
+                failureFormData.append('report_text', failureMessage);
+                failureFormData.append('type', 'bulk_transfer_accounts');
+                failureFormData.append('skip_archive', 'true');
+                
+                await fetchWithAuth('/api/reports', { method: 'POST', body: failureFormData });
+                console.log('✅ Failure notification sent to Telegram');
+            } catch (notifyError) {
+                console.warn('⚠️ Failed to send failure notification:', notifyError);
+            }
+            
+            // Wait before retrying
+            await new Promise(resolve => setTimeout(resolve, 10000));
+            
+            // Retry failed accounts
+            console.log('🔄 Starting retry for failed accounts...');
+            let retrySuccessCount = 0;
+            let retryFailCount = 0;
+            
+            for (let j = 0; j < failedAccounts.length; j++) {
+                const failedAccount = failedAccounts[j];
+                console.log(`🔄 Retrying account ${failedAccount} (${j + 1}/${failedAccounts.length})...`);
+                
+                try {
+                    // Find the form for this account
+                    const form = Array.from(forms).find(f => {
+                        const accountInput = f.querySelector('.bulk-account-input');
+                        return accountInput && accountInput.value.trim() === failedAccount;
+                    });
+                    
+                    if (!form) {
+                        console.error(`❌ Could not find form for account ${failedAccount}`);
+                        retryFailCount++;
+                        continue;
+                    }
+                    
+                    // Recreate the report data
+                    const ip = form.querySelector('.bulk-ip-input')?.value.trim() || 'غير محدد';
+                    const countryRaw = form.querySelector('.bulk-country-input')?.value.trim() || 'غير محدد';
+                    const [country] = countryRaw.split(' | ');
+                    const email = form.querySelector('.bulk-email-input')?.value.trim() || 'غير محدد';
+                    const transferSource = form.querySelector('.bulk-transfer-source')?.value || 'غير محدد';
+                    
+                    const notes = form.querySelector('textarea[name="notes"]')?.value.trim() || '';
+
+                    let body = `ip country: ${country}\nIP: ${ip}\nالإيميل: ${email}\nرقم الحساب: ${failedAccount}\nمصدر التحويل: ${transferSource}`;
+
+                    if (notes) {
+                        body += `\n\nالملاحظات:\n${notes}`;
+                    }
+
+                    const reportText = `تقرير تحويل الحسابات\n\n${body}\n\n#account_transfer`;
+
+                    const retryFormData = new FormData();
+                    retryFormData.append('report_text', reportText);
+                    retryFormData.append('type', 'bulk_transfer_accounts');
+
+                    const files = bulkTransferFormFilesMap.get(form.id) || [];
+                    files.forEach(f => retryFormData.append('images', f.file, f.originalName));
+
+                    await fetchWithAuth('/api/reports', { method: 'POST', body: retryFormData });
+                    retrySuccessCount++;
+                    console.log(`✅ Retry successful for account ${failedAccount}`);
+                    
+                    // Remove from failed list
+                    const index = failedAccounts.indexOf(failedAccount);
+                    if (index > -1) {
+                        failedAccounts.splice(index, 1);
+                        j--; // Adjust loop index since we removed an item
+                    }
+                    
+                    // Wait between retries
+                    if (j < failedAccounts.length - 1) {
+                        await new Promise(resolve => setTimeout(resolve, 15000));
+                    }
+                    
+                } catch (retryErr) {
+                    console.error(`❌ Retry failed for account ${failedAccount}:`, retryErr);
+                    retryFailCount++;
+                }
+            }
+            
+            // Update final counts
+            successCount += retrySuccessCount;
+            failCount = retryFailCount; // Only count final failures
+        }
+
         if (failCount === 0) {
+            // Send success notification to Telegram
+            try {
+                console.log(`🎉 All ${successCount} reports sent successfully. Sending success notification to Telegram...`);
+                const successMessage = `✅ تم إرسال جميع التقارير بنجاح!\n\n📊 إجمالي التقارير المرسلة: ${successCount}\n📅 التاريخ والوقت: ${new Date().toLocaleString('ar-SA')}\n\nنوع التقرير: تحويل الحسابات المجمعة`;
+                const successFormData = new FormData();
+                successFormData.append('report_text', successMessage);
+                successFormData.append('type', 'bulk_transfer_accounts');
+                successFormData.append('skip_archive', 'true'); // Don't save success notification in archive
+                
+                await fetchWithAuth('/api/reports', { method: 'POST', body: successFormData });
+                console.log('✅ Success notification sent to Telegram');
+            } catch (successNotifyError) {
+                console.warn('⚠️ Failed to send success notification:', successNotifyError);
+                // Don't show error to user as the main operation succeeded
+            }
+
             showToast(`تم إرسال جميع التقارير بنجاح (${successCount} تقرير) ✅`);
 
             setTimeout(() => {
