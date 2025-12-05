@@ -3935,26 +3935,13 @@ function initBulkTransferFormsBehavior(container) {
             }
             
             // Show warning message before sending individual report
-            // Note: Telegram warning is sent automatically by backend
+            // Note: No individual warnings - only bulk warnings from frontend
             const submitBtn = form.querySelector('.submit-btn');
             const originalText = submitBtn.innerText;
             submitBtn.disabled = true; 
             submitBtn.innerText = 'جاري الإرسال...';
             
             try {
-                // Send warning message to Telegram before sending the report
-                console.log('📢 Sending individual warning message');
-                const warningMessage = 'تنبيه: سيتم إرسال 1 تقرير تحويل حسابات الآن.';
-                const warningFormData = new FormData();
-                warningFormData.append('report_text', warningMessage);
-                warningFormData.append('type', 'bulk_transfer_accounts');
-                warningFormData.append('skip_archive', 'true'); // Don't save warning in archive
-                
-                await fetchWithAuth('/api/reports', { method: 'POST', body: warningFormData });
-                console.log('✅ Individual warning message sent to Telegram');
-                
-                // Small delay before sending the actual report
-                await new Promise(resolve => setTimeout(resolve, 1000));
             
                 const ip = form.querySelector('.bulk-ip-input')?.value.trim() || 'غير محدد';
                 const countryRaw = form.querySelector('.bulk-country-input')?.value.trim() || 'غير محدد';
@@ -4187,12 +4174,29 @@ async function sendAllBulkTransferReports(reportsData) {
                 console.log(`✅ Transfer report ${i + 1} sent successfully:`, accountNumber);
 
                 if (i < forms.length - 1) {
-                    await new Promise(resolve => setTimeout(resolve, 8000)); // Increased delay to prevent issues
+                    console.log(`⏱️ Waiting 15 seconds before next report (${i + 2}/${forms.length}) to prevent rate limiting...`);
+                    await new Promise(resolve => setTimeout(resolve, 15000)); // Increased delay to prevent Telegram rate limiting
                 }
 
             } catch (err) {
                 console.error(`❌ Failed to send transfer report ${i + 1} (${accountNumber}):`, err);
-                failCount++;
+                
+                // Check if it's a rate limiting error and retry once
+                if (err.message && err.message.includes('Too Many Requests')) {
+                    console.log(`🔄 Retrying report ${i + 1} after rate limit...`);
+                    try {
+                        // Wait longer before retry
+                        await new Promise(resolve => setTimeout(resolve, 30000));
+                        await fetchWithAuth('/api/reports', { method: 'POST', body: formData });
+                        successCount++;
+                        console.log(`✅ Transfer report ${i + 1} sent successfully on retry:`, accountNumber);
+                    } catch (retryErr) {
+                        console.error(`❌ Retry failed for transfer report ${i + 1} (${accountNumber}):`, retryErr);
+                        failCount++;
+                    }
+                } else {
+                    failCount++;
+                }
             }
         }
 
