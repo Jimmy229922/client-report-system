@@ -42,6 +42,56 @@ export function cleanupReportPage() {
     document.removeEventListener('specialIdentifiersUpdated', handleSpecialIdentifiersUpdate);
 }
 
+// Apply transfer rules based on country and transfer source
+async function applyTransferRules(form) {
+    try {
+        const countryInput = form.querySelector('#country');
+        const transferSourceSelect = form.querySelector('#transfer-source-select');
+        
+        if (!countryInput || !transferSourceSelect) {
+            return; // Not on a transfer form
+        }
+
+        const country = countryInput.value?.split(' | ')?.[0]?.trim() || '';
+        const transferSource = transferSourceSelect.value;
+
+        if (!country || !transferSource) {
+            return; // Not enough information to apply rules
+        }
+
+        // Fetch transfer rules from backend
+        const { data: rules } = await fetchWithAuth('/api/transfer-rules');
+        
+        if (!Array.isArray(rules) || rules.length === 0) {
+            return; // No rules found
+        }
+
+        // Find applicable rule based on conditions
+        const applicableRule = rules.find(rule => {
+            if (!rule.isEnabled) return false;
+            
+            // Check if rule conditions match the current form state
+            if (rule.conditions?.country && !rule.conditions.country.includes(country)) {
+                return false;
+            }
+            
+            if (rule.conditions?.source && !rule.conditions.source.includes(transferSource)) {
+                return false;
+            }
+            
+            return true;
+        });
+
+        if (applicableRule && applicableRule.toGroup) {
+            // Log the applied rule (in a real scenario, this might update UI or form state)
+            console.log(`Applied transfer rule: ${applicableRule.name} -> Group: ${applicableRule.toGroup}`);
+        }
+    } catch (err) {
+        console.warn('Error applying transfer rules:', err);
+        // Don't throw error as this is a secondary feature
+    }
+}
+
 export function createDepositReportPageHTML(reportType) {
     return `
     <div class="report-form-page-container">
@@ -393,6 +443,8 @@ function getReportPayload(reportType, form, options = {}) {
         'Employee Evaluation': { title: 'Employee Evaluation', hash: '#evaluations', type: 'evaluation' },
 
         'Same Price and SL': { title: 'Same Price and SL', hash: '#same_price_sl', type: 'same_price_sl' },
+
+        'Deals with No profit': { title: 'Deals with No profit', hash: '#deals_no_profit', type: 'deals_no_profit' },
 
     };
 
@@ -3067,6 +3119,34 @@ export function initBulkTransferReportPage() {
 
     bulkDataEl.addEventListener('input', debouncedProcess);
     bulkDataEl.addEventListener('paste', () => setTimeout(debouncedProcess, 60));
+
+    // Global paste handler for bulk transfer page
+    document.onpaste = (e) => {
+        console.log('📋 Global paste event triggered:', {
+            location: window.location.hash,
+            selectedFormId: selectedBulkTransferFormId,
+            hasFiles: e.clipboardData?.files?.length > 0
+        });
+
+        if (window.location.hash === '#reports/bulk-transfer' && selectedBulkTransferFormId) {
+            const form = document.getElementById(selectedBulkTransferFormId);
+            console.log('🎯 Found selected form:', form?.id);
+
+            if (form) {
+                const previews = form.querySelector('.image-previews');
+                console.log('🖼️ Found previews container:', !!previews);
+
+                handleFilesForBulkTransferForm(form, e.clipboardData.files, previews);
+            } else {
+                console.log('❌ Selected form not found in DOM');
+            }
+        } else {
+            console.log('❌ Paste conditions not met:', {
+                isBulkTransferPage: window.location.hash === '#reports/bulk-transfer',
+                hasSelectedForm: !!selectedBulkTransferFormId
+            });
+        }
+    };
 }
 
 function createBulkTransferReportPageHTML() {
@@ -3444,35 +3524,101 @@ function createBulkTransferReportPageHTML() {
 
 function parseBulkTransferData(rawData) {
     const reports = [];
-    const accountRegex = /\b\d{6,7}\b/g;
+    const lines = rawData.split('\n').map(l => l.trim()).filter(l => l);
     
-    const matches = [...rawData.matchAll(accountRegex)];
-    if (matches.length === 0) return [];
-
-    for (let i = 0; i < matches.length; i++) {
-        const currentMatch = matches[i];
-        const nextMatch = matches[i + 1];
-
-        const accountNumber = currentMatch[0];
-        const startIndex = currentMatch.index;
-        const endIndex = nextMatch ? nextMatch.index : rawData.length;
+    console.log('📝 Parsing bulk transfer data, total lines:', lines.length);
+    
+    const accountRegex = /\b\d{6,7}\b/;
+    const emailRegex = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/;
+    const ipRegex = /(?:[0-9]{1,3}\.){3}[0-9]{1,3}/;
+    
+    let currentAccount = null;
+    
+    for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+        const accountMatch = line.match(accountRegex);
+        const ipMatch = line.match(ipRegex);
+        const emailMatch = line.match(emailRegex);
         
-        const chunk = rawData.substring(startIndex, endIndex);
-
-        const emailRegex = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/;
-        const ipRegex = /(?:[0-9]{1,3}\.){3}[0-9]{1,3}/;
-
-        const emailMatch = chunk.match(emailRegex);
-        const ipMatch = chunk.match(ipRegex);
-
-        reports.push({
-            accountNumber: accountNumber,
-            email: emailMatch ? emailMatch[0] : '',
-            ip: ipMatch ? ipMatch[0] : ''
-        });
+        // If we find an account number, start processing it
+        if (accountMatch) {
+            // If we already have a current account being built, save it first
+            if (currentAccount && currentAccount.accountNumber) {
+                reports.push(currentAccount);
+            }
+            
+            // Start a new account
+            currentAccount = {
+                accountNumber: accountMatch[0],
+                email: '',
+                ip: ''
+            };
+            console.log('🆕 New account started:', accountMatch[0]);
+            
+            // Check if this same line has IP or email
+            if (ipMatch && !currentAccount.ip) {
+                currentAccount.ip = ipMatch[0];
+                console.log('🌐 IP added from same line:', ipMatch[0]);
+            }
+            if (emailMatch && !currentAccount.email) {
+                currentAccount.email = emailMatch[0];
+                console.log('📧 Email added from same line:', emailMatch[0]);
+            }
+        } else if (currentAccount) {
+            // Continue building current account from subsequent lines
+            if (ipMatch && !currentAccount.ip) {
+                currentAccount.ip = ipMatch[0];
+                console.log('🌐 IP added:', ipMatch[0]);
+            }
+            if (emailMatch && !currentAccount.email) {
+                currentAccount.email = emailMatch[0];
+                console.log('📧 Email added:', emailMatch[0]);
+            }
+        }
     }
     
-    return reports;
+    // Don't forget the last account
+    if (currentAccount && currentAccount.accountNumber) {
+        reports.push(currentAccount);
+    }
+    
+    // Remove duplicates based on account number, but merge information
+    const uniqueReports = [];
+    const accountMap = new Map();
+    
+    for (const report of reports) {
+        console.log(`🔍 Processing report for account ${report.accountNumber}: IP=${report.ip}, Email=${report.email}`);
+        
+        if (accountMap.has(report.accountNumber)) {
+            // Merge information from duplicate accounts
+            const existing = accountMap.get(report.accountNumber);
+            if (!existing.ip && report.ip) {
+                existing.ip = report.ip;
+                console.log(`🔄 Updated IP for account ${report.accountNumber}: ${report.ip}`);
+            }
+            if (!existing.email && report.email) {
+                existing.email = report.email;
+                console.log(`🔄 Updated email for account ${report.accountNumber}: ${report.email}`);
+            }
+        } else {
+            accountMap.set(report.accountNumber, { ...report });
+            console.log(`✅ Added new account: ${report.accountNumber} with IP: ${report.ip}`);
+        }
+    }
+    
+    // Convert map to array
+    for (const report of accountMap.values()) {
+        uniqueReports.push(report);
+    }
+    
+    console.log('✨ Final parsed reports:', uniqueReports);
+    console.log('📊 Report details:');
+    uniqueReports.forEach((report, index) => {
+        console.log(`  ${index + 1}. Account: ${report.accountNumber}, IP: ${report.ip || 'none'}, Email: ${report.email || 'none'}`);
+    });
+    
+    console.log('🔗 Total unique accounts processed:', uniqueReports.length);
+    return uniqueReports;
 }
 
 function renderBulkTransferReportForms(reportsData, container) {
@@ -3485,13 +3631,14 @@ function renderBulkTransferReportForms(reportsData, container) {
     const ipInputsToTrigger = [];
 
     reportsData.forEach((data, index) => {
-        const wrapper = document.createElement('div');
-        wrapper.className = 'bulk-report-card';
+        const wrapper = document.createElement('form');
+        wrapper.className = 'bulk-report-card bulk-transfer-form';
         wrapper.setAttribute('data-index', String(index + 1));
+        wrapper.setAttribute('data-account', data.accountNumber);
+        wrapper.id = `bulk-form-${index}`;
         wrapper.innerHTML = `
             <div class="bulk-card-index-badge" title="ترتيب الحساب">${index + 1}</div>
             <h3>الحساب: <code class="clickable-account" data-account="${data.accountNumber}" title="اضغط للنسخ" style="cursor: pointer; user-select: none;">${data.accountNumber}</code></h3>
-            <form class="bulk-transfer-form" data-account="${data.accountNumber}" id="bulk-transfer-form-${index}">
                 <!-- IP and Country in one row -->
                 <div class="form-row">
                     <div class="form-group ip-group">
@@ -3544,7 +3691,7 @@ function renderBulkTransferReportForms(reportsData, container) {
                 <div class="form-group full-width">
                     <div class="notes-field-wrapper">
                         <label>الملاحظات <span style="color: var(--danger-color);">*</span></label>
-                        <textarea name="notes" class="clickable-notes" rows="3" placeholder="اكتب ملاحظاتك هنا...&#10;اضغط Enter للإرسال، أو Shift+Enter لسطر جديد." title="اضغط للنسخ" style="cursor: pointer;" required></textarea>
+                        <textarea name="notes" class="clickable-notes bulk-notes-input" rows="3" placeholder="اكتب ملاحظاتك هنا...&#10;اضغط Enter للإرسال، أو Shift+Enter لسطر جديد." title="اضغط للنسخ" style="cursor: pointer;" required></textarea>
                     </div>
                 </div>
                 
@@ -3564,9 +3711,16 @@ function renderBulkTransferReportForms(reportsData, container) {
         // Attach individual debounce listener
         const ipInput = wrapper.querySelector('.bulk-ip-input');
         if (ipInput) {
+            // Set the IP value from parsed data
+            if (data.ip) {
+                ipInput.value = data.ip;
+                console.log(`🌐 IP set for account ${data.accountNumber}: ${data.ip}`);
+            }
             ipInput.addEventListener('input', debounce(() => performBulkIpLookup(ipInput), 300));
             if (data.ip) {
                 ipInputsToTrigger.push(ipInput);
+            } else {
+                console.log(`⚠️ No IP found for account ${data.accountNumber}`);
             }
         }
 
@@ -3577,15 +3731,26 @@ function renderBulkTransferReportForms(reportsData, container) {
 
     // Trigger initial lookups sequentially
     (async () => {
+        console.log(`🚀 Starting IP lookups for ${ipInputsToTrigger.length} accounts`);
+        console.log('IP inputs to trigger:', ipInputsToTrigger);
         for (const input of ipInputsToTrigger) {
+            console.log(`🔍 Looking up IP: ${input.value}, input element:`, input);
             await performBulkIpLookup(input);
             await new Promise(r => setTimeout(r, 200)); // Small delay to be nice to API
         }
+        console.log('✅ All IP lookups completed');
     })();
 }
 
 async function performBulkIpLookup(ipInput) {
     const form = ipInput.closest('form');
+    console.log('🔍 IP input element:', ipInput);
+    console.log('🔍 Closest form:', form);
+    if (!form) {
+        console.error('❌ Could not find form for IP input:', ipInput);
+        return;
+    }
+    
     const countryInput = form.querySelector('.bulk-country-input');
     const countryIcon = form.querySelector('.bulk-country-icon');
     const clearIpBtn = form.querySelector('.clear-ip-btn');
@@ -3661,6 +3826,20 @@ function initBulkTransferFormsBehavior(container) {
     // Copy account number on click
     container.addEventListener('click', (e) => {
         if (e.target.classList.contains('clickable-account')) {
+            console.log('👆 Clicked on account number:', e.target.getAttribute('data-account'));
+
+            // First, select the form/card
+            const card = e.target.closest('.bulk-report-card');
+            console.log('🎯 Found card:', card ? 'YES' : 'NO');
+
+            if (card) {
+                container.querySelectorAll('.bulk-report-card.selected').forEach(c => c.classList.remove('selected'));
+                card.classList.add('selected');
+                const formEl = card.querySelector('form.bulk-transfer-form');
+                selectedBulkTransferFormId = formEl ? formEl.id : null;
+                console.log('✅ Selected form ID:', selectedBulkTransferFormId);
+            }
+            
             const accountNum = e.target.getAttribute('data-account');
             if (accountNum) {
                 navigator.clipboard.writeText(accountNum).then(() => {
@@ -3671,23 +3850,36 @@ function initBulkTransferFormsBehavior(container) {
             }
             return;
         }
-        
         // Open templates on click for notes
         if (e.target.classList.contains('clickable-notes')) {
-            openTemplatesWidget(e.target);
+            if (!e.target.dataset.templatesOpened) {
+                openTemplatesWidget(e.target);
+                e.target.dataset.templatesOpened = 'true';
+            }
             return;
         }
     });
 
-    // Selection highlight logic
+    // Selection highlight logic - runs first to ensure form selection
     container.addEventListener('click', (e) => {
         const card = e.target.closest('.bulk-report-card');
         if (!card) return;
+        
+        console.log('🎨 Card selection triggered:', {
+            target: e.target.className,
+            cardFound: !!card,
+            currentSelectedId: selectedBulkTransferFormId
+        });
+        
         container.querySelectorAll('.bulk-report-card.selected').forEach(c => c.classList.remove('selected'));
         card.classList.add('selected');
-        const formEl = card.querySelector('form.bulk-transfer-form');
+        
+        // Find the form - it could be the target itself or inside the card
+        const formEl = e.target.closest('form.bulk-transfer-form') || card.querySelector('form.bulk-transfer-form');
         selectedBulkTransferFormId = formEl ? formEl.id : null;
-    });
+        
+        console.log('✅ New selected form ID:', selectedBulkTransferFormId, 'formEl found:', !!formEl);
+    }, true); // Use capture phase to run first
     
     // Enter to move to next field inside bulk forms (skip textareas and modifiers)
     container.addEventListener('keydown', (e) => {
@@ -3705,31 +3897,190 @@ function initBulkTransferFormsBehavior(container) {
             next && next.focus();
         }
     });
+
+    // File Upload Logic (Drag & Drop)
+    container.querySelectorAll('.upload-area').forEach(area => {
+        const form = area.closest('form');
+        if (!form) return;
+        const previews = form.querySelector('.image-previews');
+        if (!previews) return;
+
+        area.addEventListener('dragover', (e) => { e.preventDefault(); area.classList.add('dragover'); });
+        area.addEventListener('dragleave', () => area.classList.remove('dragover'));
+        area.addEventListener('drop', (e) => {
+            e.preventDefault();
+            area.classList.remove('dragover');
+            console.log('📥 Files dropped on upload area:', {
+                formId: form.id,
+                filesCount: e.dataTransfer.files.length,
+                selectedFormId: selectedBulkTransferFormId
+            });
+            handleFilesForBulkTransferForm(form, e.dataTransfer.files, previews);
+        });
+        
+        // Click to select form
+        area.addEventListener('click', () => {
+            const card = area.closest('.bulk-report-card');
+            if (card) card.click();
+        });
+    });
+
+    // Individual form submit logic
+    forms.forEach(form => {
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            if (!form.checkValidity()) { 
+                form.reportValidity(); 
+                return; 
+            }
+            
+            // Show warning message before sending individual report
+            // Note: Telegram warning is sent automatically by backend
+            const submitBtn = form.querySelector('.submit-btn');
+            const originalText = submitBtn.innerText;
+            submitBtn.disabled = true; 
+            submitBtn.innerText = 'جاري الإرسال...';
+            
+            try {
+                // Send warning message to Telegram before sending the report
+                console.log('📢 Sending individual warning message');
+                const warningMessage = 'تنبيه: سيتم إرسال 1 تقرير تحويل حسابات الآن.';
+                const warningFormData = new FormData();
+                warningFormData.append('report_text', warningMessage);
+                warningFormData.append('type', 'bulk_transfer_accounts');
+                warningFormData.append('skip_archive', 'true'); // Don't save warning in archive
+                
+                await fetchWithAuth('/api/reports', { method: 'POST', body: warningFormData });
+                console.log('✅ Individual warning message sent to Telegram');
+                
+                // Small delay before sending the actual report
+                await new Promise(resolve => setTimeout(resolve, 1000));
+            
+                const ip = form.querySelector('.bulk-ip-input')?.value.trim() || 'غير محدد';
+                const countryRaw = form.querySelector('.bulk-country-input')?.value.trim() || 'غير محدد';
+                const [country] = countryRaw.split(' | ');
+                const email = form.querySelector('.bulk-email-input')?.value.trim() || 'غير محدد';
+                const accountNumber = form.querySelector('.bulk-account-input')?.value.trim() || 'غير محدد';
+                const transferSource = form.querySelector('.bulk-transfer-source')?.value || 'غير محدد';
+                
+                const notes = form.querySelector('textarea[name="notes"]')?.value.trim() || '';
+
+                let body = `ip country: ${country}\nIP: ${ip}\nالإيميل: ${email}\nرقم الحساب: ${accountNumber}\nمصدر التحويل: ${transferSource}`;
+
+                if (notes) {
+                    body += `\n\nالملاحظات:\n${notes}`;
+                }
+
+                const reportText = `تقرير تحويل الحسابات\n\n${body}\n\n#account_transfer`;
+
+                const formData = new FormData();
+                formData.append('report_text', reportText);
+                formData.append('type', 'bulk_transfer_accounts');
+
+                const files = bulkTransferFormFilesMap.get(form.id) || [];
+                files.forEach(f => formData.append('images', f.file, f.originalName));
+
+                console.log('📤 Sending individual bulk transfer report:', {
+                    accountNumber,
+                    reportText: reportText.substring(0, 100) + '...',
+                    imageCount: files.length,
+                    skipArchive: false, // Individual reports should be archived
+                    willBeArchived: true // Explicit confirmation
+                });
+
+                await fetchWithAuth('/api/reports', { method: 'POST', body: formData });
+                
+                showToast(`تم إرسال تقرير الحساب ${accountNumber} بنجاح ✅`);
+                submitBtn.innerText = 'تم الإرسال';
+                
+                // Remove this form from the page after successful send
+                setTimeout(() => {
+                    const card = form.closest('.bulk-report-card');
+                    if (card) {
+                        card.remove();
+                        // Update count
+                        const countEl = document.getElementById('bulk-transfer-count');
+                        if (countEl) {
+                            const currentCount = parseInt(countEl.textContent) || 0;
+                            countEl.textContent = Math.max(0, currentCount - 1);
+                        }
+                    }
+                }, 1500);
+                
+            } catch (err) {
+                console.error('Failed to send individual transfer report:', err);
+                showToast(err.message || 'فشل إرسال التقرير.', true);
+                submitBtn.disabled = false; 
+                submitBtn.innerText = originalText;
+            }
+        });
+    });
 }
 
     // Removed stray reportsData.forEach block (was outside any function)
     // ...existing code...
 
 function handleFilesForBulkTransferForm(form, files, previews) {
-    if (!files || !files.length || !form || !previews) return;
-    const existing = bulkTransferFormFilesMap.get(form.id) || [];
+    console.log('🔍 handleFilesForBulkTransferForm called:', {
+        formId: form?.id,
+        filesCount: files?.length,
+        previews: !!previews,
+        selectedFormId: selectedBulkTransferFormId
+    });
+
+    if (!files || !files.length || !form || !previews) {
+        console.log('❌ handleFilesForBulkTransferForm: Missing required parameters');
+        return;
+    }
+    
+    // Initialize if not exists
+    if (!bulkTransferFormFilesMap.has(form.id)) {
+        bulkTransferFormFilesMap.set(form.id, []);
+    }
+
     const compressionOptions = { maxSizeMB: 1, maxWidthOrHeight: 1920, useWebWorker: true };
     
     [...files].forEach(async (file) => {
         if (!file.type.startsWith('image/')) return;
-        if (existing.length >= 3) { showToast('الحد الأقصى 3 صور لكل تقرير.', true); return; }
-        if (existing.some(f => f.originalName === file.name && f.originalSize === file.size)) return;
+        
+        // Check current count dynamically
+        const currentFiles = bulkTransferFormFilesMap.get(form.id) || [];
+        if (currentFiles.length >= 3) { 
+            showToast('الحد الأقصى 3 صور لكل تقرير.', true); 
+            return; 
+        }
+        
+        if (currentFiles.some(f => f.originalName === file.name && f.originalSize === file.size)) return;
         
         const previewContainer = document.createElement('div');
         previewContainer.className = 'img-preview-container loading';
         previewContainer.innerHTML = `<div class="img-preview-spinner"></div>`;
         previews.appendChild(previewContainer);
         
+        let fileToUpload = file;
         try {
-            const compressedFile = await imageCompression(file, compressionOptions);
-            const previewUrl = URL.createObjectURL(compressedFile);
-            const fileData = { file: compressedFile, originalName: file.name, originalSize: file.size, previewUrl };
-            bulkTransferFormFilesMap.set(form.id, [...bulkTransferFormFilesMap.get(form.id), fileData]);
+            try {
+                fileToUpload = await imageCompression(file, compressionOptions);
+            } catch (compressionErr) {
+                console.warn('Image compression failed, using original file:', compressionErr);
+                fileToUpload = file;
+            }
+
+            const previewUrl = URL.createObjectURL(fileToUpload);
+            const fileData = { file: fileToUpload, originalName: file.name, originalSize: file.size, previewUrl };
+            
+            // Re-fetch to be safe with concurrency
+            const updatedFiles = bulkTransferFormFilesMap.get(form.id) || [];
+            if (updatedFiles.length >= 3) {
+                 // Race condition hit, remove this one
+                 previewContainer.remove();
+                 URL.revokeObjectURL(previewUrl);
+                 showToast('الحد الأقصى 3 صور لكل تقرير.', true);
+                 return;
+            }
+
+            bulkTransferFormFilesMap.set(form.id, [...updatedFiles, fileData]);
+            
             previewContainer.classList.remove('loading');
             previewContainer.innerHTML = `
                 <img src="${previewUrl}" class="img-preview">
@@ -3738,11 +4089,13 @@ function handleFilesForBulkTransferForm(form, files, previews) {
             previewContainer.querySelector('.remove-img-btn').onclick = () => {
                 previewContainer.remove();
                 URL.revokeObjectURL(previewUrl);
-                bulkTransferFormFilesMap.set(form.id, bulkTransferFormFilesMap.get(form.id).filter(f => f.previewUrl !== previewUrl));
+                const current = bulkTransferFormFilesMap.get(form.id) || [];
+                bulkTransferFormFilesMap.set(form.id, current.filter(f => f.previewUrl !== previewUrl));
             };
         } catch (err) {
+            console.error('Error processing file:', err);
             previewContainer.remove();
-            showToast('فشل ضغط الصورة.', true);
+            showToast('فشل معالجة الصورة.', true);
         }
     });
 }
@@ -3765,8 +4118,29 @@ async function sendAllBulkTransferReports(reportsData) {
             return;
         }
 
+        // Show warning message before sending
+        // Note: Individual Telegram warnings are sent automatically by backend for each report
         let successCount = 0;
         let failCount = 0;
+
+        // Send warning message to Telegram before starting bulk send
+        try {
+            console.log(`📢 Sending bulk warning message for ${forms.length} reports`);
+            const warningMessage = `تنبيه: سيتم إرسال ${forms.length} تقرير تحويل حسابات الآن.`;
+            const warningFormData = new FormData();
+            warningFormData.append('report_text', warningMessage);
+            warningFormData.append('type', 'bulk_transfer_accounts');
+            warningFormData.append('skip_archive', 'true'); // Don't save warning in archive
+            
+            await fetchWithAuth('/api/reports', { method: 'POST', body: warningFormData });
+            console.log('✅ Bulk warning message sent to Telegram');
+            
+            // Small delay before starting to send reports
+            await new Promise(resolve => setTimeout(resolve, 2000));
+        } catch (warningError) {
+            console.warn('⚠️ Failed to send warning message:', warningError);
+            // Continue with sending reports even if warning fails
+        }
 
         showToast(`جاري إرسال ${forms.length} تقرير...`, false);
 
@@ -3782,15 +4156,16 @@ async function sendAllBulkTransferReports(reportsData) {
                 const email = form.querySelector('.bulk-email-input')?.value.trim() || 'غير محدد';
                 accountNumber = form.querySelector('.bulk-account-input')?.value.trim() || 'غير محدد';
                 const transferSource = form.querySelector('.bulk-transfer-source')?.value || 'غير محدد';
+                
                 const notes = form.querySelector('textarea[name="notes"]')?.value.trim() || '';
 
-                let body = `ip country: ${country}\nIP: ${ip}\nEmail: ${email}\nAccount Number: ${accountNumber}\nSource: ${transferSource}`;
+                let body = `ip country: ${country}\nIP: ${ip}\nالإيميل: ${email}\nرقم الحساب: ${accountNumber}\nمصدر التحويل: ${transferSource}`;
 
                 if (notes) {
-                    body += `\n\nNotes:\n${notes}`;
+                    body += `\n\nالملاحظات:\n${notes}`;
                 }
 
-                reportText = `تقرير تحويل الحسابات\n\n${body}\n\n#transfer_accounts`;
+                reportText = `تقرير تحويل الحسابات\n\n${body}\n\n#account_transfer`;
 
                 const formData = new FormData();
                 formData.append('report_text', reportText);
@@ -3799,12 +4174,20 @@ async function sendAllBulkTransferReports(reportsData) {
                 const files = bulkTransferFormFilesMap.get(form.id) || [];
                 files.forEach(f => formData.append('images', f.file, f.originalName));
 
+                console.log(`📤 Sending bulk transfer report ${i + 1}/${forms.length}:`, {
+                    accountNumber,
+                    reportText: reportText.substring(0, 100) + '...',
+                    imageCount: files.length,
+                    skipArchive: false, // Bulk reports should be archived individually
+                    willBeArchived: true // Explicit confirmation
+                });
+
                 await fetchWithAuth('/api/reports', { method: 'POST', body: formData });
                 successCount++;
                 console.log(`✅ Transfer report ${i + 1} sent successfully:`, accountNumber);
 
                 if (i < forms.length - 1) {
-                    await new Promise(resolve => setTimeout(resolve, 5000));
+                    await new Promise(resolve => setTimeout(resolve, 8000)); // Increased delay to prevent issues
                 }
 
             } catch (err) {

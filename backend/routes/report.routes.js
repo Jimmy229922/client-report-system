@@ -14,6 +14,13 @@ module.exports = (verifyToken, verifyAdmin, handleUploadErrors, upload, telegram
         const userId = req.userId;
         const { report_text, type, skip_archive } = req.body;
 
+        console.log('[POST /api/reports] Request received');
+        console.log('[POST /api/reports] userId:', userId);
+        console.log('[POST /api/reports] type:', type);
+        console.log('[POST /api/reports] skip_archive:', skip_archive);
+        console.log('[POST /api/reports] report_text length:', report_text?.length);
+        console.log('[POST /api/reports] files count:', req.files?.length || 0);
+
         if (!report_text || !type) {
             return res.status(400).json({ message: 'يرجى ملء جميع الحقول المطلوبة' });
         }
@@ -38,31 +45,48 @@ module.exports = (verifyToken, verifyAdmin, handleUploadErrors, upload, telegram
                 }
             }
 
+            console.log('[POST /api/reports] About to create report');
             let newReport = null;
             if (skip_archive !== 'true') {
+                console.log('[POST /api/reports] Creating report in archive...');
                 newReport = await Report.create({ report_text, user_id: userId, type, image_urls: imageUrls });
+                console.log('[POST /api/reports] Report created:', newReport._id);
                 await logActivity(req, req.userId, 'create_report', { reportId: newReport._id, type: newReport.type });
                 sendEventToAll('new_report', { reportId: newReport._id, type: newReport.type });
+            } else {
+                console.log('[POST /api/reports] Skipping archive (skip_archive=true)');
             }
 
+            console.log('[POST /api/reports] About to send Telegram notification');
             // Send Telegram notification asynchronously to avoid blocking the response
             (async () => {
                 try {
                     const fullCaption = report_text;
+                    // Don't use HTML parse_mode for bulk_transfer_accounts as it may contain special characters
+                    const parseMode = type === 'bulk_transfer_accounts' ? undefined : 'HTML';
+                    const captionOptions = parseMode ? { parse_mode: parseMode } : {};
+                    
+                    console.log('[POST /api/reports] Sending to Telegram:', {
+                        type,
+                        hasImages: req.files?.length > 0,
+                        skipArchive: skip_archive,
+                        messagePreview: fullCaption.substring(0, 50) + '...'
+                    });
+                    
                     if (req.files && req.files.length > 0) {
                         if (req.files.length === 1) {
-                            await telegramHelper.sendPhoto(config.CHAT_ID, { source: req.files[0].buffer }, { caption: fullCaption, parse_mode: 'HTML' });
+                            await telegramHelper.sendPhoto(config.CHAT_ID, { source: req.files[0].buffer }, { caption: fullCaption, ...captionOptions });
                         } else {
                             const mediaGroup = req.files.map((file, index) => ({
                                 type: 'photo',
                                 media: { source: file.buffer },
                                 caption: index === 0 ? fullCaption : '',
-                                parse_mode: 'HTML'
+                                ...captionOptions
                             }));
                             await telegramHelper.sendMediaGroup(config.CHAT_ID, mediaGroup);
                         }
                     } else {
-                        await telegramHelper.sendMessage(config.CHAT_ID, fullCaption, { parse_mode: 'HTML' });
+                        await telegramHelper.sendMessage(config.CHAT_ID, fullCaption, captionOptions);
                     }
                     
                     if (newReport && newReport.telegram_failed) {
@@ -102,7 +126,14 @@ module.exports = (verifyToken, verifyAdmin, handleUploadErrors, upload, telegram
 
             res.status(201).json({ message: 'تم حفظ التقرير وإرساله بنجاح.', report: newReport });
         } catch (error) {
-            console.error('[Reports] Error:', error.message);
+            console.error('═══════════════════════════════════════════════════');
+            console.error('[Reports] Error caught in main catch block');
+            console.error('[Reports] Error Type:', error.name);
+            console.error('[Reports] Error Message:', error.message);
+            console.error('[Reports] Error Code:', error.code);
+            console.error('[Reports] Error Stack:', error.stack);
+            console.error('[Reports] Full Error:', JSON.stringify(error, null, 2));
+            console.error('═══════════════════════════════════════════════════');
             res.status(500).json({ message: 'حدث خطأ أثناء إرسال التقرير. يرجى المحاولة لاحقًا.' });
         }
     });
