@@ -2,6 +2,9 @@
 title MongoDB Launcher
 color 0B
 
+REM Store the script's directory
+set "SCRIPT_DIR=%~dp0"
+
 REM Determine the default data path and ensure it exists.
 set "MONGO_DATA_PATH=C:\data\db"
 if not exist "%MONGO_DATA_PATH%" (
@@ -20,26 +23,27 @@ if %ERRORLEVEL% EQU 0 (
 )
 
 REM Verify mongod is available on PATH, else try common install path.
-set "MONGOD_EXE=mongod"
+set "MONGOD_EXE="
 where mongod >nul 2>&1
-if errorlevel 1 (
+if %ERRORLEVEL% EQU 0 (
+    set "MONGOD_EXE=mongod"
+) else (
+    REM Try to find MongoDB in Program Files
     for /f "delims=" %%D in ('dir /b /ad "C:\Program Files\MongoDB\Server" 2^>nul') do (
         if exist "C:\Program Files\MongoDB\Server\%%D\bin\mongod.exe" (
             set "MONGOD_EXE=C:\Program Files\MongoDB\Server\%%D\bin\mongod.exe"
         )
     )
 )
-if "%MONGOD_EXE%"=="mongod" (
-    where mongod >nul 2>&1
-    if errorlevel 1 (
-        echo [ERROR] 'mongod' not found. Please install MongoDB Server or add it to PATH.
-        echo Download: https://www.mongodb.com/try/download/community
-        pause
-        exit /b 1
-    )
+
+if not defined MONGOD_EXE (
+    echo [ERROR] 'mongod' not found. Please install MongoDB Server or add it to PATH.
+    echo Download: https://www.mongodb.com/try/download/community
+    pause
+    exit /b 1
 )
 
 REM Launch MongoDB in a separate window so the service stays alive.
 echo [INFO] Starting MongoDB with dbpath "%MONGO_DATA_PATH%"...
-start "MongoDB" cmd /k "%MONGOD_EXE% --dbpath \"%MONGO_DATA_PATH%\" --bind_ip 127.0.0.1"
+start "MongoDB" cmd /k ""%MONGOD_EXE%" --dbpath "%MONGO_DATA_PATH%" --bind_ip 127.0.0.1"
 exit /b 0

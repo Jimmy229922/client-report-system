@@ -2,6 +2,10 @@
 title Client Report System Server
 color 0A
 
+REM Store the script's directory (handles paths with spaces)
+set "SCRIPT_DIR=%~dp0"
+cd /d "%SCRIPT_DIR%"
+
 echo ===================================================
 echo      Starting INZO LLC Report System Server...
 echo ===================================================
@@ -18,8 +22,8 @@ IF %ERRORLEVEL% NEQ 0 (
 
 REM Check MongoDB before navigating to backend
 echo [INFO] Checking MongoDB connection...
-if exist "check-mongodb.bat" (
-    call check-mongodb.bat
+if exist "%SCRIPT_DIR%check-mongodb.bat" (
+    call "%SCRIPT_DIR%check-mongodb.bat"
     if errorlevel 1 (
         echo.
         echo [ERROR] MongoDB check failed. Cannot start server.
@@ -33,11 +37,11 @@ if exist "check-mongodb.bat" (
 )
 
 REM Navigate to the backend directory
-cd backend
+cd /d "%SCRIPT_DIR%backend"
 if not exist "server.js" (
     echo [ERROR] Cannot find backend folder or server.js
     echo [ERROR] Make sure you're running this from the project root folder.
-    cd ..
+    cd /d "%SCRIPT_DIR%"
     pause
     exit /b 1
 )
@@ -48,7 +52,7 @@ IF NOT EXIST "node_modules" (
     call npm install
     if errorlevel 1 (
         echo [ERROR] Failed to install dependencies.
-        cd ..
+        cd /d "%SCRIPT_DIR%"
         pause
         exit /b 1
     )
@@ -60,7 +64,7 @@ IF NOT EXIST "config.json" (
     node setup.js
     if errorlevel 1 (
         echo [ERROR] Setup failed.
-        cd ..
+        cd /d "%SCRIPT_DIR%"
         pause
         exit /b 1
     )
@@ -100,10 +104,6 @@ node server.js
 REM The script will only reach here if the server is stopped (e.g., with Ctrl+C)
 echo.
 echo --- The server has stopped. ---
-cd ..
+cd /d "%SCRIPT_DIR%"
 pause
 exit /b 0
-
-echo.
-echo --- The server has stopped. ---
-pause

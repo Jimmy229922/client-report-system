@@ -2,6 +2,9 @@
 title MongoDB Health Check
 color 0B
 
+REM Store the script's directory (with proper quoting for paths with spaces)
+set "SCRIPT_DIR=%~dp0"
+
 set "TASK_NAME=mongod.exe"
 
 REM Helper to verify whether mongod.exe is running.
@@ -12,7 +15,7 @@ if %ERRORLEVEL% EQU 0 (
 )
 
 echo [INFO] MongoDB process is not running. Attempting to start it.
-call "%~dp0start-mongodb.bat" >nul 2>&1
+call "%SCRIPT_DIR%start-mongodb.bat" >nul 2>&1
 timeout /t 3 /nobreak >nul
 
 tasklist /FI "IMAGENAME eq %TASK_NAME%" 2>nul | find /I "%TASK_NAME%" >nul

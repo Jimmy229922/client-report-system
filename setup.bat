@@ -2,16 +2,19 @@
 title INZO System - First Time Setup
 color 0B
 
+REM Store the script's directory (handles paths with spaces)
 set "PROJECT_ROOT=%~dp0"
+cd /d "%PROJECT_ROOT%"
+
 echo --- INZO System Setup ---
 echo This script will install dependencies, configure the backend, and launch MongoDB + the server.
 echo.
 
 echo [1/4] Installing required packages...
-pushd "%PROJECT_ROOT%backend"
+cd /d "%PROJECT_ROOT%backend"
 call npm install
 if errorlevel 1 (
-    popd
+    cd /d "%PROJECT_ROOT%"
     echo [ERROR] Failed to install backend dependencies.
     goto error
 )
@@ -22,7 +25,7 @@ echo.
 echo [2/4] Generating configuration from .env file...
 node setup.js
 if errorlevel 1 (
-    popd
+    cd /d "%PROJECT_ROOT%"
     echo [ERROR] Failed to generate configuration.
     goto error
 )
@@ -34,14 +37,14 @@ if not exist "config.json" (
 )
 
 if not exist "config.json" (
-    popd
+    cd /d "%PROJECT_ROOT%"
     echo.
     echo [WARNING] backend/config.json was not generated.
     echo - Open backend\.env and fill required values (BOT_TOKEN, CHAT_ID, MONGODB_URI, ADMIN_EMAIL, ADMIN_PASSWORD)
     echo - Then re-run setup.bat or run start-server.bat
     goto error
 )
-popd
+cd /d "%PROJECT_ROOT%"
 echo.
 echo [2/4] Configuration generated successfully.
 echo.
@@ -57,7 +60,7 @@ echo [3/4] MongoDB launch requested.
 echo.
 
 echo [4/4] Launching the server window...
-start "" "%PROJECT_ROOT%start-server.bat"
+start "" cmd /c ""%PROJECT_ROOT%start-server.bat""
 echo.
 echo --- Setup process finished. ---
 echo MongoDB window and server window have been opened. Keep them running while you use the app.
