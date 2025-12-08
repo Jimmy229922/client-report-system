@@ -41,6 +41,7 @@ export function renderDataFilterPage() {
                     <h2><i class="fas fa-stream"></i> النتائج الفريدة (<span id="result-count">0</span>)</h2>
                     <div id="result-actions" class="result-actions">
                         <button id="copy-accounts-only-btn" class="copy-btn btn-sm"><i class="fas fa-user-tag"></i> نسخ الحسابات فقط</button>
+                        <button id="copy-new-accounts-btn" class="copy-btn btn-sm" style="background-color: #3498db;"><i class="fas fa-plus-circle"></i> نسخ حسابات New فقط</button>
                         <button id="export-excel-btn" class="submit-btn btn-sm" style="background-color: var(--success-color);"><i class="fas fa-file-excel"></i> تصدير إلى Excel</button>
                     </div>
                 </div>
@@ -278,6 +279,18 @@ export function renderDataFilterPage() {
         );
     };
 
+    const handleCopyNewAccountsOnly = () => {
+        const newAccounts = currentResults.filter(item => item.status && item.status.toLowerCase() === 'new');
+        if (newAccounts.length === 0) {
+            showToast('لا توجد حسابات بحالة New.', true);
+            return;
+        }
+        const accountsText = newAccounts.map(item => item.account).join('\n');
+        navigator.clipboard.writeText(accountsText).then(() => 
+            showToast(`تم نسخ ${newAccounts.length} حساب بحالة New بنجاح.`)
+        );
+    };
+
     const handleExportExcel = () => {
         if (currentResults.length === 0) {
             showToast('لا توجد بيانات لتصديرها.', true);
@@ -427,6 +440,7 @@ export function renderDataFilterPage() {
     const resultActionsContainer = document.getElementById('result-actions');
     resultActionsContainer.addEventListener('click', (e) => {
         if (e.target.closest('#copy-accounts-only-btn')) handleCopyAccountsOnly();
+        if (e.target.closest('#copy-new-accounts-btn')) handleCopyNewAccountsOnly();
         if (e.target.closest('#export-excel-btn')) handleExportExcel();
     });
     
