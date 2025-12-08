@@ -60,6 +60,27 @@ module.exports = (verifyToken, verifyAdmin, handleUploadErrors, upload, telegram
             console.log('[POST /api/reports] About to send Telegram notification');
             // Send Telegram notification asynchronously to avoid blocking the response
             (async () => {
+                // Retry wrapper to handle Telegram rate limits (HTTP 429)
+                const sendWithRetry = async (fn, ctx = 'telegram send') => {
+                    let attempt = 0;
+                    while (true) {
+                        try {
+                            return await fn();
+                        } catch (err) {
+                            const isRateLimit = err.response?.error_code === 429 || /Too Many Requests/i.test(err.message || '');
+                            const retryAfter = Number(err.response?.parameters?.retry_after) || (isRateLimit ? 3 : 0);
+                            if (isRateLimit && attempt < 2) {
+                                attempt += 1;
+                                const waitMs = (retryAfter + 1) * 1000; // Add 1s buffer
+                                console.warn(`[TELEGRAM RETRY] ${ctx} - attempt ${attempt} after ${waitMs}ms (retry_after=${retryAfter})`);
+                                await new Promise((resolve) => setTimeout(resolve, waitMs));
+                                continue;
+                            }
+                            throw err;
+                        }
+                    }
+                };
+
                 try {
                     const fullCaption = report_text;
                     // Don't use HTML parse_mode for bulk_transfer_accounts as it may contain special characters
@@ -75,7 +96,7 @@ module.exports = (verifyToken, verifyAdmin, handleUploadErrors, upload, telegram
                     
                     if (req.files && req.files.length > 0) {
                         if (req.files.length === 1) {
-                            await telegramHelper.sendPhoto(config.CHAT_ID, { source: req.files[0].buffer }, { caption: fullCaption, ...captionOptions });
+                            await sendWithRetry(() => telegramHelper.sendPhoto(config.CHAT_ID, { source: req.files[0].buffer }, { caption: fullCaption, ...captionOptions }), 'sendPhoto');
                         } else {
                             const mediaGroup = req.files.map((file, index) => ({
                                 type: 'photo',
@@ -83,10 +104,10 @@ module.exports = (verifyToken, verifyAdmin, handleUploadErrors, upload, telegram
                                 caption: index === 0 ? fullCaption : '',
                                 ...captionOptions
                             }));
-                            await telegramHelper.sendMediaGroup(config.CHAT_ID, mediaGroup);
+                            await sendWithRetry(() => telegramHelper.sendMediaGroup(config.CHAT_ID, mediaGroup), 'sendMediaGroup');
                         }
                     } else {
-                        await telegramHelper.sendMessage(config.CHAT_ID, fullCaption, captionOptions);
+                        await sendWithRetry(() => telegramHelper.sendMessage(config.CHAT_ID, fullCaption, captionOptions), 'sendMessage');
                     }
                     
                     if (newReport && newReport.telegram_failed) {
