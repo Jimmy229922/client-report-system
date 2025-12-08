@@ -3729,6 +3729,17 @@ function renderBulkTransferReportForms(reportsData, container) {
     container.appendChild(formsFragment);
     initBulkTransferFormsBehavior(container);
 
+    // Auto-scroll to first card when cards are rendered
+    if (reportsData.length > 0) {
+        setTimeout(() => {
+            const firstCard = container.querySelector('.bulk-report-card');
+            if (firstCard) {
+                firstCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                console.log('📍 Scrolled to first card');
+            }
+        }, 100);
+    }
+
     // Trigger initial lookups sequentially
     (async () => {
         console.log(`🚀 Starting IP lookups for ${ipInputsToTrigger.length} accounts`);
