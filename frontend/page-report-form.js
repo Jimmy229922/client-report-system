@@ -4173,10 +4173,9 @@ async function sendAllBulkTransferReports(reportsData) {
                 successCount++;
                 console.log(`✅ Transfer report ${i + 1} sent successfully:`, accountNumber);
 
-                if (i < forms.length - 1) {
-                    console.log(`⏱️ Waiting 3 seconds before next report (${i + 2}/${forms.length}) to prevent rate limiting...`);
-                    await new Promise(resolve => setTimeout(resolve, delayMs));
-                }
+                // Wait after each report (including the last one) to ensure delivery
+                console.log(`⏱️ Waiting 3 seconds after report (${i + 1}/${forms.length})...`);
+                await new Promise(resolve => setTimeout(resolve, delayMs));
 
             } catch (err) {
                 console.error(`❌ Failed to send transfer report ${i + 1} (${accountNumber}):`, err);
@@ -4280,10 +4279,9 @@ async function sendAllBulkTransferReports(reportsData) {
                         j--; // Adjust loop index since we removed an item
                     }
                     
-                    // Wait between retries
-                    if (j < failedAccounts.length - 1) {
-                        await new Promise(resolve => setTimeout(resolve, delayMs));
-                    }
+                    // Wait after each retry to ensure delivery
+                    console.log(`⏱️ Waiting 3 seconds after retry...`);
+                    await new Promise(resolve => setTimeout(resolve, delayMs));
                     
                 } catch (retryErr) {
                     console.error(`❌ Retry failed for account ${failedAccount}:`, retryErr);
@@ -4298,6 +4296,8 @@ async function sendAllBulkTransferReports(reportsData) {
 
         if (failCount === 0) {
             // Wait for a few seconds after last report before sending success notification
+            // This ensures all Telegram messages are delivered before the confirmation
+            console.log('⏳ Waiting 3 seconds to ensure all reports are delivered...');
             await new Promise(resolve => setTimeout(resolve, delayMs));
             
             // Send success notification to Telegram
