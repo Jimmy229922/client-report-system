@@ -3107,6 +3107,14 @@ export function initBulkTransferReportPage() {
         if (summaryEl && countEl) {
             countEl.textContent = String(reportsData.length);
             summaryEl.style.display = reportsData.length > 0 ? 'flex' : 'none';
+            
+            // Auto-scroll to summary when accounts are added
+            if (reportsData.length > 0) {
+                setTimeout(() => {
+                    summaryEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    console.log('📍 Scrolled to summary section');
+                }, 100);
+            }
         }
         if (sendAllBtn) {
             sendAllBtn.disabled = reportsData.length === 0;
@@ -3728,17 +3736,6 @@ function renderBulkTransferReportForms(reportsData, container) {
     });
     container.appendChild(formsFragment);
     initBulkTransferFormsBehavior(container);
-
-    // Auto-scroll to first card when cards are rendered
-    if (reportsData.length > 0) {
-        setTimeout(() => {
-            const firstCard = container.querySelector('.bulk-report-card');
-            if (firstCard) {
-                firstCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                console.log('📍 Scrolled to first card');
-            }
-        }, 100);
-    }
 
     // Trigger initial lookups sequentially
     (async () => {
