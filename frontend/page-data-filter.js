@@ -73,20 +73,44 @@ export function renderDataFilterPage() {
         const accountRegex = /\b\d{6,7}\b/g;
 
         if (mode === 'accounts-only') {
-            const uniqueAccounts = new Set();
+            const uniqueAccounts = new Map(); // Use Map to store account with its status
             const results = [];
             // Split by lines to track line numbers accurately
             const lines = text.split('\n');
             
+            // Status pattern: matches lines that have status (New/Sent/Done) followed by numbers then account
+            const statusPattern = /(New|Sent|Done)\s*\n?\s*\d+\s*\n?\s*(\d{6,7})/gi;
+            const fullText = text;
+            
+            // First pass: extract accounts with their status from the pattern
+            let match;
+            while ((match = statusPattern.exec(fullText)) !== null) {
+                const status = match[1];
+                const account = match[2];
+                if (!uniqueAccounts.has(account)) {
+                    // Find line number for this account
+                    const accountPosition = match.index;
+                    const textBefore = fullText.substring(0, accountPosition);
+                    const lineNumber = (textBefore.match(/\n/g) || []).length + 1;
+                    uniqueAccounts.set(account, { 
+                        account, 
+                        status: status,
+                        ip: null,
+                        originalLine: lineNumber 
+                    });
+                }
+            }
+            
+            // Second pass: find any remaining accounts without status
             lines.forEach((line, index) => {
                 const matches = line.match(accountRegex);
                 if (matches) {
                     matches.forEach(account => {
                         if (!uniqueAccounts.has(account)) {
-                            uniqueAccounts.add(account);
-                            results.push({ 
+                            uniqueAccounts.set(account, { 
                                 account, 
-                                ip: null, // No IP in this mode
+                                status: '-', // Unknown status
+                                ip: null,
                                 originalLine: index + 1 
                             });
                         }
@@ -94,7 +118,7 @@ export function renderDataFilterPage() {
                 }
             });
             
-            return results.sort((a, b) => 
+            return Array.from(uniqueAccounts.values()).sort((a, b) => 
                 a.account.localeCompare(b.account, undefined, { numeric: true })
             );
         }
@@ -141,9 +165,22 @@ export function renderDataFilterPage() {
                     ? `<span class="copyable-account" title="اضغط للنسخ">${item.ip}</span>`
                     : '<span class="text-muted">-</span>';
                 
+                // Status badge with color coding
+                const getStatusBadge = (status) => {
+                    if (!status || status === '-') return '<span class="text-muted">-</span>';
+                    const statusColors = {
+                        'New': 'background: #3498db; color: white;',
+                        'Sent': 'background: #f39c12; color: white;',
+                        'Done': 'background: #27ae60; color: white;'
+                    };
+                    const style = statusColors[status] || 'background: #95a5a6; color: white;';
+                    return `<span class="status-badge" style="${style} padding: 2px 8px; border-radius: 4px; font-size: 0.85em;">${status}</span>`;
+                };
+                
                 return `<tr data-line-id="${item.originalLine}">
                     <td>${index + 1}</td>
                     <td class="account-cell">${accountCellContent}</td>
+                    ${isAccountsOnly && item.status !== undefined ? `<td class="status-cell">${getStatusBadge(item.status)}</td>` : ''}
                     ${!isAccountsOnly ? `<td class="ip-cell">${ipCellContent}</td>` : ''}
                     <td>${item.originalLine}</td>
                 </tr>`;
@@ -158,6 +195,7 @@ export function renderDataFilterPage() {
                                 <tr>
                                     <th>#</th>
                                     <th data-sort-key="account" data-sort-type="number">رقم الحساب</th>
+                                    ${isAccountsOnly ? '<th data-sort-key="status" data-sort-type="string">الحالة</th>' : ''}
                                     ${!isAccountsOnly ? '<th data-sort-key="ip" data-sort-type="string">الآي بي</th>' : ''}
                                     <th data-sort-key="originalLine" data-sort-type="number">السطر الأصلي</th>
                                 </tr>
@@ -254,6 +292,9 @@ export function renderDataFilterPage() {
                 '#': index + 1,
                 'رقم الحساب': item.account,
             };
+            if (isAccountsOnly && item.status) {
+                row['الحالة'] = item.status;
+            }
             if (!isAccountsOnly) {
                 row['الآي بي'] = item.ip;
             }
