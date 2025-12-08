@@ -4297,8 +4297,8 @@ async function sendAllBulkTransferReports(reportsData) {
         if (failCount === 0) {
             // Wait for a few seconds after last report before sending success notification
             // This ensures all Telegram messages are delivered before the confirmation
-            console.log('⏳ Waiting 3 seconds to ensure all reports are delivered...');
-            await new Promise(resolve => setTimeout(resolve, delayMs));
+            console.log('⏳ Waiting 1 second to ensure all reports are delivered...');
+            await new Promise(resolve => setTimeout(resolve, 1000));
             
             // Send success notification to Telegram
             try {
