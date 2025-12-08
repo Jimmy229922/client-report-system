@@ -4108,6 +4108,7 @@ async function sendAllBulkTransferReports(reportsData) {
         let successCount = 0;
         let failCount = 0;
         const failedAccounts = []; // Track failed accounts for retry
+        const delayMs = 3000; // 3 seconds between reports to prevent rate limiting
 
         // Send warning message to Telegram before starting bulk send
         try {
@@ -4122,7 +4123,7 @@ async function sendAllBulkTransferReports(reportsData) {
             console.log('✅ Bulk warning message sent to Telegram');
             
             // Small delay before starting to send reports
-            await new Promise(resolve => setTimeout(resolve, 2000));
+            await new Promise(resolve => setTimeout(resolve, delayMs));
         } catch (warningError) {
             console.warn('⚠️ Failed to send warning message:', warningError);
             // Continue with sending reports even if warning fails
@@ -4173,8 +4174,8 @@ async function sendAllBulkTransferReports(reportsData) {
                 console.log(`✅ Transfer report ${i + 1} sent successfully:`, accountNumber);
 
                 if (i < forms.length - 1) {
-                    console.log(`⏱️ Waiting 15 seconds before next report (${i + 2}/${forms.length}) to prevent rate limiting...`);
-                    await new Promise(resolve => setTimeout(resolve, 15000)); // Increased delay to prevent Telegram rate limiting
+                    console.log(`⏱️ Waiting 3 seconds before next report (${i + 2}/${forms.length}) to prevent rate limiting...`);
+                    await new Promise(resolve => setTimeout(resolve, delayMs));
                 }
 
             } catch (err) {
@@ -4281,7 +4282,7 @@ async function sendAllBulkTransferReports(reportsData) {
                     
                     // Wait between retries
                     if (j < failedAccounts.length - 1) {
-                        await new Promise(resolve => setTimeout(resolve, 15000));
+                        await new Promise(resolve => setTimeout(resolve, delayMs));
                     }
                     
                 } catch (retryErr) {
@@ -4296,6 +4297,9 @@ async function sendAllBulkTransferReports(reportsData) {
         }
 
         if (failCount === 0) {
+            // Wait for a few seconds after last report before sending success notification
+            await new Promise(resolve => setTimeout(resolve, delayMs));
+            
             // Send success notification to Telegram
             try {
                 console.log(`🎉 All ${successCount} reports sent successfully. Sending success notification to Telegram...`);
