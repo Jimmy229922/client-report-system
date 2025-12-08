@@ -26,7 +26,13 @@ if errorlevel 1 (
     echo [ERROR] Failed to generate configuration.
     goto error
 )
+
 REM Verify that config.json was generated (requires required keys in .env)
+REM Adding a small delay and retry to handle potential filesystem latency
+if not exist "config.json" (
+    timeout /t 2 /nobreak >nul
+)
+
 if not exist "config.json" (
     popd
     echo.
