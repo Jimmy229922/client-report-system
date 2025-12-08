@@ -15,6 +15,37 @@ if not exist "%MONGO_DATA_PATH%" (
     )
 )
 
+REM Check if MongoDB is running as a Windows Service FIRST
+sc query MongoDB 2>nul | find "RUNNING" >nul
+if %ERRORLEVEL% EQU 0 (
+    echo [INFO] MongoDB is running as a Windows Service. No action needed.
+    exit /b 0
+)
+
+REM Check if port 27017 is already in use
+netstat -ano | findstr ":27017" | findstr "LISTENING" >nul 2>&1
+if %ERRORLEVEL% EQU 0 (
+    echo [INFO] Port 27017 is already in use.
+    
+    REM Check if it's mongod.exe
+    tasklist /FI "IMAGENAME eq mongod.exe" 2>nul | find /I "mongod.exe" >nul
+    if %ERRORLEVEL% EQU 0 (
+        echo [INFO] MongoDB is already running. No action needed.
+        exit /b 0
+    )
+    
+    echo [WARNING] Port 27017 is used by another process.
+    echo [INFO] Trying to find and stop the process...
+    
+    REM Get the PID using the port and try to stop it
+    for /f "tokens=5" %%a in ('netstat -ano ^| findstr ":27017" ^| findstr "LISTENING"') do (
+        echo [INFO] Stopping process with PID: %%a
+        taskkill /PID %%a /F >nul 2>&1
+    )
+    
+    timeout /t 2 /nobreak >nul
+)
+
 REM Check if mongod is already running.
 tasklist /FI "IMAGENAME eq mongod.exe" 2>nul | find /I "mongod.exe" >nul
 if %ERRORLEVEL% EQU 0 (
@@ -46,4 +77,15 @@ if not defined MONGOD_EXE (
 REM Launch MongoDB in a separate window so the service stays alive.
 echo [INFO] Starting MongoDB with dbpath "%MONGO_DATA_PATH%"...
 start "MongoDB" cmd /k ""%MONGOD_EXE%" --dbpath "%MONGO_DATA_PATH%" --bind_ip 127.0.0.1"
+
+REM Wait and verify it started
+timeout /t 3 /nobreak >nul
+
+netstat -ano | findstr ":27017" | findstr "LISTENING" >nul 2>&1
+if %ERRORLEVEL% EQU 0 (
+    echo [INFO] MongoDB started successfully on port 27017.
+    exit /b 0
+)
+
+echo [WARNING] MongoDB may not have started properly. Check the MongoDB window for errors.
 exit /b 0
