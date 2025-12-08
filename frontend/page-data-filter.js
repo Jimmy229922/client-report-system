@@ -7,7 +7,7 @@ export function renderDataFilterPage() {
     <div class="comparator-page-container data-filter-page-container">
         <div class="page-header">
             <h1 class="page-title"><i class="fas fa-project-diagram"></i> أداة فلترة البيانات المترابطة</h1>
-            <p>استخرج الارتباطات الفريدة بين أرقام الحسابات (7 أرقام) وعناوين IP.</p>
+            <p>استخرج الارتباطات الفريدة بين أرقام الحسابات (6-7 أرقام) وعناوين IP.</p>
         </div>
         <div class="form-container" style="max-width: 1000px;">
             <div class="filter-options" style="margin-bottom: 1.5rem; background: var(--background-color-offset); padding: 1rem; border-radius: 8px; border: 1px solid var(--border-color);">
@@ -19,7 +19,7 @@ export function renderDataFilterPage() {
                     </label>
                     <label class="radio-label" style="cursor: pointer; display: flex; align-items: center; gap: 0.5rem;">
                         <input type="radio" name="filter-type" value="accounts-only">
-                        <span><i class="fas fa-list-ol"></i> استخراج أرقام الحسابات فقط (7 أرقام)</span>
+                        <span><i class="fas fa-list-ol"></i> استخراج أرقام الحسابات فقط (6-7 أرقام)</span>
                     </label>
                 </div>
             </div>
@@ -69,7 +69,8 @@ export function renderDataFilterPage() {
     const HIGHLIGHT_ROW_KEY = 'highlightRowId';
 
     const extractDataFromText = (text, mode = 'linked-ip') => {
-        const accountRegex = /\b\d{7}\b/g;
+        // Match account numbers with 6 or 7 digits
+        const accountRegex = /\b\d{6,7}\b/g;
 
         if (mode === 'accounts-only') {
             const uniqueAccounts = new Set();
