@@ -10,6 +10,20 @@ export function renderDataFilterPage() {
             <p>استخرج الارتباطات الفريدة بين أرقام الحسابات (7 أرقام) وعناوين IP.</p>
         </div>
         <div class="form-container" style="max-width: 1000px;">
+            <div class="filter-options" style="margin-bottom: 1.5rem; background: var(--background-color-offset); padding: 1rem; border-radius: 8px; border: 1px solid var(--border-color);">
+                <label style="display: block; margin-bottom: 0.8rem; font-weight: 600; color: var(--text-color);">نوع الفلترة:</label>
+                <div class="radio-group" style="display: flex; gap: 2rem; flex-wrap: wrap;">
+                    <label class="radio-label" style="cursor: pointer; display: flex; align-items: center; gap: 0.5rem;">
+                        <input type="radio" name="filter-type" value="linked-ip" checked>
+                        <span><i class="fas fa-link"></i> ارتباطات الحسابات والـ IP</span>
+                    </label>
+                    <label class="radio-label" style="cursor: pointer; display: flex; align-items: center; gap: 0.5rem;">
+                        <input type="radio" name="filter-type" value="accounts-only">
+                        <span><i class="fas fa-list-ol"></i> استخراج أرقام الحسابات فقط (7 أرقام)</span>
+                    </label>
+                </div>
+            </div>
+
             <div class="form-group textarea-group">
                 <label for="data-input">ألصق البيانات هنا</label>
                 <div class="textarea-with-linenumbers">
@@ -54,8 +68,37 @@ export function renderDataFilterPage() {
     const DATA_FILTER_STATE_KEY = 'dataFilterState';
     const HIGHLIGHT_ROW_KEY = 'highlightRowId';
 
-    const extractDataFromText = (text) => {
+    const extractDataFromText = (text, mode = 'linked-ip') => {
         const accountRegex = /\b\d{7}\b/g;
+
+        if (mode === 'accounts-only') {
+            const uniqueAccounts = new Set();
+            const results = [];
+            // Split by lines to track line numbers accurately
+            const lines = text.split('\n');
+            
+            lines.forEach((line, index) => {
+                const matches = line.match(accountRegex);
+                if (matches) {
+                    matches.forEach(account => {
+                        if (!uniqueAccounts.has(account)) {
+                            uniqueAccounts.add(account);
+                            results.push({ 
+                                account, 
+                                ip: null, // No IP in this mode
+                                originalLine: index + 1 
+                            });
+                        }
+                    });
+                }
+            });
+            
+            return results.sort((a, b) => 
+                a.account.localeCompare(b.account, undefined, { numeric: true })
+            );
+        }
+
+        // Default mode: linked-ip
         const ipRegex = /(?:[0-9]{1,3}\.){3}[0-9]{1,3}/g;
         const pairs = new Map();
         const blocks = text.split('⋮');
@@ -83,6 +126,8 @@ export function renderDataFilterPage() {
         const tableContainer = resultSectionContent.querySelector('.table-container');
         const actionsContainer = document.getElementById('result-actions');
         const resultCountSpan = document.getElementById('result-count');
+        const filterType = document.querySelector('input[name="filter-type"]:checked').value;
+        const isAccountsOnly = filterType === 'accounts-only';
 
         if (resultCountSpan) {
             resultCountSpan.textContent = results.length;
@@ -91,25 +136,28 @@ export function renderDataFilterPage() {
         if (results.length > 0) {
             const tableRows = results.slice(0, 1000).map((item, index) => {
                 const accountCellContent = `<div class="account-cell-content"><span class="copyable-account" title="اضغط للنسخ">${item.account}</span><a href="#archive?search=${item.account}" class="search-in-archive-btn" data-line-id="${item.originalLine}" title="بحث عن هذا الحساب في الأرشيف"><i class="fas fa-search"></i></a></div>`;
-                const ipCellContent = `<span class="copyable-account" title="اضغط للنسخ">${item.ip}</span>`;
+                const ipCellContent = item.ip 
+                    ? `<span class="copyable-account" title="اضغط للنسخ">${item.ip}</span>`
+                    : '<span class="text-muted">-</span>';
+                
                 return `<tr data-line-id="${item.originalLine}">
                     <td>${index + 1}</td>
                     <td class="account-cell">${accountCellContent}</td>
-                    <td class="ip-cell">${ipCellContent}</td>
+                    ${!isAccountsOnly ? `<td class="ip-cell">${ipCellContent}</td>` : ''}
                     <td>${item.originalLine}</td>
                 </tr>`;
             }).join('');
 
             tableContainer.innerHTML = `
                 <div class="result-category">
-                    <h3><i class="fas fa-stream"></i> الارتباطات الفريدة (${results.length})</h3>
+                    <h3><i class="fas fa-stream"></i> النتائج (${results.length})</h3>
                     <div class="table-wrapper">
                         <table class="results-table">
                             <thead>
                                 <tr>
                                     <th>#</th>
                                     <th data-sort-key="account" data-sort-type="number">رقم الحساب</th>
-                                    <th data-sort-key="ip" data-sort-type="string">الآي بي</th>
+                                    ${!isAccountsOnly ? '<th data-sort-key="ip" data-sort-type="string">الآي بي</th>' : ''}
                                     <th data-sort-key="originalLine" data-sort-type="number">السطر الأصلي</th>
                                 </tr>
                             </thead>
@@ -126,7 +174,7 @@ export function renderDataFilterPage() {
             tableContainer.innerHTML = `
                 <div class="empty-state">
                     <i class="fas fa-inbox"></i>
-                    <p>لم يتم العثور على أي ارتباطات مطابقة (رقم حساب من 7 أرقام + IP).</p>
+                    <p>لم يتم العثور على أي نتائج مطابقة.</p>
                 </div>
             `;
             if (actionsContainer) {
@@ -152,19 +200,21 @@ export function renderDataFilterPage() {
         processBtn.disabled = true;
 
         try {
-            const uniquePairs = extractDataFromText(text);
+            const filterType = document.querySelector('input[name="filter-type"]:checked').value;
+            const uniquePairs = extractDataFromText(text, filterType);
             currentResults = uniquePairs || [];
             resultsContainer.classList.remove('hidden');
             renderResultsTable(uniquePairs);
-            showToast(`تمت المعالجة! تم العثور على ${uniquePairs.length} ارتباط فريد.`);
+            showToast(`تمت المعالجة! تم العثور على ${uniquePairs.length} نتيجة فريدة.`);
 
             // مسح حقل الإدخال لتخفيف العبء على المتصفح
-            dataInput.value = '';
-            dataInput.dispatchEvent(new Event('input', { bubbles: true })); // لتحديث أرقام الأسطر وزر المسح
+            // dataInput.value = ''; // Commented out to keep data visible if user wants to switch filter type
+            // dataInput.dispatchEvent(new Event('input', { bubbles: true })); 
 
             // حفظ النتائج فقط في sessionStorage
             sessionStorage.setItem(DATA_FILTER_STATE_KEY, JSON.stringify({
-                results: uniquePairs
+                results: uniquePairs,
+                filterType: filterType
             }));
 
         } catch (error) {
@@ -194,13 +244,21 @@ export function renderDataFilterPage() {
             showToast('لا توجد بيانات لتصديرها.', true);
             return;
         }
+        const filterType = document.querySelector('input[name="filter-type"]:checked').value;
+        const isAccountsOnly = filterType === 'accounts-only';
+
         const { utils, writeFile } = window.XLSX;
-        const dataToExport = currentResults.map((item, index) => ({
-            '#': index + 1,
-            'رقم الحساب': item.account,
-            'الآي بي': item.ip,
-            'السطر الأصلي': item.originalLine
-        }));
+        const dataToExport = currentResults.map((item, index) => {
+            const row = {
+                '#': index + 1,
+                'رقم الحساب': item.account,
+            };
+            if (!isAccountsOnly) {
+                row['الآي بي'] = item.ip;
+            }
+            row['السطر الأصلي'] = item.originalLine;
+            return row;
+        });
         const worksheet = utils.json_to_sheet(dataToExport);
         const workbook = utils.book_new();
         utils.book_append_sheet(workbook, worksheet, 'Filtered Data');
